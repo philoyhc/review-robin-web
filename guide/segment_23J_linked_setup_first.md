@@ -82,6 +82,12 @@ Taken 2026-11-25 at `d23dffcd2`.
 - **Taken beyond the ladder:** a re-send may also carry the settings alone, before the rosters, so Process edits after set-up reach the draft. The pipeline had no file to save and returned before the re-send's guard and record. Now, with no files, it runs them under the session lock (`quick_setup_pipeline.run_contents`).
 - The cumulative read for rungs 2–5 runs from `8e2eb04ec`.
 
+**Rung 3 (2026-11-25):**
+- `POST /operator/handoffs/{transfer_id}/discard` takes an envelope with operation `reviewrobin.discard_draft_session` and no files (`handoffs.parse_discard`). It deletes the draft through `sessions.delete_session`. That writes `session.deleted` with no session, now with a `context`: the creating `transfer_id`, `source_app`, and the discard's own `discard_transfer_id`. `session.deleted` gains `context` in `EVENT_SCHEMAS`.
+- Refusals: `not_linked` (unknown transfer, another application, or unlinked since), `not_authorized` (not the operator who set it up), `session_opened`, and `session_not_empty` (rosters or responses), each rechecked under the session lock.
+- A retry answers `already_discarded` with the session code, read from that delete.
+- A transfer cut off before completion may also be discarded: its draft is just as empty.
+
 ## PR ladder
 
 1. **Plan**: this file, its queue entry and README row; Apply Desk's ruling 80 in `applydesk/guide/todo_master.md`, with AD6's row naming the stored `session_home_url`. Prose only.

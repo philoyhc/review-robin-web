@@ -330,6 +330,32 @@ async def create_handoff_session(
     )
 
 
+@router.post("/handoffs/{transfer_id}/discard", response_model=None)
+async def discard_handoff_session(
+    transfer_id: str,
+    request: Request,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Delete the empty draft the transfer ``transfer_id`` set up, for the
+    linked application that sent it (segment 23J, `spec/handoffs.md`): a
+    gate dropped before its rosters. Refused, nothing deleted, for a draft
+    holding rosters, opened, or unlinked since."""
+    body = await _handoff_body(request)
+    if isinstance(body, JSONResponse):
+        return body
+    try:
+        bundle = handoffs.parse_discard(body)
+        # In the threadpool: it waits on the session lock (findings Bc3).
+        status_word, code = await run_in_threadpool(
+            handoffs.discard, db, user, transfer_id, bundle, request_correlation_id()
+        )
+    except handoffs.HandoffError as exc:
+        db.rollback()
+        return _handoff_refused(request, exc)
+    return JSONResponse({"status": status_word, "session_code": code}, headers=_HANDOFF_HEADERS)
+
+
 @router.post("/handoffs/{transfer_id}/update", response_model=None)
 async def update_handoff_session(
     transfer_id: str,

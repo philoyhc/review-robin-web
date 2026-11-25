@@ -21,6 +21,7 @@ from datetime import UTC, datetime, timedelta
 from typing import cast
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -42,15 +43,22 @@ from app.services import (
     monitoring,
     permissions,
     session_config_io,
+    session_guard,
+    sessions,
     unit_of_work,
 )
 from app.services import session_lifecycle as lifecycle
 from app.services.date_formatting import iso_in_zone
 from app.services.sessions import resolve_session_timezone
 
+#: The audit event a discard writes: the session's own delete (segment 23J).
+DISCARDED = "session.deleted"
+
 PROTOCOL = "cordware.csv-handoff"
 PROTOCOL_VERSION = 1
 OPERATION = "reviewrobin.create_draft_session"
+#: A linked application removing an empty draft it set up (segment 23J).
+DISCARD_OPERATION = "reviewrobin.discard_draft_session"
 #: The re-send to a linked, unopened draft (segment 23F): it names the
 #: draft by the transfer that created it.
 UPDATE_OPERATION = "reviewrobin.update_draft_session"
@@ -133,11 +141,9 @@ def _text(data: dict[str, object], key: str, limit: int) -> str:
     return value.strip()
 
 
-def parse_bundle(body: bytes, *, operation: str = OPERATION) -> Bundle:
-    """The bundle, or :class:`HandoffError`. Checks the envelope only:
-    the CSVs are Quick Setup's to check, with its own parsers and caps.
-    ``operation`` is the one the route serves: a re-send
-    (:data:`UPDATE_OPERATION`) carries no ``session_suggestion``."""
+def _envelope(body: bytes, operation: str) -> tuple[dict[str, object], str, str]:
+    """The body as an object, its ``transfer_id`` and ``source_app``, or
+    :class:`HandoffError`: the protocol, version and ``operation`` checked."""
     try:
         raw: object = json.loads(body)
     except (ValueError, UnicodeDecodeError, RecursionError) as exc:
@@ -162,6 +168,23 @@ def parse_bundle(body: bytes, *, operation: str = OPERATION) -> Bundle:
     except ValueError as exc:
         raise HandoffError("invalid_package", 422, ["`transfer_id` must be a UUID."]) from exc
     source_app = _text(data, "source_app", 64)
+    return data, transfer_id, source_app
+
+
+def parse_discard(body: bytes) -> Bundle:
+    """A discard's envelope, or :class:`HandoffError` (segment 23J): no
+    suggestion and no files, the draft being named by its creating
+    transfer in the route."""
+    _, transfer_id, source_app = _envelope(body, DISCARD_OPERATION)
+    return Bundle(transfer_id, source_app, "", "", {})
+
+
+def parse_bundle(body: bytes, *, operation: str = OPERATION) -> Bundle:
+    """The bundle, or :class:`HandoffError`. Checks the envelope only:
+    the CSVs are Quick Setup's to check, with its own parsers and caps.
+    ``operation`` is the one the route serves: a re-send
+    (:data:`UPDATE_OPERATION`) carries no ``session_suggestion``."""
+    data, transfer_id, source_app = _envelope(body, operation)
     name = code = ""
     if operation == OPERATION:
         suggestion = data.get("session_suggestion")
@@ -316,6 +339,14 @@ def replayed(db: Session, user: User, bundle: Bundle) -> ReviewSession | None:
     is incomplete."""
     prior = prior_transfer(db, bundle.transfer_id)
     if prior is None:
+        # Its draft was discarded (segment 23J; the cumulative read): a
+        # retried create makes no fresh draft for a gate already dropped.
+        if _discarded(db, bundle.transfer_id) is not None:
+            raise HandoffError(
+                "session_discarded",
+                409,
+                ["This transfer's session was discarded in Review Robin."],
+            )
         return None
     if prior.actor_user_id != user.id:
         raise HandoffError("duplicate_conflict", 409)
@@ -549,6 +580,118 @@ def linked(db: Session, user: User, transfer_id: str) -> ReviewSession:
             review_session=prior.review_session,
         )
     return prior.review_session
+
+
+def _discarded(db: Session, created_transfer: str) -> AuditEvent | None:
+    """The delete a discard of ``created_transfer`` wrote, if any: the
+    session goes with its own events, so a retry is answered from the
+    session-less ``session.deleted`` that names the transfer."""
+    events = db.scalars(
+        select(AuditEvent)
+        .where(AuditEvent.event_type == DISCARDED, AuditEvent.session_id.is_(None))
+        .order_by(AuditEvent.id)
+    ).all()
+    return next((e for e in events if _transfer_of(e) == created_transfer), None)
+
+
+def _already_discarded(done: AuditEvent, user: User, bundle: Bundle) -> tuple[str, str]:
+    """A retried discard's answer, for the operator and the application
+    that discarded it; anyone else's is refused, as a fresh one would be."""
+    detail: dict[str, object] = done.detail or {}
+    context = detail.get("context")
+    sender = (
+        cast(dict[str, object], context).get("source_app") if isinstance(context, dict) else None
+    )
+    if sender != bundle.source_app:
+        raise HandoffError("not_linked", 404)
+    if done.actor_user_id != user.id:
+        raise HandoffError("not_authorized", 403)
+    snapshot = detail.get("snapshot")
+    code = cast(dict[str, object], snapshot).get("code", "") if isinstance(snapshot, dict) else ""
+    return "already_discarded", str(code)
+
+
+def discard(
+    db: Session,
+    user: User,
+    created_transfer: str,
+    bundle: Bundle,
+    correlation_id: str | None,
+) -> tuple[str, str]:
+    """Delete the empty draft a linked application set up (segment 23J),
+    named by the transfer that created it: ``("discarded", code)``, or
+    ``("already_discarded", code)`` for a retry. :class:`HandoffError` and
+    nothing deleted for any other session: not this sender's transfer
+    (``not_linked``), another operator's (``not_authorized``), unlinked
+    since, opened (``session_opened``) or holding rosters
+    (``session_not_empty``). The checks run again under the session lock."""
+    try:
+        uuid.UUID(created_transfer)
+    except ValueError:
+        raise HandoffError("not_linked", 404) from None
+    done = _discarded(db, created_transfer)
+    if done is not None:
+        return _already_discarded(done, user, bundle)
+    prior = prior_transfer(db, created_transfer)
+    if prior is None:
+        raise HandoffError("not_linked", 404)
+    review_session = prior.review_session
+    if prior.actor_user_id != user.id or not permissions.user_can_view_session(
+        db, user, review_session.id
+    ):
+        raise HandoffError("not_authorized", 403)
+    # A create still running is not discarded under it (the cumulative
+    # read): it would finish on a deleted session.
+    if not prior.completed and datetime.now(UTC) - prior.started_at < IN_PROGRESS:
+        raise HandoffError(
+            "transfer_in_progress",
+            409,
+            ["The set-up of this transfer is still running. Try again in a moment."],
+        )
+    try:
+        session_guard.lock_session(db, review_session)
+    except NoResultFound:
+        # Deleted while this one waited for the lock: a discard that got
+        # there first answers as a retry would; anything else, not linked.
+        db.rollback()
+        done = _discarded(db, created_transfer)
+        if done is not None:
+            return _already_discarded(done, user, bundle)
+        raise HandoffError("not_linked", 404) from None
+    profile = linked_apps.profile_for(bundle.source_app)
+    if profile is None or review_session.linked_app != profile.key:
+        raise HandoffError("not_linked", 404)
+    if not lifecycle.is_editable(review_session):
+        raise HandoffError(
+            "session_opened",
+            409,
+            ["The session has opened in Review Robin: it is the operator's to delete there."],
+            review_session=review_session,
+        )
+    if (
+        csv_imports.existing_reviewer_count(db, review_session.id)
+        or csv_imports.existing_reviewee_count(db, review_session.id)
+        or lifecycle.session_has_responses(db, review_session)
+    ):
+        raise HandoffError(
+            "session_not_empty",
+            409,
+            ["The session holds rosters: it is the operator's to delete in Review Robin."],
+            review_session=review_session,
+        )
+    code = review_session.code
+    sessions.delete_session(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id=correlation_id,
+        context={
+            "transfer_id": created_transfer,
+            "source_app": bundle.source_app,
+            "discard_transfer_id": bundle.transfer_id,
+        },
+    )
+    return "discarded", code
 
 
 #: The answers a sender fetches (segment 23B): ``responses.csv``'s names

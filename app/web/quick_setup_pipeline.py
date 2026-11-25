@@ -313,13 +313,19 @@ async def run_contents(
         # Nothing to save, but a caller's checks and record still run under
         # the session lock: a linked re-send carrying only its settings,
         # before its rosters (segment 23J), applies them in ``unit_record``.
+        # In the threadpool, as the saves are: waiting on the lock on the
+        # event loop would stall the worker (findings Bc3; 23J's read).
         if unit_guard is not None or unit_record is not None:
-            with unit_of_work.atomic(db):
-                session_guard.lock_session(db, review_session)
-                if unit_guard is not None:
-                    unit_guard()
-                if unit_record is not None:
-                    unit_record()
+
+            def unit() -> None:
+                with unit_of_work.atomic(db):
+                    session_guard.lock_session(db, review_session)
+                    if unit_guard is not None:
+                        unit_guard()
+                    if unit_record is not None:
+                        unit_record()
+
+            await run_in_threadpool(unit)
         return None
     first = next(iter(contents))
     if not lifecycle.is_editable(review_session):

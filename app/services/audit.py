@@ -434,7 +434,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # PR 1 — session lifecycle
     "session.created": EventSchema(_IDENTITY | {"snapshot"}),
     "session.updated": EventSchema(_IDENTITY | {"changes"}),
-    "session.deleted": EventSchema(frozenset({"snapshot"})),
+    # ``context`` names a linked application's discard (segment 23J).
+    "session.deleted": EventSchema(frozenset({"snapshot", "context"})),
     # Segment 23A: a session created from another application's rosters;
     # ``context`` carries the transfer and the sending application.
     "session.handoff_created": EventSchema(_IDENTITY | {"counts", "context"}),
