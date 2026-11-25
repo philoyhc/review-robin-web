@@ -54,17 +54,28 @@ Taken 2026-11-18 at `295cdf575`.
 
 ## Status
 
-**Rung 2 (2026-11-25):** `Instrument.linked_mode` (`locked` / `custom`, `LINKED_MODES`; migration `a7d3e9f2b4c8`, every row `locked`); the Settings row `instruments[N].linked_mode`, parsed and refused when unknown, written to the CSV only when `custom` so every other file is unchanged; a linked application owns `instruments[1].linked_mode` on a re-send, a change audited as `instrument.linked_mode_set` (the same type writes nothing). The cumulative read for rungs 2–5 runs from `dde4e36cf`. As any instrument row, the row needs the gate's name beside it (the parse's rule).
+**Closed 2026-11-25.** PRs #4211 (the rename), #4214 (Required is Review Robin's), #4215 (not asked vs missing), #4217–#4221 (rungs 2–6), #4222 (an author iteration: the Type menu's width) and this close. The ladder ran as planned. The specs are `spec/linked_sessions.md` (`instrument_structure`, the two modes), `spec/instruments.md` ("A linked instrument"), `spec/handoffs.md` (§6a, §10), `spec/csv_contracts.md` and `applydesk/spec/applications.md` (the gate's *Type*).
 
-**Rung 3 (2026-11-25):** held fields are a list, `Instrument.held_field_keys` (migration `b8e4f0a3c5d9`; author, 2026-11-25, not a flag on the field), written at the create and by each re-send carrying field rows. On a custom instrument the card's Save keeps the response fields and checks the held ones after (`linked_instruments.held_problems`): a held field removed, or its name, type, bounds, options, scale, help or visibility changed, is a 422; its R, place and branch are Review Robin's. Band 3 is the operator's lock region; each held row's name, type, bounds, visibility chip, ≡, help box and delete are fixed. Narrowed: the per-field routes and the legacy `/band2-state` POST, which no page calls, still refuse on every linked instrument.
+**What shipped, against the plan:**
+- **The mode** is `Instrument.linked_mode`, and the held fields are a list, `Instrument.held_field_keys`, not a flag on each field (author). Both were added by migrations `a7d3e9f2b4c8` and `b8e4f0a3c5d9`. `linked_instruments.held_keys` is the one reading of the list; `None` means every stored field.
+- **The Settings row** `instruments[N].linked_mode` is refused when unknown, and a blank cell leaves the type as it is. Review Robin's own export writes it only when `custom`. Apply Desk sends it on every gate, `custom` or `locked`, so a gate switched back to the default sends the switch.
+- **The card's Save** keeps a custom instrument's response fields and checks the held ones (`held_problems`, a 422). The sync's cut texts (help over 1,000 characters, lists over 255) are put back whole before the change record (`restore_cut_texts`, through `set_band2_state`'s `after_sync`). A Save that changes nothing therefore records nothing and leaves the session validated.
+- **Visibility a hidden parent sets** on a held field is not compared, and a custom re-send applies the same cascade.
+- **A custom re-send** (`instruments.replace_held_fields`) is refused whole, with a settings 422, in two cases: a sent key names an own field, or the result would leave an invalid branch structure. An inner branch that is dropped lifts its children to the outer parent.
+- **`not_asked`** applies to any branched, non-group instrument, not to custom only (author). It is a last column, `Answer`, in `results.csv`. Review Robin's own extracts still export a closed branch as blank.
+- **Narrowed:** a re-send does not check a condition's number against a held parent's new bounds (`condition_error` reads type and options only). The per-field routes and the legacy `/band2-state` still refuse on every linked instrument.
+- **Apply Desk** (sample only): the Type menu on Process, the shut card's line, Evaluations, `process.csv`, and `settings.csv`. The sample RA exercise's Gate 1 is custom, and its note reads e.g. *4.1 from 26 of 30 · 4 not asked*.
 
-**Rung 4 (2026-11-25):** a re-send into a custom instrument goes through `instruments.replace_held_fields`: held fields update in place by key (definition only), a new one joins at the end with the sent `required` as its start, a held field no longer sent is deleted; own fields, order, branches and `required` stay. A branch losing its parent or last governed field (`field_removed`), or whose parent's type or options no longer take its condition (`no_longer_fits`, `responses.condition_error`), is dropped and audited as `instrument.branch_dropped`. Custom → locked with field rows replaces them whole as a locked re-send does; without field rows, `linked_instruments.restore_held` rebuilds the held fields in the application's order, unbranched (their `required` as stored, since no gate value came). Locked → custom keeps everything. Narrowed: a condition's number outside a held parent's new bounds is not checked (`condition_error` reads type and options only).
-
-**Rung 5 (2026-11-25):** `results.csv` gains a last column, `Answer` (`answered` / `not_asked`); a `not_asked` row, no value, stands for each visible field a branch closed on a submitted assignment (as `completion.csv` reads submitted), from `responses.applicable_field_ids`. **Not custom-only** (author, 2026-11-25: *not asked* applies to any branched instrument): every branched instrument gives them; a custom one reports its held fields only, Review Robin's own staying in its extracts. A file with no branch keeps the query's row order. Review Robin's own extracts still export a closed branch blank, as a skipped field (`by_instrument_extract`): marking them is not this segment's.
-
-**Cumulative read (1, at rung 5, on `dde4e36cf..`):** three defects, all fixed in rung 5. A held field under a hidden parent made every Save 422, since the cascade sets its `visible`: visibility a hidden field above sets is not compared, and a custom re-send keeps the cascade (`responses.hide_below_hidden_parents`). The card's sync cuts long help (1000) and lists (255), which made every Save on such a held field 422: the check compares the cut value and puts the whole back. `held_field_keys = None` read three ways (one path deleting an own field): `linked_instruments.held_keys` is the one reading, every stored field, and a switch into custom holds what the instrument has. Also taken: a blank `linked_mode` cell leaves the type; group instruments are left out of `not_asked` reads. Recorded, not in Semantics: a custom re-send whose sent key names an own field, or that would leave an invalid branch structure (`branch_structure_errors`), is refused whole with a settings 422.
-
-**Rung 6 (2026-11-25):** `stages.GATE_TYPES` gains `RRW-custom`, *Review Robin Session (custom)*, beside `RRW`, now *Review Robin Session*; the gate card's Type menu is live until the gate's session opens, saved by Process's Save (`process_save` refuses another value), and read on the shut card's line, Evaluations' Type column and `process.csv`'s gate `detail` (`type=`). `settings.csv` carries `instruments[1].linked_mode`, `custom` or `locked`: both, so a gate switched back to the default sends the switch (Codex on #4221; an absent row leaves the mode). Sample: the RA exercise's Gate 1 is custom, those who do not know an applicant not asked, its note e.g. *4.1 from 26 of 30 · 4 not asked* (`stages.mean_note`).
+**Reads:**
+- `diff-reviewer` ran once, cumulatively, on rungs 2–5 (base `dde4e36cf`). It found three defects, all fixed in rung 5: the hidden-parent cascade, cut texts, and the three readings of `held_field_keys = None`.
+- Rung 6 took no read, since it touched only `applydesk/`. #4222 was an author iteration.
+- Codex found five more, all fixed before merge:
+  - a sent key colliding with an own field;
+  - a dropped inner branch losing its children;
+  - the validation cache built from a cut list;
+  - the change record seeing a cut as an edit;
+  - the locked mode not sent.
+- `spec-writer` at close followed the code where the plan's Semantics said otherwise. A custom re-send's new field starts from the sent `required`. Custom → locked without field rows keeps `required` as stored.
 
 ## PR ladder
 
@@ -91,10 +102,10 @@ Taken 2026-11-18 at `295cdf575`.
 
 ## Open questions
 
-- **Who sets *Required* on a held field?** Review Robin, as ruling 36 says: the gate's value is the start only (author, 2026-11-25, given what a fixed *Required* costs a branched instrument).
-- **Own fields' answers back to Apply Desk** (a *Familiarity* worth showing on the dossier?): proposed later, Review Robin's extracts only; the author's.
-- **May a held field be hidden** (`visible`) in custom mode, or only branched? Proposed: its visibility stays the application's.
-- **Apply Desk's derivations over a branched field**: *not asked* and *missing* kept apart, neither a response (author, 2026-11-25; Semantics, "Results").
+- **Who sets *Required* on a held field?** Review Robin (author, 2026-11-25).
+- **Own fields' answers back to Apply Desk:** not returned; they stay in Review Robin's extracts (Out of scope).
+- **May a held field be hidden in custom mode?** No: its visibility stays the application's, and a hidden parent's cascade aside, a change is a 422.
+- **Apply Desk's derivations over a branched field:** *not asked* and *missing* are kept apart, and neither is a response (author, 2026-11-25).
 
 ## Out of scope
 

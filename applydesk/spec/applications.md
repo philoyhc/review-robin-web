@@ -953,10 +953,17 @@ but the lobby's *Stage* column reads:
     (`…/evaluations/<key>`). In a draft exercise the line says instead
     that the page is there once the exercise is published, and a new gate
     otherwise that it is there once the gate is saved.
-  - **Gate**: *Name*; *Type* (a disabled menu, *Review Robin session*, kept
-    for other kinds; *Ruled, not built (2026-11-18, ruling 36):* a second
-    type, *Review Robin Session (custom)*, whose instrument Review Robin may
-    extend around the gate's response fields); *Description* (Review Robin's instrument description);
+  - **Gate**: *Name*; *Type* (`stages.GATE_TYPES`): *Review Robin Session*
+    (`RRW`, the instrument fixed whole) or *Review Robin Session (custom)*
+    (`RRW-custom`), whose instrument Review Robin may extend around the
+    gate's response fields, which it holds (`spec/linked_sessions.md`
+    `instrument_structure`). The menu is live until the gate's session
+    opens and as wide as its longest choice. Process's Save writes it
+    (`process_save` refuses any other value). It shows on a shut card's
+    line, in Evaluations' *Type* column and in `process.csv`'s gate
+    `detail` as `type=`; the handoff's `settings.csv` always carries
+    `instruments[1].linked_mode`, `custom` or `locked`, so a gate switched
+    back to the default sends the switch; *Description* (Review Robin's instrument description);
     *Confidential* (per gate: Review Robin shows each applicant as *Name
     redacted* with their Dossier ID); the *Entry rule*. The exercise's *Help
     contact* and *Timezone* show read-only, linking to Home, where they are
@@ -1465,7 +1472,10 @@ reaches *Selection*. An outcome's **going-on values** are every one but its
 last (`stages.going_on`; *Re-appointment* and *Interview*, not *Not
 shortlisted*): each is counted in its column head and toned green, the rest
 muted, undecided amber. A mean's note under its chip says how many scores it
-took (`stages.mean_note`).
+took (`stages.mean_note`); where a branch left a field unasked it also
+says how many were not asked, kept apart from those who left it blank
+(*4.1 from 26 of 30 · 4 not asked*). The sample exercise's Gate 1 is
+custom.
 
 - **A gate's cells are fixed once its Review Robin session has opened**
   (`locks.cells_lock`; entry flips there change who the results cover). The

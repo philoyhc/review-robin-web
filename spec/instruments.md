@@ -547,7 +547,8 @@ the rule, the response-field table, the short label and the description
 render fixed (`data-linked-fixed`, inert even when the card is unlocked),
 with a line naming the application; inside them every chip is a fixed
 chip with the lock glyph and every other control takes the inactive look.
-Whether each field is required is the application's too. The
+Whether each field is required is the application's too, unless the
+instrument's `linked_mode` is `custom` (below). The
 dossier link's display field is held as it stands (its chip locked, as the
 fixed pair's: both Band 2 saves keep it, `linked_instruments.hold_profile`,
 and the per-field display routes refuse it, `409`). The relationship's tags
@@ -556,6 +557,23 @@ held off the same way. The card's Save writes the
 rest (the other display fields, layouts, widths, sort, visibility) and
 leaves the owned parts as they are; the routes that change only owned parts (add, replicate,
 delete, page break, the field rows, identity) are `409`.
+
+**A custom linked instrument** (`Instrument.linked_mode` `custom`,
+`spec/linked_sessions.md` `instrument_structure`): the response-field
+table is Review Robin's, but its held fields are the application's
+(`Instrument.held_field_keys`, read through `linked_instruments.held_keys`).
+A held row's name, type, bounds, visibility chip, ≡, help box and delete
+are fixed; its R, place and branch are live. An own row is as on any
+instrument, and +, ⑂ and reordering work. The card's Save keeps the
+response fields and checks the held ones after (`linked_instruments.held_problems`):
+a held field removed, or a fixed part changed, is a `422` and nothing
+saves. The Save's sync cuts long texts (help, lists, labels); they are
+restored whole before the change is recorded
+(`linked_instruments.restore_cut_texts`, run as `set_band2_state`'s
+`after_sync`), so a Save that changed nothing records nothing. A held
+field under a hidden parent takes the cascade's visibility, not compared.
+The per-field routes and the legacy `/band2-state` POST still refuse on
+every linked instrument, custom included.
 
 | Column | Link (operator label) | Vocabulary |
 |---|---|---|

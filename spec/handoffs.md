@@ -203,6 +203,29 @@ application's, which re-sends them rather than Review Robin editing them.
   `instrument.renamed`; a draft holding other than one instrument refuses
   them (`422`, `slot` `settings`). A re-send's reviewee save seeds no
   display field: the instrument's display fields stay the operator's.
+  A profile taking the instrument lock also owns `instruments[1].linked_mode`
+  (`locked` or `custom`, `spec/linked_sessions.md`
+  `instrument_structure`): a change is audited `instrument.linked_mode_set`
+  (the same type writes nothing), and a blank cell leaves the type.
+- **Into a custom instrument** (`instruments.replace_held_fields`): the
+  field rows are the held fields only. A held field is updated in place by
+  key and a new one joins at the end, with the sent `required` as its start;
+  a held field no longer sent is deleted. Review Robin's own fields, the
+  order, the branches and every `required` stay. A branch that loses its
+  parent or its last governed field (`field_removed`), or whose parent's
+  type or options no longer take its condition (`no_longer_fits`), is
+  dropped and audited as `instrument.branch_dropped`; an inner branch's
+  children lift to the outer parent, and a field under a hidden parent is
+  hidden as the card's Save hides it. A sent key naming an own field, or a
+  result that is no valid branch structure, refuses the re-send whole
+  (`422`, `slot` `settings`). A field holding responses refuses as for a
+  locked instrument.
+- **Switching type** on an unopened draft: *custom → locked* with field
+  rows replaces the fields whole as a locked re-send does; without field
+  rows, `linked_instruments.restore_held` rebuilds the held fields in the
+  application's order, unbranched, their `required` as stored, and drops
+  Review Robin's own. *Locked → custom* keeps everything and holds the
+  fields the instrument has.
   A row of fewer than three
   cells is refused, as the Settings import refuses it. The rows are
   checked as the import's row checks check them, plus the schedule's order on the values
@@ -367,9 +390,15 @@ spec §6.5).
   (`Instrument.session_seq`, stable where `responses.csv`'s
   `InstrumentName` is positional), `InstrumentLabel`, `FieldKey`,
   `FieldLabel`, `ResponseType`, `Value`, `SubmittedAt` (the session's
-  zone). No preamble. An answer has no ID of its own (`Version` resets
+  zone) and, last, `Answer`: `answered`, or `not_asked`. No preamble. An answer has no ID of its own (`Version` resets
   after a clear), so a fetch is a complete snapshot: a receiver reconciles
   on reviewer, application, instrument and field.
+  - **`not_asked`** is a row with no `Value`, for each visible field a
+    branch closed on a submitted assignment (submitted as `completion.csv`
+    reads it), on any branched per-reviewee instrument. It is not a
+    response and never owed. A field asked and left blank has no row. A
+    custom linked instrument reports its held fields only (`answered` and
+    `not_asked` alike); Review Robin's own stay in its extracts.
 - `completion.csv`: one row per assignment, `ReviewerEmail`,
   `RevieweeEmail`, `InstrumentSeq`, `State`:
   - `submitted`: its answers are all submitted, or it has none and its
