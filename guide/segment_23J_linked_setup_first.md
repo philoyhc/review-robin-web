@@ -100,6 +100,22 @@ Taken 2026-11-25 at `d23dffcd2`.
 - **Send rosters** after a set-up sends to the set-up's transfer.
 - **Process** asks before removing a gate set up but not sent.
 
+**Cumulative read (1, at rung 5, on `8e2eb04ec..7ac0a8132`):** one high, five medium, four low; fixed in rung 5 unless noted.
+- **High:** the settings-only re-send's unit, and discard, waited on the session lock on the event loop (findings Bc3). Both now run in the threadpool.
+- **Medium:**
+  - A create retried after its discard made a fresh draft; it is now `409 session_discarded`.
+  - A discard during a create still running would have broken the create; it is now `transfer_in_progress` within `IN_PROGRESS`.
+  - A roster with a header and no rows stays `empty_roster`. Semantics' "header and no rows" is superseded by Status rung 2, and a test pins it.
+  - A settings-only re-send after the rosters keeps them; a test pins it.
+  - Discard also removes instrument work built in Review Robin: the gate is the operator's to drop, and Process's confirm now says so. The judgment call "can never delete work" holds for rosters and responses only.
+- **Low:**
+  - *Set up* is Secondary, one Primary per region.
+  - A discard that loses the lock race to another answers `already_discarded` or `not_linked`, not a 500.
+  - A replayed discard checks its sender.
+  - The unused `rr-open-off` class is gone.
+  - Not fixed: a set-up record outlives a removed gate in the tab. It is harmless, since no page reads a gate that is gone.
+  - Not fixed: a re-send racing a discard can still 500 on the lock, as a re-send racing an operator's delete already could.
+
 ## PR ladder
 
 1. **Plan**: this file, its queue entry and README row; Apply Desk's ruling 80 in `applydesk/guide/todo_master.md`, with AD6's row naming the stored `session_home_url`. Prose only.

@@ -1301,7 +1301,7 @@
         // A gate set up in Review Robin, its rosters not sent (segment 23J,
         // ruling 80), has an empty draft there: removing it discards that.
         if (p.dataset.pcAct === "remove-gate" && setUpOnly(p.closest(".pc-item").dataset.key)
-            && !window.confirm("This gate is set up in Review Robin. Removing it discards its empty draft there once Process is saved.")) return;
+            && !window.confirm("This gate is set up in Review Robin. Removing it discards its draft there once Process is saved, with any instrument built there.")) return;
         p.closest(".pc-item").remove();
         changed();
         card.querySelector('[data-pc-act="' + p.dataset.pcAct.slice(7) + '"]').focus();

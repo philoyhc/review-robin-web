@@ -346,8 +346,9 @@ async def discard_handoff_session(
         return body
     try:
         bundle = handoffs.parse_discard(body)
-        status_word, code = handoffs.discard(
-            db, user, transfer_id, bundle, request_correlation_id()
+        # In the threadpool: it waits on the session lock (findings Bc3).
+        status_word, code = await run_in_threadpool(
+            handoffs.discard, db, user, transfer_id, bundle, request_correlation_id()
         )
     except handoffs.HandoffError as exc:
         db.rollback()

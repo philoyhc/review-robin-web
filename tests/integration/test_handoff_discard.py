@@ -137,3 +137,41 @@ def test_the_envelope_is_the_discard_operations(client: TestClient, db: Session)
     reply = _discard(client, created, bundle)
     assert reply.status_code == 422 and reply.json()["error"] == "unsupported_version"
     assert _count(db, ReviewSession) == 1
+
+
+def test_a_create_retried_after_its_discard_makes_no_draft(client: TestClient, db: Session) -> None:
+    """The cumulative read: a set-up whose reply was lost, discarded, then
+    retried, would make a fresh draft for a gate already dropped."""
+    from utilityapps.interop_poc import mock
+
+    from .test_handoffs import _bundle, _post
+
+    bundle = _bundle(files={"settings": mock.settings_csv()})
+    assert _post(client, bundle).status_code == 201
+    assert _discard(client, bundle["transfer_id"]).status_code == 200
+    again = _post(client, bundle)
+    assert again.status_code == 409 and again.json()["error"] == "session_discarded"
+    assert _count(db, ReviewSession) == 0
+
+
+def test_a_set_up_still_running_is_not_discarded(client: TestClient, db: Session) -> None:
+    """The cumulative read: a discard landing between the create's record
+    and its completion would leave the create to finish on nothing."""
+    from app.services import handoffs
+
+    _, created = _set_up(client, db)
+    for event in db.scalars(select(AuditEvent).where(AuditEvent.event_type == handoffs.COMPLETED)):
+        db.delete(event)
+    db.commit()
+    reply = _discard(client, created)
+    assert reply.status_code == 409 and reply.json()["error"] == "transfer_in_progress"
+    assert _count(db, ReviewSession) == 1
+
+
+def test_a_retried_discard_from_another_application_is_not_linked(
+    client: TestClient, db: Session
+) -> None:
+    _, created = _set_up(client, db)
+    assert _discard(client, created).status_code == 200
+    reply = _discard(client, created, _discard_bundle(source_app="applydesk"))
+    assert reply.status_code == 404 and reply.json()["error"] == "not_linked"

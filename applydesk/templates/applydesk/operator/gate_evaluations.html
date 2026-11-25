@@ -45,7 +45,7 @@
     <dt>Reminded</dt><dd data-rr-reminded><span class="muted">—</span></dd>
     {# Segment 23J (ruling 80): the session's Session Home in a new tab,
        once the gate is set up or sent; inert until then (_rr_js.html). #}
-    <dt>In Review Robin</dt><dd data-rr-open><span class="muted rr-open-off" title="Once the gate is set up in Review Robin, this opens its session there, in a new tab">Open in Review Robin ↗</span></dd>
+    <dt>In Review Robin</dt><dd data-rr-open><span class="muted" title="Once the gate is set up in Review Robin, this opens its session there, in a new tab">Open in Review Robin ↗</span></dd>
   </dl>
   </div>
   <h3>What is sent</h3>
@@ -66,8 +66,9 @@
   <h3>Progress</h3>
   <p class="muted"><em>Set up in Review Robin</em> makes the gate's session from its settings and response fields, so a custom gate's instrument can be built there early; <em>Send rosters</em> sends its evaluators, dossiers and pairs once the gate is ready. Progress is read from Review Robin by <em>Pull results</em> once the session opens; once it closes, <em>Pull final results</em> brings the results back and the gate is done.</p>
   <div class="btnrow rr-acts">
-    {# Segment 23J (ruling 80): the session first, its rosters once ready. #}
-    <button class="btn btn-primary" type="button" data-rr-act="setup"{{ rr_wait }}>Set up in Review Robin</button>
+    {# Segment 23J (ruling 80): the session first, its rosters once ready.
+       Secondary: one Primary per region (`spec/ui_elements.md` §6). #}
+    <button class="btn btn-secondary" type="button" data-rr-act="setup"{{ rr_wait }}>Set up in Review Robin</button>
     <button class="btn btn-primary" type="button" data-rr-act="send"{{ rr_wait }}>Send rosters</button>
     <button class="btn btn-secondary" type="button" data-rr-act="resend"{{ rr_wait }}>Re-send</button>
     <button class="btn btn-secondary" type="button" data-rr-act="pull"{{ rr_wait }}>Pull results</button>

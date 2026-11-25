@@ -137,3 +137,44 @@ def test_a_replay_of_an_old_cut_off_set_up_is_incomplete(client: TestClient, db:
     again = _post(client, bundle)
     assert again.status_code == 409 and again.json()["error"] == "transfer_incomplete"
     assert _count(db, ReviewSession) == 1  # the draft is left for its operator
+
+
+def test_a_linked_roster_with_no_rows_is_still_empty(client: TestClient, db: Session) -> None:
+    """Both rosters or neither: one sent with its header alone is refused
+    as any empty roster is (`empty_roster`), not read as left out."""
+    header = {"reviewers": "ReviewerName,ReviewerEmail\r\n", "reviewees": REVIEWEES}
+    reply = _post(client, _bundle(files=header))
+    assert reply.status_code == 422 and reply.json()["reason"] == "empty_roster"
+    assert _count(db, ReviewSession) == 0
+
+
+def test_a_settings_alone_resend_after_the_rosters_keeps_them(
+    client: TestClient, db: Session
+) -> None:
+    """Once the rosters are there, a re-send may still carry its settings
+    alone: they apply, and the rosters stay as they are."""
+    review_session, created = _set_up(client, db)
+    rosters = _update_bundle(files={"reviewers": REVIEWERS, "reviewees": REVIEWEES})
+    assert _resend(client, created, rosters).status_code == 200
+    typed = "field,value,data_type\r\nsession.description,Later,string\r\n"
+    bundle = _update_bundle(files=_with(typed))
+    del bundle["files"]["reviewers"], bundle["files"]["reviewees"]
+    assert _resend(client, created, bundle).status_code == 200
+    db.refresh(review_session)
+    assert review_session.description == "Later"
+    assert _count(db, Reviewer) == 2 and _count(db, Reviewee) == 3
+
+
+def test_a_settings_alone_resend_to_an_opened_session_is_refused(
+    client: TestClient, db: Session
+) -> None:
+    review_session, created = _set_up(client, db)
+    review_session.status = "ready"
+    db.commit()
+    typed = "field,value,data_type\r\nsession.description,Too late,string\r\n"
+    bundle = _update_bundle(files=_with(typed))
+    del bundle["files"]["reviewers"], bundle["files"]["reviewees"]
+    reply = _resend(client, created, bundle)
+    assert reply.status_code == 409 and reply.json()["error"] == "session_opened"
+    db.refresh(review_session)
+    assert review_session.description != "Too late"
