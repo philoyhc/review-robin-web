@@ -100,6 +100,55 @@ class Field:
     max: str = ""
     step: str = ""
     options: str = ""  # a list's, comma-separated
+    # Answered as Review Robin's scale (segment AD2S): an Integer or a
+    # Decimal only, its labels ``start|middle|end`` ("" for none).
+    scale: bool = False
+    scale_labels: str = ""
+
+
+#: A scale label's longest text, each of the three: Review Robin's
+#: ``SCALE_LABEL_MAX`` (segment 20P), which its import cuts to.
+SCALE_LABEL_MAX = 60
+
+
+def scale_labels(raw: str) -> str:
+    """``start|middle|end`` as kept: each part trimmed and cut to
+    :data:`SCALE_LABEL_MAX`, at most three, "" when all are blank (as
+    Review Robin's ``parse_scale_labels`` and ``join_scale_labels``)."""
+    parts = [p.strip()[:SCALE_LABEL_MAX] for p in raw.split("|")][:3]
+    parts += [""] * (3 - len(parts))
+    return "|".join(parts) if any(parts) else ""
+
+
+def _number(v: str) -> float | None:
+    try:
+        n = float(v)
+    except ValueError:
+        return None
+    return n if math.isfinite(n) else None
+
+
+def scale_problem(f: Field) -> str:
+    """Why a field set as a scale cannot be one, in words, else "": as
+    Review Robin's ``scale_shape_error`` (segment 20P), whose import
+    would refuse it. A field not set as a scale has none."""
+    if not f.scale:
+        return ""
+    if f.type not in ("integer", "decimal"):
+        return "is a scale but not an Integer or a Decimal"
+    lo, hi, step = _number(f.min), _number(f.max), _number(f.step)
+    if lo is None or hi is None:
+        return "is a scale with no Min or Max"
+    if step is None or step <= 0:
+        return "is a scale with no Step"
+    if hi <= lo:
+        return "is a scale whose Max is not above its Min"
+    if f.type == "integer" and not all(v.is_integer() for v in (lo, hi, step)):
+        return "is an Integer scale with a bound or Step not whole"
+    points = (hi - lo) / step
+    if abs(points - round(points)) > 1e-9 * max(1.0, abs(points)):
+        return "is a scale whose Max is not Min plus a whole number of Steps"
+    return ""
 
 
 @dataclass(frozen=True)
@@ -1394,6 +1443,17 @@ def sources_warn(
     ``sourceProblems``: no sources, a panel not chosen, a question not
     chosen, a min above its max, or a Total outside its bounds."""
     return bool(total_problem(sources, total) or source_problems(sources, pools))
+
+
+def field_problems(gate: Gate) -> tuple[str, ...]:
+    """Each response field that cannot be asked as set, in words (segment
+    AD2S): a scale whose bounds Review Robin would refuse. The Outline
+    names them, and publishing the gate's stage waits on them."""
+    return tuple(
+        f"field {n} ({f.label or f.key}) {why}"
+        for n, f in enumerate(fields_of(gate), 1)
+        if (why := scale_problem(f.field))
+    )
 
 
 def source_problems(

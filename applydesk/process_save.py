@@ -169,12 +169,21 @@ def _field_def(got: dict[str, Any], what: str) -> Field:
     kind = _text(got.get("type"), what, 20)
     if kind not in dict(stages.FIELD_TYPES):
         raise Refused(f"{what}'s type is not one of the choices.")
+    # A scale is a number type's (segment AD2S): a List or a String keeps
+    # neither the flag nor its labels, as Review Robin's Band 3 clears them.
+    # Its bounds are kept as typed; one Review Robin would refuse is the
+    # Outline's problem (``stages.field_problems``), not a refused save.
+    number = kind in ("integer", "decimal")
+    scale = _flag(got.get("scale", False), what) and number
+    labels = _text(got.get("scale_labels", ""), what, _TEXT) if scale else ""
     return Field(
         kind,
         _text(got.get("min", ""), what, 40),
         _text(got.get("max", ""), what, 40),
         _text(got.get("step", ""), what, 40),
         _text(got.get("options", ""), what, _TEXT),
+        scale,
+        stages.scale_labels(labels),
     )
 
 

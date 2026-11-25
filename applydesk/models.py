@@ -308,6 +308,11 @@ class GateField(Base):
     max: Mapped[str] = mapped_column(String(32), nullable=False, default="")
     step: Mapped[str] = mapped_column(String(32), nullable=False, default="")
     options: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # A bounded Integer or Decimal answered as Review Robin's scale (segment
+    # AD2S): ``type`` stays the number type, as Review Robin's does, and the
+    # labels read ``start|middle|end``, "" for none.
+    scale: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    scale_labels: Mapped[str] = mapped_column(String(200), nullable=False, default="")
     required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     help: Mapped[str] = mapped_column(Text, nullable=False, default="")
     retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
