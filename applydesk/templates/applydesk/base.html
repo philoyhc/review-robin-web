@@ -661,6 +661,10 @@
     .pc-row > .fc-l { flex: 1 1 110px; }
     .pc-row > .pc-wide { flex: 3 1 220px; }
     .pc-row > .pc-narrow { flex: 0 1 120px; }
+    /* A gate's Type, as wide as its longest choice (Review Robin Session
+       (custom), segment 23G); the Name beside it takes the rest. */
+    .pc-row > .pc-type { flex: 0 1 auto; min-width: 0; }
+    .pc-type > .fc-in { width: auto; max-width: 100%; }
     .pc-row > .pc-full { flex: 1 1 100%; margin-bottom: -6px; }
     /* An open stage card keeps its summary in the head: its name, dates
        and what it holds, above the fields that edit them. */
