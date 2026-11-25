@@ -117,6 +117,8 @@ def publish_problems(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
                 out.append(f"{name}: {why}.")
             # Each source must give evaluators too (Codex).
             out += [f"{name}: {p}." for p in stages.source_problems(sources, pools, people_keys)]
+            # A field Review Robin could not ask as set (segment AD2S).
+            out += [f"{name}: {p}." for p in stages.field_problems(c)]
         else:
             name = c.label or "The outcome"
             if not c.values:

@@ -290,7 +290,7 @@ def load(session: Session, public_id: str) -> Stored | None:
     field_by_id = {f.id: f for f in fields}
 
     def field_def(f: GateField) -> stages.Field:
-        return stages.Field(f.type, f.min, f.max, f.step, f.options)
+        return stages.Field(f.type, f.min, f.max, f.step, f.options, f.scale, f.scale_labels)
 
     def gate_of(g: GateRow, number: int) -> stages.Gate:
         own_fields = tuple(
@@ -893,6 +893,8 @@ def _save_gate(
             max=f.field.max,
             step=f.field.step,
             options=f.field.options,
+            scale=f.field.scale,
+            scale_labels=f.field.scale_labels,
             required=f.required,
             help=f.help,
         )

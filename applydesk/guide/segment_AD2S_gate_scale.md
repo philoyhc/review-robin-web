@@ -34,6 +34,10 @@ Taken 2026-11-25 at `3092a29ea`.
 | Templates with the Response fields card | 1 | `grep -rln "FIELD_TYPES\|Response fields" applydesk/templates` |
 | Checks on a field's type | 27 | `grep -rn "type ==\|type in (\|ALLOWED\[" applydesk/*.py \| wc -l` |
 
+## Status
+
+**Rung 2 (2026-11-25):** `ad2s1_gate_scale.py` adds `gate_field.scale` and `scale_labels`; `stages.Field` carries both, `process_save` reads them (a List or String keeps neither, labels cut to 60), and `stages.field_problems` names a scale Review Robin's `scale_shape_error` would refuse, which `locks.publish_problems` blocks on. Divergences: `scale_labels` is `String(200)` not null, `""` for none, as the table's other text columns, not nullable; the Outline's line is the page script's and lands with the card in rung 3, since nothing sets a scale before it.
+
 ## PR ladder
 
 1. **Plan** (this file, moved from 20P Item 2). Prose only.
