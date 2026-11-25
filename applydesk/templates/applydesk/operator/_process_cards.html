@@ -340,6 +340,11 @@
   <p class="pc-line muted pr-rrw" data-pr-rrw{% if not fs %} hidden{% endif %}>For Review Robin, each evaluator answers: {% for f in fs %}<strong>{{ f.label or "Untitled field" }}</strong> ({{ field_text(f.field) }}{{ ", required" if f.required }}{{ ("; help: “" ~ f.help ~ "”") if f.help }}){{ "; " if not loop.last }}{% endfor %}.</p>
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-gate">Remove the gate</button></div>
   </fieldset>
+  {# Segment 23J (amended, 2026-11-25): the gate's Review Robin session
+     made from here, at the card's end, opened in a new tab. Outside the
+     lock: a published stage's gate is the one to set up. A scaffold
+     (rung 7): inert, its reason in its title, until rung 8 wires it. #}
+  <div class="pc-item-foot pc-rr-foot"><button type="button" class="btn btn-secondary" data-pc-rr-create disabled title="Creates the gate's Review Robin session and opens it in a new tab, once the exercise is published and the gate saved">Create Review Robin session</button></div>
   </div>
 </div>
 {% endmacro %}
