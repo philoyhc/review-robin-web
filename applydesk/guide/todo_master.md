@@ -753,7 +753,9 @@ the rulings it relied on but does not move them.
     - *Send rosters* sends the reviewers, reviewees and pairs once the
       gate is *Ready*.
 
-    The step is manual, and both gate types take it. Its own segment:
+    The step is manual, offered once the exercise is published, and both
+    gate types take it. A gate removed after set-up has its empty draft
+    discarded in Review Robin. Its own segment:
     `guide/segment_23J_linked_setup_first.md`. Apply Desk stores
     `session_home_url` with the gate's transfer record (AD2F) and makes
     the real calls with AD6.

@@ -37,7 +37,11 @@ Rejected:
 - **Replay** of a create without rosters reads the completion record, not the rosters. Completed means `already_created`, as now. Not completed and recent means `transfer_in_progress`. Not completed and older means `transfer_incomplete`. `rosters_saved` keeps its meaning for a create that carried rosters.
 - **The first roster send** is an ordinary re-send (§6a), guarded as now (`guard_update`: unopened, no responses). The rosters lock applies from creation, so the operator never edits rosters in Review Robin.
 - **An empty draft** shows on Session Home and in the lobby as a draft, its rosters empty. Validate names the missing rosters (verified in rung 2, by a test). *Start* passes with nothing opened.
-- **The gate deleted in Apply Desk** before its rosters are sent leaves a draft. See Open questions.
+- **A gate dropped after set-up** has its empty draft removed (author, 2026-11-25). Review Robin gains **discard** (`POST …/handoffs/{transfer_id}/discard`), which Apply Desk calls when the gate is removed or its exercise discarded.
+  - It deletes the linked draft only when the session is a draft, its rosters are empty and it has no responses, and the caller is the transfer's sender and still an operator of it. The session goes with its audit events, as a refused create's does.
+  - Anything else is refused and nothing is deleted: `409 session_not_empty` once rosters have been sent, `session_opened` once the session has opened, `not_linked` after an Unlink. Such a session is the operator's to delete in Review Robin.
+  - A discard of a transfer already discarded answers `already_discarded`, so a retry is safe.
+  - The discard is audited as an operator's delete is: `session.deleted`, written with no session (`sessions.py` does the same), its snapshot naming the session, and `context` adding `transfer_id` and `source_app`.
 - **Apply Desk's states** for a gate's link, in order:
   - *Not set up*;
   - *Set up* (the session exists, no rosters);
@@ -51,6 +55,8 @@ Rejected:
 - The rule is "a linked create may omit rosters", not a new flag in the bundle: the sender's profile already says it is linked.
 - The link uses Review Robin's `session_home_url` as given, never a URL Apply Desk builds itself.
 - One lifecycle for both gate types (author's recommendation accepted, 2026-11-25).
+- A dropped gate's empty draft is removed by Apply Desk's discard call, not left for the operator (author, 2026-11-25). The call refuses anything but an empty, unopened, still-linked draft, so it can never delete work.
+- *Set up* is offered only once the exercise is published, when the gate's page exists (rulings 60, 61; author, 2026-11-25).
 
 ## Blast radius (measured)
 
@@ -77,9 +83,10 @@ Taken 2026-11-25 at `d23dffcd2`.
    - a native create still refused.
 
    Must not touch Apply Desk.
-3. **Apply Desk: the card's two steps, scaffold.** *Set up in Review Robin* and *Send rosters*, the link line's new state, and *Open in Review Robin ↗*. Inert, with each reason in its title. Must not touch Review Robin.
-4. **Apply Desk: the steps wired, simulated in the tab** (as `_rr_js.html` sends today). Set-up keeps a sample `session_home_url`; the link opens it in a new tab. *Send rosters* is today's *Send*, reading *Re-send* after. `diff-reviewer` reads 2–4.
-5. **Close**, after the author's check.
+3. **Review Robin: discard.** The call deletes an empty linked draft for its sender, with its refusals, its replay and its audit. Integration tests cover each refusal, a retried discard, and a draft with rosters left whole. Must not touch Apply Desk.
+4. **Apply Desk: the card's two steps, scaffold.** *Set up in Review Robin* and *Send rosters*, the link line's new state, and *Open in Review Robin ↗*. Inert, with each reason in its title. Must not touch Review Robin.
+5. **Apply Desk: the steps wired, simulated in the tab** (as `_rr_js.html` sends today). Set-up keeps a sample `session_home_url`, and the link opens it in a new tab. *Send rosters* is today's *Send*, reading *Re-send* after. Removing a set-up gate on Process says its draft will be discarded. `diff-reviewer` reads 2–5.
+6. **Close**, after the author's check.
 
 Real sends, and storing `session_home_url` with the gate's transfer record, are AD6's and AD2F's (Out of scope).
 
@@ -88,6 +95,7 @@ Real sends, and storing `session_home_url` with the gate's transfer record, are 
 - A linked create without rosters makes a draft that cannot be validated or opened, and a roster re-send populates it (Review Robin tests).
 - A native create without rosters is still refused (test).
 - Replay of a create without rosters answers in its three cases (tests).
+- Discard deletes an empty linked draft for its sender and refuses every other session, deleting nothing (tests).
 - The gate's Review Robin card offers *Set up in Review Robin*, then *Send rosters*, and shows *Open in Review Robin ↗* (new tab) from set-up on (Apply Desk tests, Chromium).
 - The author has used the two steps locally and approved them.
 - `## Doc impact` section present and current
@@ -98,25 +106,21 @@ Real sends, and storing `session_home_url` with the gate's transfer record, are 
 
 ## Open questions
 
-- **A gate dropped after set-up:** who removes its empty draft? Two options:
-  - the operator deletes it in Review Robin, after an Unlink if the lock stands in the way;
-  - Review Robin gains a *discard* call that deletes a linked draft with no rosters and no responses, which Apply Desk makes when the gate is removed.
-
-  Proposed: the first now, the second with AD6 if drafts pile up. The author decides.
-- **Who else can open the link?** The session is created as the operator who sets it up. Whether Apply Desk's other exercise operators become its Review Robin operators is `guide/rrw_permissions_update.md`'s question. Until then the link may refuse them. AD6 decides.
-- **May *Set up* happen in a draft exercise?** Proposed no: only once the exercise is published, when the gate's page exists (rulings 60, 61). The author decides.
+- **A gate dropped after set-up:** its empty draft is removed by Review Robin's discard call (author, 2026-11-25; Semantics).
+- **Who else can open the link?** The session is created as the operator who sets it up. Whether Apply Desk's other exercise operators become its Review Robin operators is `guide/rrw_permissions_update.md`'s question, decided with AD6 (author, 2026-11-25). Until then the link may refuse them.
+- ***Set up* in a draft exercise:** no, only once the exercise is published (author, 2026-11-25).
 
 ## Out of scope
 
 - **Real sends from Apply Desk**, and storing `session_home_url` with the gate's transfer record: AD2F (the record) and AD6 (the calls), named in ruling 80.
 - **Review Robin's operator model for co-operators:** `guide/rrw_permissions_update.md`.
-- **A discard call:** an open question, not built here.
+- **Apply Desk's real discard call** when a gate is removed: AD6, with the other calls. This segment builds Review Robin's side and simulates Apply Desk's.
 
 ## Doc impact
 
-- `spec/handoffs.md` — §6: a linked create may omit its rosters; replay of such a create; the audit context. §6a: the first roster send to an empty draft.
+- `spec/handoffs.md` — §6: a linked create may omit its rosters; replay of such a create; the audit context. §6a: the first roster send to an empty draft. A new section: discard, its conditions, refusals and audit.
 - `spec/linked_sessions.md` — `rosters`: an empty linked draft, and Validate refusing it.
-- `applydesk/spec/applications.md` — the Review Robin card's two steps, the *Set up* state and *Open in Review Robin ↗*.
+- `applydesk/spec/applications.md` — the Review Robin card's two steps, the *Set up* state and *Open in Review Robin ↗*; removing a set-up gate discards its draft.
 - `applydesk/guide/todo_master.md` — ruling 80; AD6's row names the stored `session_home_url`.
 - `guide/todo_master.md` — the queue entry (rung 1); deleted at close.
 - `guide/README.md` — this plan's row (rung 1); moved to the archive's index at close.
