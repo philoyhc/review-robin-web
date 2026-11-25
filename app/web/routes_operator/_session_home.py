@@ -98,6 +98,23 @@ def new_session_form(
     )
 
 
+@router.get("/sessions/by-code/{code}", response_model=None)
+def session_by_code(
+    code: str,
+    request: Request,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """A session's home named by its code, for a linked application that
+    knows the code it sent (segment 23J): a redirect for an operator of
+    that session, the uniform 404 for anyone else or an unknown code, as
+    Session Home itself answers."""
+    found = sessions.public_id_for_code(db, code)
+    if found is None or not permissions.user_can_view_session(db, user, found[0]):
+        raise HTTPException(status_code=404)
+    return urls.redirect(request, f"/operator/sessions/{found[1]}")
+
+
 @router.get("/sessions/{session_id}", response_class=HTMLResponse)
 def session_detail(
     request: Request,
