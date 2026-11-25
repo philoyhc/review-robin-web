@@ -864,15 +864,6 @@ Segments in order; each gets a plan in this folder when it starts.
 - **AD6:** a gate's progress line, and each evaluator's share of it on
   the Review Robin card, is canned beside counted pairs until Review
   Robin's status read replaces it (AD1I; AD-32; AD1M).
-- **A scale on a gate, built with Review Robin's scale field right after
-  AD2G Item 1** (author, 2026-11-23;
-  RRW `guide/rrw_reviewer_phone_and_scale.md` §3). The gate's *Response
-  fields* offer *Integer (scale)* and *Decimal (scale)*, stored as the
-  number type plus a `gate_field` flag and three labels, handed off as
-  Review Robin's scale attributes. Lands with or after Review Robin's
-  scale item; until then Apply Desk does not offer the two types.
-  Review Robin's scale closed 2026-11-24 (20P Item 1).
-  **Plan:** `applydesk/guide/segment_AD2S_gate_scale.md`.
 - **AD2:** operator pages' dates as Review Robin's `YYYY-MM-DD HH:MM`
   through one helper, once dates are stored (U18; AD1P).
 - **Form:** card drag has no Escape and no auto-scroll (AD1B).

@@ -96,7 +96,9 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
   `exercise.panels_revision`, and `person.display_name_key`, backfilled with
   Python's casefold), `ad2d1_form.py` (`ad2d1form`) and `ad2l1_emails.py`
   (revision `ad2l1emails` after `ad2d1form`: `email_send`, `email_template`
-  and `exercise.sends_saved`).
+  and `exercise.sends_saved`) and `ad2s1_gate_scale.py`
+  (revision `ad2s1gatescale` after `ad2l1emails`: `gate_field.scale` and
+  `gate_field.scale_labels`).
 
 | Table (model) | Holds |
 |---|---|
@@ -107,7 +109,7 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
 | `audit_event` (`AuditEvent`) | `at`, `event_type`, `actor_id`, `exercise_id`, `detail` (JSON) |
 | `stage` (`Stage`) | One stage: `key` (`s<n>`), `position`, `name`, `starts_at` and `ends_at` (NULL when unset), `status` (`draft` or `published`), `shown`; `holds_form` and `holds_candidates`; on the stage holding the form, its window (`form_opens_at`, `form_closes_at`) and state (`form_state`: `draft`, `open`, `closed`; NULL elsewhere) with `form_opened_at` and `form_closed_at`; `retired_at`. (exercise, `key`) unique |
 | `gate` (`Gate`) | One gate: its `stage_id`, `key` (`g<n>`), `position` in its stage, `label`, `via`, `description`, `confidential`, `mode`, `total_min` and `total_max`, `review_from` and `review_to`, `rule` (JSON), `retired_at`. (exercise, `key`) unique. Its number is computed, for display only |
-| `gate_field` (`GateField`) | A response field: `gate_id`, `key` (`f<n>`), `position`, `label`, `type`, `min`, `max`, `step`, `options`, `required`, `help`, `retired_at`. (gate, `key`) unique |
+| `gate_field` (`GateField`) | A response field: `gate_id`, `key` (`f<n>`), `position`, `label`, `type`, `min`, `max`, `step`, `options`, `scale` (boolean: a Review Robin scale on an Integer or Decimal) and `scale_labels` (`start\|middle\|end`, "" for none), `required`, `help`, `retired_at`. (gate, `key`) unique |
 | `gate_result` (`GateResult`) | A result: `gate_id`, `key` (`r<n>`), `position` (1 is the headline), `name`, `field_id` (the `gate_field` it collates, nullable), `derive`, `value`, `at_least`, `ignore_zero`, `retired_at`. (gate, `key`) unique |
 | `gate_source` (`GateSource`) | An evaluator source: `gate_id`, `rank`, `kind`, `ref` (a panel key or a Form question key), `min`, `max`, `all_members` |
 | `form_card` (`FormCard`) | One card of an exercise's form: `exercise_id`, `key` (`q<n>`, server-minted, never reused), `position`, `kind` (`field`, `section`, `pagebreak`), `type`, `label`, `help`, `min`, `max`, `step`, `options`, `exclusive`, `ratio_w`, `ratio_h`, `pool` (a panel key or `institution`), `required`, `shown`, `retired_at`. (exercise, `key`) unique. The exercise's `form_title`, `form_description` and `form_revision` (0 until Form is first saved) sit on `exercise`; migration `applydesk/alembic/versions/ad2d1_form.py`, revision `ad2d1form` after `ad2e1panels` |
