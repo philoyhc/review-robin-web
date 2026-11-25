@@ -35,12 +35,6 @@ is the author's call.
 
 **Order (author, 2026-11-12):** 14G when IT answers.
 
-2. **23G — A linked instrument Review Robin may extend** (author,
-   2026-11-18; Apply Desk ruling 36). A second linked-gate type,
-   *Review Robin Session (custom)*: the gate's response fields held, Review
-   Robin free to reorder them, set required, add fields and branch
-   between them. **Plan:** `guide/segment_23G_linked_custom_instrument.md`.
-
 1. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
    and confirmations from 14E's clock, turning the offset fields from

@@ -194,10 +194,26 @@ Which instruments exist and their owned parts (`spec/instruments.md`
   card's Save and the Band 2 save succeed but ignore the rule, identity
   and response fields and write the rest.
 - **Holds as sent:** the instrument's name and description, and its
-  response fields in the application's order (key, label, response and
-  data type, bounds, options, help text and its visibility, visible).
-  Whether a field is required is the application's. A field is never
-  branched.
+  response fields (key, label, response and data type, bounds, options,
+  help text and its visibility, visible). In `locked` mode (below) the
+  order and whether a field is required are the application's too, and a
+  field is never branched.
+- **Two modes**, `Instrument.linked_mode`: `locked` (the default) and
+  `custom`, sent as the Settings row `instruments[1].linked_mode`
+  (`spec/handoffs.md` §6a, `spec/csv_contracts.md`). The mode is the
+  gate's, not a lock: `instrument_structure` holds in both.
+  - **`custom` allows:** reordering fields, setting *Required* on every
+    field (the application's value is only the starting one), adding
+    fields of Review Robin's own, and branching between any fields
+    (`spec/instruments.md` "Branching between response fields").
+  - **`custom` refuses:** deleting a held field, or changing its name,
+    type, bounds, options, scale, help text or visibility: the card's
+    Save answers `422`. The per-field routes stay `409`.
+  - **Held fields** are the keys the application last sent
+    (`Instrument.held_field_keys`); the rest are Review Robin's own.
+    `linked_instruments.held_keys` is the one reading of them: `None`
+    reads as every stored field.
+  - **Results** carry held fields only (`spec/handoffs.md` §10).
 - **Shown fixed:** the description renders as text, never an edit box;
   Band 1, the response-field table, the short label and the description
   are muted regions (`data-linked-fixed`, inert even on an unlocked card)
@@ -227,6 +243,9 @@ Which instruments exist and their owned parts (`spec/instruments.md`
   Review Robin's fixed rule. An application that sends no pairs, or sends
   several instruments, takes a different profile and not this lock as it
   stands.
+- **`custom` is a mode of `instrument_structure`, not a lock of its own.**
+  The mode row is owned only by a profile taking the lock; without it the
+  mode is never read.
 - **`owned_settings` is per profile but uniform today**; the tags are
   owned when it names `session_tags`.
 - **`observers` also governs the handoff's refusal** of an `observers`

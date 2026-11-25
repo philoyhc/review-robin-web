@@ -992,6 +992,12 @@ import leaves as stored, on an unchanged anchor, is not checked.
   row, or with a blank cell, leaves the instrument at the default
   `across`. The export writes a stored value outside `DISPLAY_LAYOUTS` as
   `across`.
+- **`instruments[n].linked_mode` is a linked instrument's type**
+  (`spec/linked_sessions.md` `instrument_structure`), an `enum` row:
+  `locked` or `custom` (`LINKED_MODES`). An unknown value is refused. A
+  file without the row, or with a blank cell, leaves the instrument's
+  type. The export writes it only when `custom`, so every other file is
+  unchanged.
 - **`instruments[n].order` is informational.** Apply parses the `order`
   cell, so a non-integer is refused in phase 1, but ignores its value —
   **the `[n]` number is authoritative**, not the rows' place in

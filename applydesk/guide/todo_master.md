@@ -477,7 +477,8 @@ the rulings it relied on but does not move them.
     response fields, which Review Robin may not delete, but may reorder,
     require or not, add fields to and branch between (e.g. a
     *Familiarity* rating, Score and Comments shown only above a
-    threshold). Its own segment: `guide/segment_23G_linked_custom_instrument.md`.
+    threshold). Built and closed 2026-11-25:
+    `guide/archive/segment_23G_linked_custom_instrument.md`.
 37. **A gate's handle is a stable key** (author, 2026-11-18; AD-48): its
     URL and Extract file names use a per-exercise key that never moves;
     the number is for display only. Built at AD2, when gates are stored.
