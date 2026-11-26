@@ -40,6 +40,8 @@ TABLES = {
     "candidate",
     # AD2J: applications.
     "application",
+    # AD2F: dossiers.
+    "dossier",
     # AD2E: panels, the Panels roster and memberships.
     "panel",
     "roster_entry",

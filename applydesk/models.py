@@ -13,6 +13,7 @@ from typing import Any
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     DateTime,
     Float,
     ForeignKey,
@@ -490,6 +491,38 @@ class Application(Base):
     withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     withdraw_reason: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     form_revision: Mapped[int | None] = mapped_column(Integer)
+
+
+class Dossier(Base):
+    """The record a panel opens about one candidate's one entry (segment
+    AD2F; rulings 25, 26, 32, 81): its own public ID, never the
+    application's, and its source, an application or a Candidates row,
+    exactly one of the two, each at most once. Retiring sets
+    ``retired_at`` (ruling 74)."""
+
+    __tablename__ = "dossier"
+    __table_args__ = (
+        UniqueConstraint("public_id", name="uq_dossier_public_id"),
+        UniqueConstraint("application_id", name="uq_dossier_application"),
+        UniqueConstraint("candidate_id", name="uq_dossier_candidate"),
+        CheckConstraint(
+            "(application_id IS NULL) <> (candidate_id IS NULL)", name="ck_dossier_one_source"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(10), nullable=False)
+    exercise_id: Mapped[int] = _exercise_fk("dossier")
+    application_id: Mapped[int | None] = mapped_column(
+        ForeignKey("application.id", name="fk_dossier_application")
+    )
+    candidate_id: Mapped[int | None] = mapped_column(
+        ForeignKey("candidate.id", name="fk_dossier_candidate")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_now
+    )
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Panel(Base):
