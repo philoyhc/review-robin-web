@@ -211,8 +211,8 @@ def _shown(plan: stages.Plan, rows: str, drafts: bool = False) -> list[stages.Ro
     return [
         r
         for r in plan.rows
-        if (last is None or r.application.public_id in last)
-        and (r.application.state == "Submitted" or (drafts and r.application.state == "Draft"))
+        if (last is None or r.dossier.key in last)
+        and (r.dossier.state == "Submitted" or (drafts and r.dossier.state == "Draft"))
     ]
 
 
@@ -224,6 +224,8 @@ def applications(e: Exercise, rows: str = "last", drafts: bool = False) -> Table
     out: list[list[str]] = []
     for r in _shown(plan, rows, drafts):
         a = r.application
+        if a is None:
+            continue  # a candidate's dossier has no application (AD2F)
         known = sample_data.answers(e.public_id, a)
         out.append(
             [a.public_id, a.dossier_id, a.applicant, a.email, a.state, a.submitted]
@@ -335,12 +337,12 @@ def gate(e: Exercise, key: str, shape: str = "pair", names: bool = False) -> Tab
     rows, _ = stages.assignments(e.public_id, g)
     who = _who(names)
     if shape == "application":
-        cells = {r.application.public_id: r.cells.get(g.key) for r in plan.rows}
+        cells = {r.dossier.key: r.cells.get(g.key) for r in plan.rows}
         header = ("dossier_id", *who, *(r.name for r in g.results))
         body = [
-            [a.application.dossier_id]
-            + ([a.application.applicant, a.application.email] if names else [])
-            + _results(cells.get(a.application.public_id), g)
+            [a.dossier.public_id]
+            + ([a.dossier.name, a.dossier.email] if names else [])
+            + _results(cells.get(a.dossier.key), g)
             for a in rows
         ]
         return header, body
@@ -350,12 +352,12 @@ def gate(e: Exercise, key: str, shape: str = "pair", names: bool = False) -> Tab
     for p in stages.pairs_of(rows):
         if not p.email:
             continue  # a dossier with no evaluator yet has no answers
-        a = p.of.application
+        d = p.of.dossier
         body.append(
-            [a.dossier_id]
-            + ([a.applicant, a.email] if names else [])
+            [d.public_id]
+            + ([d.name, d.email] if names else [])
             + [p.name, p.email]
-            + [_answer(f, a.dossier_id, p.email.casefold()) for f in fields]
+            + [_answer(f, d.public_id, p.email.casefold()) for f in fields]
         )
     return header, body
 
@@ -366,8 +368,8 @@ def outcomes(e: Exercise, rows: str = "last", names: bool = True) -> Table:
     plan = stages.plan_of(e.public_id)
     body: list[list[str]] = []
     for r in _shown(plan, rows):
-        a = r.application
-        line = [a.dossier_id] + ([a.applicant, a.email] if names else [])
+        d = r.dossier
+        line = [d.public_id] + ([d.name, d.email] if names else [])
         for c in plan.columns:
             cell = r.cells.get(c.key)
             if isinstance(c, stages.Gate):

@@ -38,7 +38,7 @@ def _rows(text: str) -> list[dict[str, str]]:
 
 def _bundle(exercise_id: str, number: int) -> handoff.Bundle:
     exercise, gate = _gate(exercise_id, number)
-    return handoff.bundle(exercise, gate, lambda app: f"https://ad.invalid/d/{app.dossier_id}")
+    return handoff.bundle(exercise, gate, lambda app: f"https://ad.invalid/d/{app.public_id}")
 
 
 def test_the_files_carry_review_robin_s_columns() -> None:
@@ -70,13 +70,13 @@ def test_each_pair_and_person_is_the_gate_s() -> None:
     assert len(reviewers) == len({p.email for p in pairs})  # each evaluator once
     links = _rows(sent.files["relationships"])
     assert [(r["ReviewerEmail"], r["RevieweeEmail"]) for r in links] == [
-        (p.email, p.of.application.public_id) for p in pairs
+        (p.email, p.of.dossier.key) for p in pairs
     ]
     assert all(r["PairContextTag1.Apply-Desk-Link"] == p.source for r, p in zip(links, pairs))
     reviewees = _rows(sent.files["reviewees"])
-    assert [r["RevieweeEmail"] for r in reviewees] == [a.application.public_id for a in rows]
-    assert reviewees[0]["ProfileLink"] == f"https://ad.invalid/d/{rows[0].application.dossier_id}"
-    assert reviewees[0]["RevieweeName"] == rows[0].application.applicant
+    assert [r["RevieweeEmail"] for r in reviewees] == [a.dossier.key for a in rows]
+    assert reviewees[0]["ProfileLink"] == f"https://ad.invalid/d/{rows[0].dossier.public_id}"
+    assert reviewees[0]["RevieweeName"] == rows[0].dossier.name
 
 
 @pytest.mark.parametrize(("exercise_id", "number"), [(EX, 2), ("k7mfr3pq8z", 1)])
@@ -89,11 +89,11 @@ def test_a_confidential_gate_sends_no_name_or_application_id(exercise_id: str, n
     sent = _bundle(exercise_id, number)
     every = "".join(sent.files.values())
     for a in rows:
-        assert a.application.public_id not in every
-        assert a.application.applicant not in every
+        assert a.dossier.key not in every
+        assert a.dossier.name not in every
     reviewees = _rows(sent.files["reviewees"])
     assert {r["RevieweeName"] for r in reviewees} == {handoff.REDACTED}
-    assert [r["RevieweeEmail"] for r in reviewees] == [a.application.dossier_id for a in rows]
+    assert [r["RevieweeEmail"] for r in reviewees] == [a.dossier.public_id for a in rows]
 
 
 def test_the_settings_carry_the_gate_s_card() -> None:

@@ -64,8 +64,8 @@ def _server_plan(monkeypatch: pytest.MonkeyPatch) -> None:
         )
         rows = tuple(
             stages.Row(
-                r.application,
-                {k: cell(r.application.public_id, k, c) for k, c in r.cells.items()},
+                r.dossier,
+                {k: cell(r.dossier.key, k, c) for k, c in r.cells.items()},
             )
             for r in plan.rows
         )
@@ -501,13 +501,14 @@ def _by_answer(question: str) -> dict[str, list[stages.Row]]:
     List question on its form."""
     groups: dict[str, list[stages.Row]] = {}
     for r in stages.plan_of("wa9juxbc2t").rows:
-        if r.application.state == "Submitted":
+        if r.dossier.state == "Submitted":
             # Answers are keyed by question (segment AD2D): found by label.
             key = next(
                 k
                 for k, q in sample_data.list_questions("wa9juxbc2t").items()
                 if q.label == question
             )
+            assert r.application is not None
             answer = sample_data.answers("wa9juxbc2t", r.application)[key]
             groups.setdefault(answer, []).append(r)
     return groups
@@ -545,11 +546,11 @@ def test_a_branched_rule_takes_a_form_answer_and_the_best_n(page: Page) -> None:
     taken = sum(1 for x in results if x >= cut)
     assert taken > n and f"Shortlisting: {taken} at the cut of {n}: tied." in prop.inner_text()
     prop.locator("[data-ap-prop-apply]").click()
-    best = {r.application.public_id for r in rows if (r.cells["g1"].result or 0) >= cut}
+    best = {r.dossier.key for r in rows if (r.cells["g1"].result or 0) >= cut}
     for r in (r for rs in groups.values() for r in rs):
         if r.cells["o1"].by_hand:
             continue  # kept: the options leave a hand alone
-        i = r.application.public_id
+        i = r.dossier.key
         got = _row(page, i).locator('[data-cell="o1"] select').get_attribute("data-v")
         major = r.cells["g2"].result or 0
         want = "Re-appointment" if i in best else "Interview" if major >= 20 else "Not shortlisted"
@@ -565,7 +566,7 @@ def test_the_best_n_waits_while_one_it_could_rank_is_not_in(page: Page) -> None:
     page.goto(PAGE)
     _unlock(page)
     # One of them still waiting on its peer reviews: no result yet.
-    _set_result(rows[0].application.public_id, "g1", None)
+    _set_result(rows[0].dossier.key, "g1", None)
     _set_rule(
         page,
         "o1",
@@ -583,7 +584,7 @@ def test_the_best_n_waits_while_one_it_could_rank_is_not_in(page: Page) -> None:
         for p in prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
         if "\tShortlisting\t" in p
     ]
-    ids = {r.application.dossier_id for r in rows}  # proposals name rows as shown
+    ids = {r.dossier.public_id for r in rows}  # proposals name rows as shown
     assert not [p for p in proposed if any(i in p for i in ids)]
     # Elsewhere the rule decides: every other faculty's shortlisted turn Not.
     assert proposed and all(p.endswith("Not shortlisted") for p in proposed)
@@ -598,7 +599,7 @@ def test_one_not_entered_at_a_ranking_goes_on_once(page: Page) -> None:
     went on to the next branch twice, so its best N took one dossier for
     two and left out another."""
     rows = [r for r in stages.plan_of("wa9juxbc2t").rows if r.cells["g1"].result is not None]
-    a, b = rows[0].application.public_id, rows[1].application.public_id
+    a, b = rows[0].dossier.key, rows[1].dossier.key
     page.goto(PAGE)
     _unlock(page)
     _fill_results()
@@ -632,11 +633,11 @@ def test_one_a_ranking_cannot_take_falls_through_though_another_condition_waits(
     join the branch, so it goes on to the next even while the branch's
     other condition waits on its result."""
     xa = next(
-        r.application
+        r.dossier
         for r in stages.plan_of("wa9juxbc2t").rows
         if r.cells["o1"].value == "Interview" and not r.cells["o1"].by_hand
     )
-    x, x_shown = xa.public_id, xa.dossier_id
+    x, x_shown = xa.key, xa.public_id
     page.goto(PAGE)
     _unlock(page)
     _cell(page, x, "g1").evaluate("e => { e.dataset.v = 'Not entered'; }")
@@ -671,11 +672,11 @@ def test_a_dossier_waiting_elsewhere_holds_back_only_a_ranking_it_could_join(
     # at Interview, so the rule would change it (answers are seeded by
     # question key since segment AD2D).
     eng_app = next(
-        r.application
+        r.dossier
         for r in groups["Engineering"]
         if r.cells["g2"].value == "Entered" and r.cells["o1"].value == "Not shortlisted"
     )
-    eng, eng_dossier = eng_app.public_id, eng_app.dossier_id
+    eng, eng_dossier = eng_app.key, eng_app.public_id
     page.goto(PAGE)
     _unlock(page)
     _set_result(eng, "g2", None)  # its checks coming
@@ -698,7 +699,7 @@ def test_a_dossier_waiting_elsewhere_holds_back_only_a_ranking_it_could_join(
     text = prop.inner_text()
     assert "Shortlisting: 1 dossier cannot be judged yet" in text and eng_dossier in text
     proposed = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
-    law = {r.application.dossier_id for r in groups["Law"]}  # rows named as shown
+    law = {r.dossier.public_id for r in groups["Law"]}  # rows named as shown
     ranked = [p for p in proposed if p.split("\t")[0] in law and p.endswith("Not shortlisted")]
     assert 1 <= len(ranked) <= 3 + 2  # the best 3 not already so, or more tied at the cut
 
@@ -710,7 +711,7 @@ def test_the_best_n_waits_on_another_condition_not_yet_judged(page: Page) -> Non
     field, rows = sorted(_by_answer("Faculty").items())[0]
     page.goto(PAGE)
     _unlock(page)
-    _set_result(rows[0].application.public_id, "g2", None)
+    _set_result(rows[0].dossier.key, "g2", None)
     _set_rule(
         page,
         "o1",
@@ -762,9 +763,7 @@ def test_selection_reaches_one_sent_on_by_shortlisting_alone(page: Page) -> None
     plan = stages.plan_of("wa9juxbc2t")
     ras = {m.email for m in sample_data.CURRENT_RAS}
     out = [
-        r
-        for r in plan.rows
-        if r.application.email in ras and r.cells["o1"].value == "Not shortlisted"
+        r for r in plan.rows if r.dossier.email in ras and r.cells["o1"].value == "Not shortlisted"
     ]
     major = next(
         r for r in out if (r.cells["g2"].result or 0) > 0 and (r.cells["g1"].result or 0) >= 3.5
@@ -774,14 +773,12 @@ def test_selection_reaches_one_sent_on_by_shortlisting_alone(page: Page) -> None
     _unlock(page)
     # One by hand, one whose major concern the office withdrew (the rule
     # now re-appoints them in this run).
-    _row(page, low.application.public_id).locator('[data-cell="o1"] select').select_option(
-        "Re-appointment"
-    )
-    _set_result(major.application.public_id, "g2", "0")
+    _row(page, low.dossier.key).locator('[data-cell="o1"] select').select_option("Re-appointment")
+    _set_result(major.dossier.key, "g2", "0")
     prop = _apply_rules(page, only_undecided=False)  # its decided Shortlisting too
     rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
     for r in (low, major):
-        i = r.application.dossier_id  # proposals name rows as shown
+        i = r.dossier.public_id  # proposals name rows as shown
         assert [p for p in rows if p.startswith(i) and p.endswith("\tSelection\t\tSelected")], i
     assert not [p for p in rows if p.startswith("napy2evdjp") and "\tSelection\t" in p]
 
@@ -816,12 +813,12 @@ def test_the_page_combines_results_as_the_server_does(page: Page) -> None:
         )
     )
     for r in plan.rows:
-        if r.application.state != "Submitted":
+        if r.dossier.state != "Submitted":
             continue
         want = stages.combined(r, weighed)
-        assert shown[r.application.public_id] == ("" if want is None else f"Combined {want:.2f}")
+        assert shown[r.dossier.key] == ("" if want is None else f"Combined {want:.2f}")
     # Office checks not entered: Gate 1's alone.
-    kenji = next(r for r in plan.rows if r.application.public_id == "h6zr2tdw9p")
+    kenji = next(r for r in plan.rows if r.dossier.key == "h6zr2tdw9p")
     row = _row(page, "kenji.russo")
     g2 = row.locator('[data-cell="g2"] [data-ap-adm]')
     while g2.text_content() != "Not entered":

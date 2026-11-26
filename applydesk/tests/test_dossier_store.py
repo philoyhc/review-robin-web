@@ -70,3 +70,18 @@ def test_the_pages_read_a_dossier_id_from_the_table() -> None:
     assert sample_data.by_dossier(model, first.dossier_id) is None
     drafts = [a for a in sample_data.applications_of(model) if a.state == "Draft"]
     assert drafts and all(a.dossier_id == "" for a in drafts)
+
+
+def test_a_row_without_an_application_reads_as_no_application() -> None:
+    """Rung 4: a row is a dossier; one with no application (a candidate's,
+    rung 5) has no state, is no application to rank, and reads its own ID."""
+    from applydesk import stages
+
+    d = stages.Dossier("dd2dd2dd2d", "dd2dd2dd2d", "Ana Lim", "ana@example.edu")
+    row = stages.Row(d, {})
+    assert row.application is None and d.state == "" and not d.submitted
+    assert stages.last_submitted((row,)) == frozenset()
+    assert stages.submitted_rank((row,)) == {}
+    app = sample_data.applications_of("wa9juxbc2t")[0]
+    mine = stages.dossier_of(app)
+    assert (mine.key, mine.public_id, mine.name) == (app.public_id, app.dossier_id, app.applicant)

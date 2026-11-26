@@ -1372,9 +1372,8 @@ def _bundle(request: Request, exercise: sample_data.Exercise, gate: stages.Gate)
     return handoff.bundle(
         exercise,
         gate,
-        lambda app: (
-            origin
-            + url_path(request, f"/me/exercises/{exercise.public_id}/dossiers/{app.dossier_id}")
+        lambda d: (
+            origin + url_path(request, f"/me/exercises/{exercise.public_id}/dossiers/{d.public_id}")
         ),
     )
 
@@ -1593,7 +1592,7 @@ def operator_dossier(request: Request, exercise_id: str, dossier_id: str) -> Res
     if app.state == "Draft":  # no dossier until it is submitted (ruling 32)
         raise HTTPException(status_code=404)
     plan = stages.plan_of(exercise.public_id)
-    row = next((r for r in plan.rows if r.application.public_id == app.public_id), None)
+    row = next((r for r in plan.rows if r.dossier.key == app.public_id), None)
     return render(
         request,
         "applydesk/operator/dossier.html",

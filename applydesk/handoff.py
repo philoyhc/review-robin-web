@@ -100,10 +100,11 @@ def confidential(exercise: sample_data.Exercise, gate: stages.Gate) -> bool:
     return exercise.blind or gate.confidential
 
 
-def reviewee_key(app: sample_data.Application, hidden: bool) -> str:
-    """A reviewee's ``RevieweeEmail``: the application ID, or on a
-    confidential gate the Dossier ID (ruling 43)."""
-    return app.dossier_id if hidden else app.public_id
+def reviewee_key(dossier: stages.Dossier, hidden: bool) -> str:
+    """A reviewee's ``RevieweeEmail``: the application ID (a candidate's
+    dossier, with none, its own ID), or on a confidential gate the Dossier
+    ID (ruling 43)."""
+    return dossier.public_id if hidden else dossier.key
 
 
 def reviewers_csv(pairs: tuple[stages.Pair, ...]) -> str:
@@ -123,16 +124,16 @@ def reviewers_csv(pairs: tuple[stages.Pair, ...]) -> str:
 def reviewees_csv(
     rows: tuple[stages.Assignment, ...],
     hidden: bool,
-    profile_link: Callable[[sample_data.Application], str],
+    profile_link: Callable[[stages.Dossier], str],
 ) -> str:
     """Each dossier entered at the gate, its page as ``ProfileLink``."""
     return _csv(
         ["RevieweeName", "RevieweeEmail", "ProfileLink"],
         [
             [
-                REDACTED if hidden else a.application.applicant,
-                reviewee_key(a.application, hidden),
-                profile_link(a.application),
+                REDACTED if hidden else a.dossier.name,
+                reviewee_key(a.dossier, hidden),
+                profile_link(a.dossier),
             ]
             for a in rows
         ],
@@ -145,7 +146,7 @@ def relationships_csv(pairs: tuple[stages.Pair, ...], hidden: bool) -> str:
     return _csv(
         ["ReviewerEmail", "RevieweeEmail", f"PairContextTag1.{PAIR_LABEL}"],
         [
-            [p.email, reviewee_key(p.of.application, hidden), p.source.replace(",", "")]
+            [p.email, reviewee_key(p.of.dossier, hidden), p.source.replace(",", "")]
             for p in pairs
             if p.email
         ],
@@ -216,7 +217,7 @@ def settings_csv(exercise: sample_data.Exercise, gate: stages.Gate) -> str:
 def bundle(
     exercise: sample_data.Exercise,
     gate: stages.Gate,
-    profile_link: Callable[[sample_data.Application], str],
+    profile_link: Callable[[stages.Dossier], str],
 ) -> Bundle:
     """The gate's bundle as its pairs and card stand in the sample."""
     rows, _ = stages.assignments(exercise.public_id, gate)
