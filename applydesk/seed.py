@@ -1,11 +1,12 @@
 """The localhost seed (segment AD2A; ruling 74): `python -m applydesk.seed`.
 
 On a fresh checkout, after `alembic -c applydesk/alembic.ini upgrade head`,
-it gives every sample exercise its `exercise` row and makes one person
-its Owner, allowlisted to operate (ruling 75), so every page works on
-localhost. That person is Cordware's fake identity (`FAKE_AUTH_*` in
-`.env`), bound by its tenant and principal ID, or the email `--owner`
-names, kept pending until it signs in.
+it gives every sample exercise its `exercise` row and its applications
+(segment AD2J) and makes one person its Owner, allowlisted to operate
+(ruling 75), so every page works on localhost. That person is
+Cordware's fake identity (`FAKE_AUTH_*` in `.env`), bound by its tenant
+and principal ID, or the email `--owner` names, kept pending until it
+signs in.
 
 It is idempotent: a second run changes nothing. It refuses to run unless
 `APP_ENV=local`, since the samples are seeds for localhost and tests,
@@ -27,7 +28,7 @@ from pathlib import Path
 from sqlalchemy import make_url, select, text
 from sqlalchemy.orm import Session
 
-from applydesk import db, exercises, operators, people, sample_data
+from applydesk import applications, db, exercises, operators, people, sample_data
 from applydesk.models import Exercise, Person
 from cordware.identity import Identity, is_local
 from cordware.settings import IdentitySettings, identity_settings
@@ -45,6 +46,7 @@ class SeedResult:
     owner_id: int
     exercises_added: int
     grants_added: int
+    applications_added: int = 0
 
 
 def _fake_identity(settings: IdentitySettings) -> Identity:
@@ -86,7 +88,7 @@ def seed(
         owner = found
     if not operators.may_operate(owner):
         operators.admit(session, _PLATFORM, owner)
-    exercises_added = grants_added = 0
+    exercises_added = grants_added = applications_added = 0
     for sample in sample_data.EXERCISES:  # the samples only, never an ordinary row (AD2G)
         exercise = session.scalar(select(Exercise).where(Exercise.public_id == sample.public_id))
         if exercise is None:
@@ -96,8 +98,17 @@ def seed(
         # Its settings too (segment AD2B), once: a later save is kept.
         if record_settings:
             exercises.record_sample(session, exercise, sample, owner)
+        # Its applications (segment AD2J), each once.
+        applications_added += applications.record_samples(
+            session, exercise, sample_data.applications_of(sample.public_id), owner
+        )
     session.commit()
-    return SeedResult(owner_id=owner.id, exercises_added=exercises_added, grants_added=grants_added)
+    return SeedResult(
+        owner_id=owner.id,
+        exercises_added=exercises_added,
+        grants_added=grants_added,
+        applications_added=applications_added,
+    )
 
 
 def reset(settings: IdentitySettings | None = None) -> None:
@@ -198,7 +209,8 @@ def main(argv: list[str] | None = None) -> int:
     print(
         ("reset, then " if args.reset else "")
         + f"seeded: {result.exercises_added} exercises and {result.grants_added} "
-        f"Owner grants added (owner person {result.owner_id})"
+        f"Owner grants added (owner person {result.owner_id}); "
+        f"{result.applications_added} applications added"
         + (f"; {len(made)} blank drafts added" if made else "")
     )
     return 0

@@ -463,6 +463,35 @@ class Candidate(Base):
     removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class Application(Base):
+    """One application to an exercise (segment AD2J; AD-38): its applicant a
+    person (ruling 73), its name as they gave it, and its state, `draft`,
+    `submitted` or `withdrawn`, with the time of each move. A withdrawn
+    application keeps its `submitted_at`. ``form_revision`` is the
+    exercise's when it was submitted. Rows are in the order applications
+    came in (``id``); nothing is deleted (ruling 74)."""
+
+    __tablename__ = "application"
+    __table_args__ = (UniqueConstraint("public_id", name="uq_application_public_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(10), nullable=False)
+    exercise_id: Mapped[int] = _exercise_fk("application")
+    person_id: Mapped[int] = mapped_column(
+        ForeignKey("person.id", name="fk_application_person"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    title: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    state: Mapped[str] = mapped_column(String(10), nullable=False)  # draft, submitted, withdrawn
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_now
+    )
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    withdraw_reason: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    form_revision: Mapped[int | None] = mapped_column(Integer)
+
+
 class Panel(Base):
     """A named roster an exercise keeps (segment AD2E; rulings 4, 19, 39):
     keyed per exercise (``panel-<n>``, minted by the server, never reused),

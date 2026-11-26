@@ -151,6 +151,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "exercise.stage_reverted": EventSchema(_EXERCISE | {"refs", "reason"}),
     "exercise.form_closed": EventSchema(_EXERCISE),
     "candidate.added": EventSchema(_EXERCISE | {"refs", "context"}),
+    # Segment AD2J: the samples' applications recorded by the seed.
+    "application.seeded": EventSchema(_EXERCISE | {"counts"}),
     "candidate.removed": EventSchema(_EXERCISE | {"refs"}),
     "exercise.archived": EventSchema(_EXERCISE),
     "exercise.restored": EventSchema(_EXERCISE),

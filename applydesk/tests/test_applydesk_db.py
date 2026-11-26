@@ -38,6 +38,8 @@ TABLES = {
     "outcome_weight",
     "outcome_release",
     "candidate",
+    # AD2J: applications.
+    "application",
     # AD2E: panels, the Panels roster and memberships.
     "panel",
     "roster_entry",
@@ -143,7 +145,7 @@ def test_the_seed_may_name_a_pending_owner(capsys: pytest.CaptureFixture[str]) -
     assert main(["--owner", "Someone@Example.EDU"]) == 0
     assert "seeded: " in capsys.readouterr().out
     session = db.new_session()
-    owner = session.scalars(select(Person)).one()
+    owner = session.scalars(select(Person).where(Person.may_operate)).one()
     assert owner.object_id is None and owner.email_key == "someone@example.edu"
     assert owner.may_operate
     session.close()
@@ -174,8 +176,12 @@ def test_the_seed_is_audited_and_binds_as_a_sign_in_would() -> None:
     session = db.new_session()
     seed(session, owner_email="Admin@Example.edu ")
     seed(session)  # the fake identity (admin@example.edu) signs in: bound, not a second person
-    people = list(session.scalars(select(Person)))
-    assert len(people) == 1 and people[0].bound and people[0].may_operate
+    people = list(session.scalars(select(Person).where(Person.may_operate)))
+    assert len(people) == 1 and people[0].bound
+    # The rest are the samples' applicants (segment AD2J), pending by address.
+    assert all(
+        p.object_id is None for p in session.scalars(select(Person).where(~Person.may_operate))
+    )
     kinds = [e.event_type for e in session.scalars(select(AuditEvent).order_by(AuditEvent.id))]
     session.close()
     assert kinds[:2] == ["person.created", "person.admitted"]
