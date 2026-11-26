@@ -518,9 +518,13 @@ def save_panel(
     if max(len(code), len(code.casefold())) > 40:  # its key is casefolded
         raise Refused("An exercise code is at most 40 characters.", key="code_long", field="code")
     _ready(session, exercise, actor)
-    # A published exercise's code is fixed (G2), here as on Details (Codex on #4140).
-    sample = sample_data.sample(public_id)  # an ordinary exercise is a Draft
-    if sample is not None and sample.state != "Draft" and (code or None) != exercise.code:
+    # A published exercise's code is fixed (G2), here as on Details (Codex on #4140):
+    # published by its state or its stages (`locks.is_draft`), as an ordinary
+    # exercise is (Codex on cordware#230).
+    from applydesk import locks  # locks reads the stages, which read this module
+
+    shown = sample_data.exercise(public_id)
+    if shown is not None and not locks.is_draft(shown) and (code or None) != exercise.code:
         raise Refused("A published exercise's code is fixed.", key="code_fixed", field="code")
     if _clash(session, exercise, code or None) is not None:
         # Never the other exercise's name: the viewer may not operate it.

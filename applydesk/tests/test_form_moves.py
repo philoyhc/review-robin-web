@@ -13,7 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from applydesk import db, extract, handoff, process_store, stages, workflow
+from applydesk import db, extract, handoff, process_store, sample_data, stages, workflow
 from applydesk.lookups import exercise_or_404
 from applydesk.models import AuditEvent
 from applydesk.models import Stage as StageRow
@@ -298,3 +298,41 @@ def test_process_reads_its_revision_before_its_timeline(monkeypatch: pytest.Monk
     assert _client().get(f"{LOBBY}/{DONE}/process").status_code == 200
     assert "revision" in reads and "plan" in reads
     assert reads.index("revision") < reads.index("plan")
+
+
+def test_a_draft_published_by_its_stages_fixes_its_code() -> None:
+    """Codex on cordware#230: G2 fixes a published exercise's code and who
+    may apply, on Details and in the Lobby; an exercise published by its
+    stages kept both editable, read from its own state."""
+    from applydesk import exercises
+
+    plan = stages.plan_of(DRAFT)
+    session = db.new_session()
+    try:
+        published = tuple(replace(st, status="Published") for st in plan.stages)
+        process_store.save(session, DRAFT, published, 0, None)
+        session.commit()
+    finally:
+        session.close()
+    shown, revision = exercises.stored_at(exercise_or_404(DRAFT))
+    details = {
+        "revision": revision,
+        "name": shown.name,
+        "code": "NEW-CODE",
+        "description": shown.summary,
+        "contact": shown.help_contact,
+        "timezone": shown.timezone or sample_data.DEFAULT_TIMEZONE,
+        "eligibility": shown.eligibility,
+        "blind": shown.blind,
+    }
+    reply = _client().post(f"{LOBBY}/{DRAFT}/details", json=details)
+    assert reply.status_code in (400, 409, 422), reply.text
+    assert "Fixed once published" in reply.text
+    session = db.new_session()
+    try:
+        with pytest.raises(exercises.Refused) as refused:
+            exercises.save_panel(session, DRAFT, shown.name, "NEW-CODE", [], revision, None)
+        assert refused.value.key == "code_fixed"
+    finally:
+        session.rollback()
+        session.close()

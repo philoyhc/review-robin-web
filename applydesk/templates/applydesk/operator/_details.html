@@ -5,7 +5,7 @@
    Discard changes puts the last kept values back. A published exercise's
    code and who may apply are fixed (G2). Lock saves to the database,
    naming the revision the page opened at (segment AD2B rung 3). #}
-{% set live = exercise.state != "Draft" %}
+{% set live = exercise_published %}
 <section class="card dt" id="details" data-details data-dt-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/details') }}" data-dt-revision="{{ revision }}" data-dt-codes="{{ other_codes | tojson | forceescape }}" data-dt-default-contact="{{ default_contact }}">
   <div class="cardhead"><h2>Details</h2>
     <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
