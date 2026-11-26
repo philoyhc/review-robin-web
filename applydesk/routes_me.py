@@ -7,7 +7,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import clock, extract, sample_data, stages, timeline, workflow
+from applydesk import applications, clock, extract, sample_data, stages, timeline, workflow
 from applydesk.exercises import stored_all
 from applydesk.gate import placeholders_only
 from applydesk.lookups import application_or_404, dossier_or_404, exercise_or_404
@@ -34,7 +34,7 @@ def me(request: Request) -> Response:
         mine=[a for a in sample_data.my_applications() if a.exercise_id in shown],
         dossiers=[
             (shown[a.exercise_id], a)
-            for a in sample_data.APPLICATIONS[1:5:2]
+            for a in applications.with_ids(sample_data.MY_REVIEWS)
             if a.exercise_id in shown
         ],
     )

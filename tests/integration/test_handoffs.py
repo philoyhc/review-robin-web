@@ -227,14 +227,20 @@ def test_the_utilities_mock_bundle_arrives_set_up(client: TestClient, db: Sessio
 
 @pytest.fixture
 def applydesk_db(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """Apply Desk's database, empty, as a fresh SQLite file: `stages.plan_of`
-    reads a saved timeline from it (segment AD2C), and finds none."""
-    from applydesk import db, models
+    """Apply Desk's database as a fresh SQLite file, seeded: `stages.plan_of`
+    reads a saved timeline from it (segment AD2C), and finds none, and the
+    applications the samples' gates send (segment AD2J)."""
+    from applydesk import db, models, seed
+    from cordware.settings import identity_settings
 
     monkeypatch.setenv("APPLYDESK_DATABASE_URL", f"sqlite:///{tmp_path / 'applydesk.db'}")
+    monkeypatch.setattr(identity_settings, "app_env", "local")  # the seed is localhost's
     db.engine.cache_clear()
     db._sessions.cache_clear()  # pyright: ignore[reportPrivateUsage]  -- reset for this test
     models.Base.metadata.create_all(db.engine())
+    session = db.new_session()
+    seed.seed(session, owner_email="owner@example.edu", record_settings=False)
+    session.close()
     yield
     db.engine().dispose()
     db.engine.cache_clear()

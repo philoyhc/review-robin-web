@@ -7,16 +7,78 @@ samples', which the localhost seed records (ruling 74)."""
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
-from applydesk import audit, people, sample_data
+from applydesk import audit, db, people, sample_data
 from applydesk.models import Application, Exercise, Person
 
 #: A sample's state, as `sample_data` words it, and the stored one.
 _STATES = {"Draft": "draft", "Submitted": "submitted", "Withdrawn": "withdrawn"}
+_SAID = {stored: said for said, stored in _STATES.items()}
+
+
+def day(when: datetime) -> str:
+    """A stored time as the pages show an application's day (``3 Sep
+    2026``), in UTC, where the samples' noon keeps it."""
+    return f"{when.astimezone(UTC):%d %b %Y}".lstrip("0")
+
+
+def from_row(row: Application, person: Person, exercise_id: str) -> sample_data.Application:
+    """A stored application in the shape the pages read."""
+    started = row.started_at.replace(tzinfo=row.started_at.tzinfo or UTC)
+    submitted = (
+        row.submitted_at.replace(tzinfo=row.submitted_at.tzinfo or UTC)
+        if row.submitted_at is not None
+        else None
+    )
+    return sample_data.Application(
+        public_id=row.public_id,
+        exercise_id=exercise_id,
+        applicant=row.name,
+        email=person.email or "",
+        title=row.title,
+        state=_SAID[row.state],
+        submitted=day(submitted or started),
+        dossier_id=sample_data.sample_dossier_id(row.public_id),
+        started_at=started,
+        submitted_at=submitted,
+    )
+
+
+def _read(query: Select[Application, Person, str]) -> tuple[sample_data.Application, ...]:
+    session = db.new_session()
+    try:
+        return tuple(
+            from_row(row, person, exercise_id)
+            for row, person, exercise_id in session.execute(query)
+        )
+    finally:
+        session.close()
+
+
+def _query() -> Select[Application, Person, str]:
+    return (
+        select(Application, Person, Exercise.public_id)
+        .join(Person, Person.id == Application.person_id)
+        .join(Exercise, Exercise.id == Application.exercise_id)
+        .order_by(Application.id)
+    )
+
+
+def of(exercise_id: str) -> tuple[sample_data.Application, ...]:
+    """The exercise's applications, in the order they came in, read in a
+    session of their own (the readers in `sample_data`, which no route hands
+    a session); none for an exercise not on record."""
+    return _read(_query().where(Exercise.public_id == exercise_id))
+
+
+def with_ids(public_ids: Iterable[str]) -> tuple[sample_data.Application, ...]:
+    """The applications with these public IDs, wherever they are."""
+    return _read(_query().where(Application.public_id.in_(list(public_ids))))
 
 
 def sample_day(text: str) -> datetime:
@@ -56,6 +118,7 @@ def record_samples(
                 started_at=when,
                 submitted_at=None if state == "draft" else when,
                 withdrawn_at=when if state == "withdrawn" else None,
+                form_revision=None if state == "draft" else exercise.form_revision,
             )
         )
         added += 1
