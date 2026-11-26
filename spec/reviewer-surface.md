@@ -910,8 +910,12 @@ that apply at every width. Without script it all still works.
   (*Session ongoing*, *Responses released*; the cell's `data-label`) a line
   with its label beside its pill.
 - **Progress pills and the constraint line** read from the left.
+- **The page's sides are 12 px** and its foot 24 px (40 px each on a wider
+  screen); a card keeps its 16 px padding. This rule is in `base.html`'s
+  shared stylesheet, so it applies to any page under 640 px.
 - **The action row's buttons share its width**, with Prev / Next on a line
-  of their own.
+  of their own. Each centers its label across and down: Cancel is a link,
+  and a link's text does not center itself down as a button's does.
 - **The bottom action row floats**: sticky at the screen's foot, with
   clearance for a home indicator, so Save / Cancel / Submit stay in reach
   down a long list. Only once the top row has scrolled out of view: a

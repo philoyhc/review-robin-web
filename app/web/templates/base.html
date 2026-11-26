@@ -425,7 +425,8 @@
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
         /* The bar sits close under the browser's edge, as Apply Desk's does
-           (author, 2026-11-13); the sides and foot keep their 40 px. */
+           (author, 2026-11-13); the sides and foot keep their 40 px, narrower
+           on a phone (below). */
         margin: 12px 40px 40px;
         max-width: 1400px;
         color: var(--text-body);
@@ -435,7 +436,8 @@
       body.narrow { max-width: 800px; }
       /* On a phone the page keeps its width for the content: 12 px sides
          and a 24 px foot (author, 2026-11-26, from the reviewer surface on
-         a phone); a card's padding narrows with it, below. */
+         a phone). A card's padding stays 16 px, the floor
+         `spec/visual_style_general.md` sets. */
       @media (max-width: 639px) {
         body { margin: 12px 12px 24px; }
       }
@@ -2299,11 +2301,6 @@
            ``.bottom-left`` (Session Home's column wrapper)
            carries its own ``gap`` so Quick Setup and Extract
            Setup cards still sit apart. */
-      }
-      /* A card's padding on a phone (author, 2026-11-26), after both
-         card rules so it outranks each. */
-      @media (max-width: 639px) {
-        .card, body.ui-v2 .card { padding: var(--space-3); }
       }
       /* Page-grid / bottom-grid wrappers default to a 20px
          margin-bottom (off the spacing scale) — bring them onto

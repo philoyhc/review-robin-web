@@ -140,7 +140,9 @@ page is built for.
   desktop-first.
   - **Under 640 px** a participant table is a list of cards
     (`spec/reviewer-surface.md` § *On a phone*; `spec/participant_model.md`
-    for results and collation). 640 px is the one phone breakpoint; the
+    for results and collation), and the page's sides narrow from 40 px to
+    12 px (its foot to 24 px); a card's padding keeps the 16 px floor of
+    `spec/visual_style_general.md`. 640 px is the one phone breakpoint; the
     wider breakpoints belong to operator layouts and tablets, and are
     deliberately not consolidated with it.
   - **Under `pointer: coarse`** (a touch screen), on participant pages
