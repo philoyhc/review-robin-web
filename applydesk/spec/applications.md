@@ -315,7 +315,7 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
 - **A gate** is named `Gate N · label` wherever it is listed or chosen (Home's
   timeline rows too), an outcome `Outcome N · label`.
 - **Controls.** *Required* and *Released* are checkboxes, not pills. An add
-  button reads `+ Noun` in a builder (*+Panel*, *+Gate*, *+Question*),
+  button reads `+Noun` in a builder (*+Panel*, *+Gate*, *+Question*),
   *Add new* in a table's toolbar. Creating a panel is *+Panel*, Secondary,
   wherever it is made. CSV files are *Upload CSV* and *Download CSV*, both
   Secondary. A cross-page link reads `Verb on Page →` (*Open Gate 2 →*,
@@ -696,7 +696,7 @@ blank exercise shows the form's own card and one empty String card, open.
     replicated card and a page's placeholder are given a fresh one. A removed
     question keeps its key, so a rule naming it is refused, not re-pointed. A
     sample's cards take `q1`… in order at the first save.
-  - **Reload.** A save that keys a new card, or a panel made with *+ New
+  - **Reload.** A save that keys a new card, or a panel made with *+New
     panel…* ("The Panels page"), answers that the page must reload to hold its
     keys, and edits made while it was on its way cannot be saved before then
     ("strict").
@@ -1093,7 +1093,7 @@ but the lobby's *Stage* column reads:
 - **The rule editor** (*Add a rule* / *Edit the rule*, on a gate or an outcome).
   A rule is **branches** (ruling 30): *if … then A; else if … then B; …
   else Z*. Each branch is a row per condition, joined by AND, with its own
-  *+ Condition* and *Then*; *+ Else if* adds a branch, *Remove branch* drops
+  *+Condition* and *Then*; *+Else if* adds a branch, *Remove branch* drops
   one, and a branch whose last condition goes is dropped; the rule has one
   *Otherwise*. The first branch whose conditions all hold decides, none
   holding gives *Otherwise*; a one-branch rule is a single *if … then …,

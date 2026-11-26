@@ -75,7 +75,7 @@ def test_a_move_a_toggle_and_a_rule_button_are_changes(page: Page) -> None:
 
 
 def test_what_is_not_a_change_leaves_no_mark(page: Page) -> None:
-    """Typing in the preview, opening a rule editor, and picking + New
+    """Typing in the preview, opening a rule editor, and picking +New
     panel… then cancelling change nothing."""
     page.goto(FORM)
     mark = page.locator("[data-unsaved]")

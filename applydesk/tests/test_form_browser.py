@@ -486,7 +486,7 @@ def test_text_boxes_grow_to_fit_without_a_handle(page: Page) -> None:
     page.wait_for_function(
         "e => e.style.height !== '' && e.scrollHeight <= e.clientHeight", arg=box.element_handle()
     )
-    # And a new card's box, after + New.
+    # And a new card's box, after +Question.
     card.locator('[data-fc-act="new"]').click()
     fresh = page.locator('#fb-cards .fc[data-open] [data-f="help"]').nth(1)
     fresh.fill("One\nTwo\nThree\nFour")

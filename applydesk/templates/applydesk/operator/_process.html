@@ -943,7 +943,7 @@
         box.appendChild(head);
       }
       b.when.forEach(function (cond, i) { box.appendChild(condRow(item, cond, i, bi)); });
-      box.appendChild(button("+ Condition", "add", bi));
+      box.appendChild(button("+Condition", "add", bi));
       if (rule) {
         var lt = el("label", "fc-l", "Then"), then = select(pairs(results), b.then || results[0] || "", bi ? "Then, branch " + (bi + 1) : "Then");
         then.dataset.rulePart = "then"; then.dataset.branch = String(bi);
@@ -955,7 +955,7 @@
       ed.appendChild(box);
     });
     if (!rule) return;
-    ed.appendChild(button("+ Else if", "add-branch"));
+    ed.appendChild(button("+Else if", "add-branch"));
     var tail = el("div", "pc-row pc-cond-then"), lo = el("label", "fc-l", "Otherwise");
     var other = select(pairs(results), rule.otherwise || results[1] || results[0] || "", "Otherwise");
     other.dataset.rulePart = "otherwise";
@@ -1012,7 +1012,7 @@
   }
   // Puts focus back after the editor is redrawn: in branch `at.b`, the
   // control at `n` in row `at.i` (-1, its last), else that branch's
-  // + Condition, else the first.
+  // +Condition, else the first.
   function focusIn(item, at, n) {
     var ed = item.querySelector("[data-rule-ed]"), t = null;
     var box = at ? ed.querySelectorAll(".pc-branch")[at.b] : null;

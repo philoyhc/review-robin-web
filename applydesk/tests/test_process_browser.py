@@ -359,7 +359,7 @@ def test_a_rule_is_edited_extended_and_cleared(page: Page) -> None:
 
 
 def test_a_rule_branches_reads_a_form_answer_and_takes_the_best_n(page: Page) -> None:
-    """Ruling 30 (segment AD1H rung 3): *+ Else if* adds a branch, tried
+    """Ruling 30 (segment AD1H rung 3): *+Else if* adds a branch, tried
     after the first; a form answer and the best N are conditions; a
     branch removed leaves the rule as it was."""
     page.goto(PAGE)

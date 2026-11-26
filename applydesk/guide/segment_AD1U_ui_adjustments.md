@@ -247,7 +247,9 @@ the older and larger set.
 
 - **2026-11-26, the change:** every `+ Noun` label in Apply Desk's templates,
   their scripts, its spec and the tests that name them, 27 files; the full
-  Apply Desk and unit suites pass.
+  Apply Desk and unit suites pass. The cold read found the rule editor's
+  *+Condition* and *+Else if*, the spec's own `+Noun` line and a
+  line-wrapped *+New panel…* missed; fixed in the same PR.
 
 ### PR ladder
 
@@ -255,8 +257,9 @@ the older and larger set.
 
 ### Definition of done
 
-- No Apply Desk template carries `+ ` before a capitalized noun
-  (`grep -rnE "\+ [A-Z]" applydesk/templates` finds only arithmetic).
+- No Apply Desk template or spec writes a label as `+ Noun`
+  (`grep -rnE '"\+ [A-Z]|>\+ [A-Z]|\*\+ [A-Za-z]' applydesk/templates applydesk/spec`
+  finds nothing).
 - `### Doc impact` section present and current
 - `python3 tools/close_check.py AD1U.5` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
