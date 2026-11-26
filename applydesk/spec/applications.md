@@ -1,11 +1,11 @@
 # Apply Desk as the host sees it
 
-> **Built:** every page below, as a working scaffold on sample data, behind
+> **Built:** every page below, as a working scaffold on sample data and stored applications, behind
 > a real check of who may reach it. Every move works on screen. An
 > exercise's own settings (Details, the Lobby's name, code and tags, its
 > archive), its Process (stages, gates, outcomes, rules, the form's state),
-> its Form, its Panels, its Emails and its Candidates are stored in the
-> database; the rest of a sample exercise saves nothing until a later AD2
+> its Form, its Panels, its Emails, its Candidates and its applications are
+> stored in the database; the rest of a sample exercise saves nothing until a later AD2
 > segment, and nothing is sent to Review Robin until AD6. A made exercise
 > ("Ordinary exercises") is a row in the database like any other.
 
@@ -222,7 +222,9 @@ answer only for a Published or Closed exercise.
   - **Chips**, each with its count; every person is under exactly one, the
     first that applies: *Admins* (Admins, and the super-admin's own row), *Operators* (on the list
     and not revoked), *No role* (neither, but ever admitted, ever granted an
-    exercise, or ever the actor of an audit event), *Unused* (none of that).
+    exercise, or ever the actor of an audit event), *Unused* (none of that,
+    an application is not history, so an applicant with none of the
+    above is here).
     *Operators* and *Admins* are on by default. A chip is a checkbox label
     that submits the filter form without script. Counts take the role and
     the search but not the chips.
@@ -768,7 +770,7 @@ include.
   operator's part or the Next step line, for a Published or Closed exercise.
   *Apply* links each of the applicant's own applications there (*Your
   application*), as the User Lobby's *My applications* lists them all
-  (`sample_data.my_applications` until AD2).
+  (`sample_data.my_applications`, which reads the stored applications the sample applicant owns).
   Under each, every outcome released to applicants gives *Your result*
   with the applicant's own value and when (`stages.released_results`; the
   application page lists them as *Your results*); AD7 sends them. `/me`
@@ -1445,7 +1447,9 @@ CSV* undoes the guard. The page has no *Save*; nothing is kept until AD2.
   has none), Application ID, applicant's name and email; *Status* is *All
   statuses*, *Submitted*, *Draft* or *Withdrawn*; *Rows* is *All dossiers*
   or *Last applications*: per applicant, by email, the latest submitted,
-  else the latest of any status (`stages.last_submitted`). The three
+  else the latest started of any status (`stages.last_submitted`), latest
+  by time in UTC, ties by Application ID (segment AD2J); a gate rule's
+  *last N submitted* ranks the same way (`stages.submitted_rank`). The three
   combine, and *Showing N of M dossiers* beside them counts the rows in view. The
   ticked rows' actions (*Set ticked rows*, *Return ticked to draft*) and
   *Download CSV* stand in a row above the table.

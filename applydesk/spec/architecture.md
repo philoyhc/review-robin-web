@@ -1,6 +1,6 @@
 # Apply Desk architecture
 
-> **Built:** everything below. The pages read sample data; who may reach them, who operates an exercise, an exercise's own settings, its Process (the timeline, gates, outcomes and rules), its Candidates, the people and the audit trail are in the database, the rest moving there area by area (`applydesk/guide/ad2_series.md`).
+> **Built:** everything below. The pages read sample data; who may reach them, who operates an exercise, an exercise's own settings, its Process (the timeline, gates, outcomes and rules), its Candidates, its applications, the people and the audit trail are in the database, the rest moving there area by area (`applydesk/guide/ad2_series.md`).
 
 How `applydesk/` is laid out, what it may import, and how its tests run.
 Its contract with the host is `applydesk/spec/applications.md`.
@@ -26,10 +26,11 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/directory.py` | The people search every place that adds people uses: people on record first, then the directory through `cordware/graph.py`; a failed directory search is reported, never read as nobody there |
 | `applydesk/operators.py` | The rules of who may operate and who operates each exercise: the allowlist (`admit`, `revoke`), the Admin tier (`promote`, `demote`; `is_admin`; `is_protected` marks a super-admin's row, which no Revoke, Promote or Demote acts on; `keeps_the_list` says who admits and revokes, `makes_admins` who promotes and demotes) and an exercise's Owners and operators (`create_exercise`, `add_operator`, `remove_operator`, `hand_over`, `adopt`, `can_operate`, `is_owner`, `owners_of`; `owner_labels` names each exercise's Owners, comma-separated, for the Owners columns). `Actor` is the person, whether they are the super-admin, and `platform`, the seed acting as no one with every exercise, never built from a sign-in. Refusing with `Refused` and its `key` ("Operators"); `_allowed` re-reads the allowlist row, under `FOR SHARE` where a change rests on it |
 | `applydesk/audit.py` | `write_event` in Review Robin's envelope, copied, and `EVENT_SCHEMAS` ("Audit") |
-| `applydesk/seed.py` | `python -m applydesk.seed`: the sample exercises' rows, their settings and their Owner; refused unless `APP_ENV=local`. `--reset` first runs Apply Desk's own Alembic chain down to base and up to head, and only on SQLite or a localhost URL; `--blank N` (at most 50) adds N drafts named *Blank exercise n*, Owned by the seed's person, through `exercises.make` |
+| `applydesk/seed.py` | `python -m applydesk.seed`: the sample exercises' rows, their settings, their applications and their Owner; refused unless `APP_ENV=local`. `--reset` first runs Apply Desk's own Alembic chain down to base and up to head, and only on SQLite or a localhost URL; `--blank N` (at most 50) adds N drafts named *Blank exercise n*, Owned by the seed's person, through `exercises.make` |
 | `applydesk/ids.py` | Public IDs: generation and the shape check; `row_id` and `RowId` for a database row ID in a form or path |
 | `applydesk/web.py` | Templates, mount-aware URLs (`url()`, `is_here()`, `host_url()`), the page chrome and `MAX_BODY`, the largest post an operator page takes (256 KiB) |
-| `applydesk/sample_data.py` | The sample exercises, applications, form cards and panels (`Panel`: key, name, members; ruling 19). `SAMPLE_IDS` and `is_sample` tell a sample from an ordinary exercise; `sample` reads one with no database read; `exercise` and `exercises()` return a sample, else an ordinary exercise's row (`exercises()`: ordinary ones newest first, then the samples) |
+| `applydesk/applications.py` | An exercise's applications in the database: `of` (an exercise's, in the order they came in) and `with_ids` read them as `sample_data.Application`, built by `from_row`, in a session of their own; `day` words a stored time as the pages show it, in UTC; `record_samples` is the seed's, and `sample_day` turns a sample's day into noon UTC. Flushes, never commits |
+| `applydesk/sample_data.py` | The sample exercises, the samples' applications as written (`sample_applications`, which the seed records; `sample_dossier_id` is where a sample's dossier ID is kept until AD2F), form cards and panels (`Panel`: key, name, members; ruling 19). `applications_of`, `application`, `by_dossier`, `my_applications` and `MY_REVIEWS` (the dossiers `/me` lists) read the stored applications. `SAMPLE_IDS` and `is_sample` tell a sample from an ordinary exercise; `sample` reads one with no database read; `exercise` and `exercises()` return a sample, else an ordinary exercise's row (`exercises()`: ordinary ones newest first, then the samples) |
 | `applydesk/stages.py` | Stages, gates, outcomes and their rules; each row's cells; evaluators, assignments and pairs. `plan_of` reads the stored timeline (`process_store.stored_stages`) once Process has saved the exercise, else the sample (a new exercise's one stage); `gate_keyed` and `gate_numbered` find a gate by its key or its old number; `rule_problems` is what a rule reads amiss |
 | `applydesk/process_store.py` | An exercise's timeline in the database ("Process"): `load` and `stored_stages` build the dataclasses the pages read, `save` keeps a page's snapshot whole (the revision guard, keys, the references check, the audit), `move_form` is Home's *Open form* and *Close form*. Flushes, never commits; refuses with `Refused` and its `key` |
 | `applydesk/rules.py` | The rule engine, the only rule evaluator: `propose` answers what each rule would change in a table of dossiers (Dossiers' *Apply rules…*), over `Dossier`, `Column` and `Cell` rows built by `columns_of` and `rows_of`. Pure: reads no database |
@@ -98,12 +99,14 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
   (revision `ad2l1emails` after `ad2d1form`: `email_send`, `email_template`
   and `exercise.sends_saved`) and `ad2s1_gate_scale.py`
   (revision `ad2s1gatescale` after `ad2l1emails`: `gate_field.scale` and
-  `gate_field.scale_labels`).
+  `gate_field.scale_labels`) and `ad2j1_applications.py` (revision
+  `ad2j1applications`: `application`).
 
 | Table (model) | Holds |
 |---|---|
 | `person` (`Person`) | Tenant ID and object ID, null while pending; email, `email_key` (the casefolded address), UPN and display name as snapshots, `display_name_key` (the name casefolded, kept in step by the model; three times the name's width, as casefolding can lengthen a name, and searched by the directory and the allowlist in place of `lower(display_name)`, which folds ASCII only on SQLite); `bound_at`; `first_signed_in_at` (the first sign-in, set once; a directory pick is bound without one); `created_at`. The allowlist is on it: `may_operate`, `admitted_by_id`, `admitted_at`, `revoked_at`, `is_admin` (an Admin, always also listed) |
-| `exercise` (`Exercise`) | `public_id`, unique, and `created_at`; `name`, `code` and `code_key` (the code casefolded), `description`, `eligibility` (`open`, `invitation` or NULL), `blind`, `help_contact` and `timezone` (NULL takes the operator settings' default), `created_by_id` (the person who made it), `archived_at`, `deleted_at`, `revision` ("Exercises") and `process_revision` ("Process") and `panels_revision` ("Panels"; 0 until Panels is first saved) and `sends_saved` ("Emails"; false until Process first records its ticks), and the form's `form_title`, `form_description` and `form_revision` ("Form"). Its applications are sample data |
+| `exercise` (`Exercise`) | `public_id`, unique, and `created_at`; `name`, `code` and `code_key` (the code casefolded), `description`, `eligibility` (`open`, `invitation` or NULL), `blind`, `help_contact` and `timezone` (NULL takes the operator settings' default), `created_by_id` (the person who made it), `archived_at`, `deleted_at`, `revision` ("Exercises") and `process_revision` ("Process") and `panels_revision` ("Panels"; 0 until Panels is first saved) and `sends_saved` ("Emails"; false until Process first records its ticks), and the form's `form_title`, `form_description` and `form_revision` ("Form") |
+| `application` (`Application`) | One application: `public_id` (unique), `exercise_id`, `person_id` (the applicant; a pending person until they sign in), `name` (as the applicant gave it; a pending person has none), `title`, `state` (`draft`, `submitted` or `withdrawn`), `started_at`, `submitted_at` (kept when withdrawn), `withdrawn_at`, `withdraw_reason`, `form_revision` (the exercise's when it was submitted; NULL for a draft). Rows are in the order applications came in (`id`); none is deleted. Migration `applydesk/alembic/versions/ad2j1_applications.py`, revision `ad2j1applications` after `ad2s1gatescale` |
 | `exercise_tag` (`ExerciseTag`) | One tag on an exercise: `exercise_id`, `label` (the case first typed) and `label_key` (casefolded); (exercise, `label_key`) unique |
 | `exercise_operator` (`ExerciseOperator`) | A grant: (exercise, person) unique, `is_owner`, `added_by_id`, `added_at`, `removed_at` |
 | `audit_event` (`AuditEvent`) | `at`, `event_type`, `actor_id`, `exercise_id`, `detail` (JSON) |
@@ -142,7 +145,7 @@ and an Owner is never removed directly.
 
 `applydesk/exercises.py` reads and writes an exercise's settings. The pages
 keep `sample_data.Exercise`'s shape: `overlay` lays the stored settings over
-the sample's, whose stages, form and applications stay sample data, and
+the sample's, whose stages and form stay sample data (its applications are stored), and
 `lookups.exercise_or_404` is the one reader, a 404 for a deleted exercise.
 `revision` 0 means no settings are recorded and the sample's stand; the seed,
 or the first change, records them (`exercise.settings_recorded`).
@@ -391,8 +394,12 @@ It goes through `people` and `operators`, so its rows are matched and
 audited as any others: it binds Cordware's fake identity (or, with
 `--owner EMAIL`, leaves that address pending), admits the person as the
 platform (`Actor(platform=True)`, the one actor with every exercise), and
-makes each sample exercise's row with them its Owner. Tests
-seed through the same function.
+makes each sample exercise's row with them its Owner. It records each
+sample's applications (`applications.record_samples`, each once, in their
+order), the applicant of each the pending person of their address
+(`people.pending_many`), with `form_revision` set on a submitted one; the
+event is `application.seeded` (`counts.added`). Tests seed through the same
+function.
 
 ## Import boundaries
 
