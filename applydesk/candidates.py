@@ -1,7 +1,8 @@
 """An exercise's Candidates (ruling 77, segment AD2C rung 9): people kept
 by hand, added through the people search (ruling 75) or a CSV upload,
 removed in the list. The form's roster on an *Invitation only* exercise;
-fed to gates as dossiers once AD2F stores them.
+fed to gates where the timeline holds no form: each candidate's dossier
+minted once the exercise is published (ruling 81, `dossiers`).
 
 A person is listed once per exercise (``uq_candidate_pair``). Removing
 someone sets ``removed_at``; adding them again clears it on the same row.
@@ -24,7 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from applydesk import audit, people
+from applydesk import audit, dossiers, people
 from applydesk.models import Candidate, Exercise, Person
 
 #: How a candidate came: picked in the search, or a CSV row.
@@ -127,6 +128,7 @@ def add(session: Session, public_id: str, person: Person, via: str, actor: Perso
         refs={"person_id": person.id},
         context={"via": via},
     )
+    dossiers.sync_candidates(session, exercise, actor)  # ruling 81: on each add
     return True
 
 
@@ -151,6 +153,7 @@ def remove(session: Session, public_id: str, person_id: int, actor: Person | Non
         exercise=exercise,
         refs={"person_id": person_id},
     )
+    dossiers.retire_for(session, exercise, row, actor)
     return True
 
 

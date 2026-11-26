@@ -155,6 +155,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "application.seeded": EventSchema(_EXERCISE | {"counts"}),
     # Segment AD2F: the samples' dossiers recorded by the seed.
     "dossier.seeded": EventSchema(_EXERCISE | {"counts"}),
+    # Segment AD2F: Candidates' dossiers minted or revived, and retired.
+    "dossier.minted": EventSchema(_EXERCISE | {"counts"}),
+    "dossier.retired": EventSchema(_EXERCISE | {"refs"}),
     "candidate.removed": EventSchema(_EXERCISE | {"refs"}),
     "exercise.archived": EventSchema(_EXERCISE),
     "exercise.restored": EventSchema(_EXERCISE),

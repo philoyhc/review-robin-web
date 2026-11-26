@@ -799,7 +799,13 @@ def plan_of(exercise_id: str) -> Plan:
         if exercise_id in _STAGES:
             rows = _model_rows(apps) if exercise_id == "wa9juxbc2t" else _small_rows(apps)
             return Plan(saved, _blank_cells(rows, saved), exercise_id)
-        return Plan(saved, tuple(Row(dossier_of(a), {}) for a in apps), exercise_id)
+        from applydesk import dossiers  # it reads the store this module builds on
+
+        rows = tuple(Row(dossier_of(a), {}) for a in apps) + tuple(
+            Row(Dossier(public_id, public_id, name, email), {})
+            for public_id, name, email in dossiers.candidate_rows(exercise_id)
+        )
+        return Plan(saved, rows, exercise_id)
     if exercise_id not in _STAGES:
         e = sample_data.sample(exercise_id)  # an ordinary one: Draft, no dates
         when = _exercise_span(e) if e else None

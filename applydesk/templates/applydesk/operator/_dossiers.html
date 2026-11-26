@@ -131,7 +131,7 @@
            under it (ruling 25; AD-89): the CSV still keys rows by
            Application ID. #}
         <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ rid }}">
-          {% if d.state == "Submitted" or not a %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ d.public_id) }}"><code>{{ d.public_id }}</code></a>{% elif d.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ d.public_id }}</code>{% endif %}{% if a %}<span class="ap-app">Application <code>{{ d.key }}</code></span>{% else %}<span class="ap-app">Candidate</span>{% endif %}</td>
+          {% if d.state == "Submitted" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ d.public_id) }}"><code>{{ d.public_id }}</code></a>{% elif d.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ d.public_id }}</code>{% endif %}{% if a %}<span class="ap-app">Application <code>{{ d.key }}</code></span>{% else %}<span class="ap-app">Candidate</span>{% endif %}</td>
         <td class="ap-who"><strong>{{ d.name }}</strong><span class="ap-mail">{{ d.email }}</span></td>
         <td class="ap-stat">{% if a %}{% with value = d.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span>{% endif %}{% if d.state == "Submitted" and d.key not in redraft_closed %}<button class="btn btn-alert btn-short ap-redraft" type="button" disabled title="Returning to draft is not built yet" aria-label="Return {{ rid }} to draft">Return to draft</button>{% endif %}</td>
         {% for r in plan.stages %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}

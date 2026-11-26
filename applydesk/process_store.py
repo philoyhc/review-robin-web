@@ -33,7 +33,7 @@ from typing import Any, cast
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from applydesk import audit, db, sample_data, stages
+from applydesk import audit, db, dossiers, sample_data, stages
 from applydesk.models import (
     Exercise,
     GateField,
@@ -841,6 +841,8 @@ def save(
             reason=why or None,
             refs={"stage_id": row.id},
         )
+    # Ruling 81: a timeline with no form, published, gives Candidates dossiers.
+    dossiers.sync_candidates(session, exercise, actor)
     return exercise.process_revision
 
 
