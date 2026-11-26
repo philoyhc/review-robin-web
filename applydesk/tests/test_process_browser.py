@@ -2030,3 +2030,85 @@ def test_removing_a_set_up_gate_asks_first(page: Page) -> None:
     gate.locator('[data-pc-act="remove-gate"]').click()
     assert asked and "set up in Review Robin" in asked[0]
     assert page.locator(f'.pc-item[data-item="gate"][data-key="{key}"]').count() == 1
+
+
+def _rr_boxes(page: Page) -> dict[str, Locator]:
+    """Each saved gate's Create Review Robin session box, by gate key."""
+    found: dict[str, Locator] = {}
+    gates = page.locator('.pc-item[data-item="gate"]')
+    for i in range(gates.count()):
+        key = gates.nth(i).get_attribute("data-key") or ""
+        if key:
+            found[key] = gates.nth(i).locator("[data-pc-rr-box]")
+    return found
+
+
+def test_create_review_robin_session_sets_up_and_opens_it(page: Page) -> None:
+    """Segment 23J (amended, 2026-11-25): on a published exercise, a saved
+    gate not yet set up or sent offers *Create Review Robin session*; a
+    click keeps the set-up in the tab, as Evaluations' *Set up* does, and
+    opens the session by its code in a new tab; the card then offers *Open
+    Review Robin session ↗*, after a reload too."""
+    page.goto(MODEL)
+    boxes = _rr_boxes(page)
+    ready = [
+        k
+        for k, b in boxes.items()
+        if b.locator("[data-pc-rr-create]").count()
+        and b.locator("[data-pc-rr-create]").is_enabled()
+    ]
+    assert ready, "no gate to create a session for"
+    key = ready[0]
+    box = boxes[key]
+    code = box.get_attribute("data-code") or ""
+    assert code.startswith("wa9juxbc2t-g")
+    gate = page.locator(f'.pc-item[data-item="gate"][data-key="{key}"]')
+    _open(_cards(page).filter(has=gate))
+    _open_item(gate)
+    # Review Robin is not mounted here: its page stands in.
+    page.context.route("**/reviewrobin/**", lambda r: r.fulfill(status=200, body="Review Robin"))
+    with page.context.expect_page() as opened:
+        box.locator("[data-pc-rr-create]").click()
+    opened.value.wait_for_url(f"**/reviewrobin/operator/sessions/by-code/{code}")
+    link = box.locator("[data-pc-rr-open]")
+    assert link.inner_text() == "Open Review Robin session ↗"
+    assert link.get_attribute("target") == "_blank" and link.get_attribute("rel") == "noopener"
+    assert (link.get_attribute("href") or "").endswith(f"/by-code/{code}")
+    assert box.locator("[data-pc-rr-said]").inner_text().startswith("Set up (simulated)")
+    kept = page.evaluate(
+        "k => JSON.parse(sessionStorage.getItem('applydesk-rr-setup:wa9juxbc2t'))[k]", key
+    )
+    assert kept["code"] == code and kept["url"].endswith(f"/by-code/{code}") and kept["transfer"]
+    assert page.locator("[data-unsaved]").is_hidden()  # a set-up is not an edit
+    page.reload()
+    assert _rr_boxes(page)[key].locator("[data-pc-rr-open]").count() == 1
+
+
+def test_a_sent_gate_offers_its_session(page: Page) -> None:
+    """A gate the sample has sent has its session already: the card links
+    to it by its code."""
+    page.goto(MODEL)
+    made = [b for b in _rr_boxes(page).values() if b.get_attribute("data-made") is not None]
+    assert made
+    for box in made:
+        href = box.locator("[data-pc-rr-open]").get_attribute("href") or ""
+        assert href.endswith(f"/by-code/{box.get_attribute('data-code')}")
+
+
+def test_create_waits_for_the_save(page: Page) -> None:
+    """A gate is set up as saved: with changes unsaved the button is off,
+    saying so, and back on once they are saved."""
+    page.goto(MODEL)
+    boxes = _rr_boxes(page)
+    key = next(
+        k
+        for k, b in boxes.items()
+        if b.locator("[data-pc-rr-create]").count()
+        and b.locator("[data-pc-rr-create]").is_enabled()
+    )
+    button = boxes[key].locator("[data-pc-rr-create]")
+    page.locator("[data-unsaved]").evaluate("m => { m.hidden = false; }")
+    assert button.is_disabled()
+    assert button.get_attribute("title") == "Save the page first: the gate is set up as saved"
+    page.locator("[data-unsaved]").evaluate("m => { m.hidden = true; }")
+    assert button.is_enabled()

@@ -118,6 +118,14 @@ Taken 2026-11-25 at `d23dffcd2`.
 
 **Rung 6 (2026-11-25):** `GET /operator/sessions/by-code/{code}` (`sessions.public_id_for_code`) redirects an operator of the session to its Session Home (307). Anyone else, or an unknown code, gets the uniform 404, as Session Home answers. The URL crawl visits it. The cumulative read for rungs 6–8 runs from `540b669fb`.
 
+**Rung 7 (2026-11-26, scaffold):** the gate card ends with *Create Review Robin session*, after *Remove the gate* and outside the gate's lock: a published stage's gate, locked for editing, is the one to set up.
+
+**Rung 8 (2026-11-26):**
+- *Create Review Robin session* is off, its reason in its title, until the exercise is published, the gate saved, and no field is one Review Robin would refuse. It is also off while the page has unsaved changes, as the gate is set up as saved.
+- A click keeps the set-up in the store Evaluations uses (`applydesk-rr-setup:<exercise>`), with the gate's default name and code (ruling 56). It opens `…/reviewrobin/operator/sessions/by-code/<code>` in a new tab. The card then offers *Open Review Robin session ↗*, as it does for a gate already sent.
+- Evaluations' *Open in Review Robin ↗* goes by the session's code: the one it was sent or set up with, else the sample's. `_rr_home` gives way to `_rr_by_code`.
+- A replicated stage's gates start with the button off until saved.
+
 **Amended (author, 2026-11-25, after rung 5).** The gate card on Process gains *Create Review Robin session* at its end, active once the gate's set-up fields are complete; a click creates the session and opens its home in a new tab. *Open in Review Robin ↗* on Evaluations goes straight to that session's home by its code, which Apply Desk already knows. Review Robin gains a lookup by code for it (rung 6). Rungs 6–8 build this; the close moves to 9.
 
 ## PR ladder

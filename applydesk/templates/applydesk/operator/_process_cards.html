@@ -341,10 +341,17 @@
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-gate">Remove the gate</button></div>
   </fieldset>
   {# Segment 23J (amended, 2026-11-25): the gate's Review Robin session
-     made from here, at the card's end, opened in a new tab. Outside the
-     lock: a published stage's gate is the one to set up. A scaffold
-     (rung 7): inert, its reason in its title, until rung 8 wires it. #}
-  <div class="pc-item-foot pc-rr-foot"><button type="button" class="btn btn-secondary" data-pc-rr-create disabled title="Creates the gate's Review Robin session and opens it in a new tab, once the exercise is published and the gate saved">Create Review Robin session</button></div>
+     made from here, at the card's end, opened in a new tab by its code;
+     outside the lock, as a published stage's gate is the one to set up.
+     Off, its reason in its title, until the exercise is published, the
+     gate saved and no field is one Review Robin would refuse; the page's
+     script then turns it on while nothing is unsaved, and swaps it for
+     the link once the gate is set up or sent (in this tab, or by the
+     sample). #}
+  {% if exercise.state == "Draft" %}{% set rr_off = "Once the exercise is published" %}
+  {% elif not (g.key and g.number) %}{% set rr_off = "Once the gate is saved" %}
+  {% else %}{% set rr_off = (field_problems(g) | first | default("")) %}{% endif %}
+  <div class="pc-item-foot pc-rr-foot"><span class="pc-rr-create" data-pc-rr-box{% if g.key and g.number %} data-name="{{ session_name(g) }}" data-code="{{ session_code(g) }}"{% endif %}{% if state == "Sent" or sent %} data-made{% endif %} data-off="{{ rr_off }}"><button type="button" class="btn btn-secondary" data-pc-rr-create disabled title="{{ rr_off or "Creates the gate's Review Robin session and opens it in a new tab" }}">Create Review Robin session</button><span class="muted" data-pc-rr-said role="status"></span></span></div>
   </div>
 </div>
 {% endmacro %}

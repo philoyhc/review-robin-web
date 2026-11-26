@@ -1394,12 +1394,13 @@ def _rr_me(request: Request) -> str:
     return f"{request.url.scheme}://{request.url.netloc}{host}/reviewrobin/me"
 
 
-def _rr_home(request: Request) -> str:
-    """Where *Open in Review Robin* goes in the sample (segment 23J): a set
-    up gate's session is Review Robin's ``session_home_url``, which the
-    sample has none of, so its stand-in is Review Robin's session list,
-    beside Apply Desk under the host's mounts."""
-    return _rr_me(request).removesuffix("/me") + "/operator/sessions"
+def _rr_by_code(request: Request) -> str:
+    """Where *Open in Review Robin* goes, less the session's code (segment
+    23J, amended): Review Robin's ``/operator/sessions/by-code/`` beside
+    Apply Desk under the host's mounts, which opens the session with that
+    code for its operators. Apply Desk knows a gate's code (ruling 56), so
+    the link needs no stored ``session_home_url``."""
+    return _rr_me(request).removesuffix("/me") + "/operator/sessions/by-code/"
 
 
 def _rr_data(
@@ -1410,7 +1411,7 @@ def _rr_data(
     sent_with: handoff.Bundle,
     people: tuple[tuple[str, str, int], ...],
     rr_me: str,
-    rr_home: str = "",
+    rr_by_code: str = "",
 ) -> dict[str, object]:
     """What the Review Robin card's script needs to send and re-send in
     the tab (segment AD1M rung 4, ruling 55): the gate's state as the
@@ -1423,8 +1424,8 @@ def _rr_data(
     return {
         "ex": exercise.public_id,
         "key": gate.key,
-        # Open in Review Robin's stand-in for a set-up gate (segment 23J).
-        "rrHome": rr_home,
+        # Open in Review Robin, less the code (segment 23J, amended).
+        "rrByCode": rr_by_code,
         "state": state[0],
         "why": state[1] if state[0] == "Not ready" else "",
         "opened": opened,
@@ -1548,7 +1549,7 @@ def gate_evaluations(
         bundle=sent_with,
         people=people,
         rr_data=_rr_data(
-            exercise, found, state, sent, sent_with, people, _rr_me(request), _rr_home(request)
+            exercise, found, state, sent, sent_with, people, _rr_me(request), _rr_by_code(request)
         ),
     )
 
@@ -1782,6 +1783,13 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         gate_type=stages.gate_type,
         evaluators_summary=stages.evaluators_summary,
         gate_types=stages.GATE_TYPES,
+        # Create Review Robin session on the gate card (segment 23J,
+        # amended): the session's name and code, a field Review Robin would
+        # refuse, and where a session opens by its code.
+        session_name=functools.partial(handoff.session_name, exercise),
+        session_code=functools.partial(handoff.session_code, exercise),
+        field_problems=stages.field_problems,
+        rr_by_code=_rr_by_code(request),
         fields_of=stages.fields_of,
         field_summary=stages.field_summary,
         source_field=stages.source_field,
