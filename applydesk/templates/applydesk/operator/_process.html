@@ -1114,7 +1114,10 @@
       // (segment 23J, amended), whatever its original's was.
       added.querySelectorAll("[data-pc-rr-box]").forEach(function (box) {
         ["data-name", "data-code", "data-made"].forEach(function (a) { box.removeAttribute(a); });
-        box.dataset.off = "Once the gate is saved";
+        // As a new gate says it (the template's own reason): a draft
+        // exercise's gates wait for publishing first.
+        var fresh = document.getElementById("pc-new-gate").content.querySelector("[data-pc-rr-box]");
+        box.dataset.off = (fresh && fresh.dataset.off) || "Once the gate is saved";
         box.innerHTML = '<button type="button" class="btn btn-secondary" data-pc-rr-create disabled></button><span class="muted" data-pc-rr-said role="status"></span>';
         box.firstChild.textContent = "Create Review Robin session";
         box.firstChild.title = box.dataset.off;
