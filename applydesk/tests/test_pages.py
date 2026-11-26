@@ -2290,3 +2290,18 @@ def test_details_says_only_what_the_operator_needs(client: TestClient) -> None:
         assert "Invitation only hides the exercise" not in home, e
         assert "On, evaluators' dossiers redact" not in home, e
         assert "Blind review" in home, e
+
+
+def test_a_gate_card_ends_with_create_review_robin_session(client: TestClient) -> None:
+    """Segment 23J (amended, rung 7): the gate card ends with *Create Review
+    Robin session*, after *Remove the gate* and outside its lock: a
+    scaffold, inert, its
+    reason in its title."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
+    gate = text[text.index('data-item="gate"') :]
+    gate = gate[gate.index('data-pc-act="remove-gate"') :]
+    foot = gate[gate.index('class="pc-item-foot pc-rr-foot"') :]
+    button = foot[foot.index("<button") : foot.index("</button>")]
+    assert "data-pc-rr-create disabled" in button
+    assert "title=\"Creates the gate's Review Robin session" in button
+    assert button.endswith(">Create Review Robin session")
