@@ -1,9 +1,9 @@
 """The localhost seed (segment AD2A; ruling 74): `python -m applydesk.seed`.
 
 On a fresh checkout, after `alembic -c applydesk/alembic.ini upgrade head`,
-it gives every sample exercise its `exercise` row and its applications
-(segment AD2J) and makes one person its Owner, allowlisted to operate
-(ruling 75), so every page works on localhost. That person is
+it gives every sample exercise its `exercise` row, its applications
+(segment AD2J) and their dossiers (AD2F), and makes one person its Owner,
+allowlisted to operate (ruling 75), so every page works on localhost. That person is
 Cordware's fake identity (`FAKE_AUTH_*` in `.env`), bound by its tenant
 and principal ID, or the email `--owner` names, kept pending until it
 signs in.
@@ -28,7 +28,7 @@ from pathlib import Path
 from sqlalchemy import make_url, select, text
 from sqlalchemy.orm import Session
 
-from applydesk import applications, db, exercises, operators, people, sample_data
+from applydesk import applications, db, dossiers, exercises, operators, people, sample_data
 from applydesk.models import Exercise, Person
 from cordware.identity import Identity, is_local
 from cordware.settings import IdentitySettings, identity_settings
@@ -47,6 +47,7 @@ class SeedResult:
     exercises_added: int
     grants_added: int
     applications_added: int = 0
+    dossiers_added: int = 0
 
 
 def _fake_identity(settings: IdentitySettings) -> Identity:
@@ -88,7 +89,7 @@ def seed(
         owner = found
     if not operators.may_operate(owner):
         operators.admit(session, _PLATFORM, owner)
-    exercises_added = grants_added = applications_added = 0
+    exercises_added = grants_added = applications_added = dossiers_added = 0
     for sample in sample_data.EXERCISES:  # the samples only, never an ordinary row (AD2G)
         exercise = session.scalar(select(Exercise).where(Exercise.public_id == sample.public_id))
         if exercise is None:
@@ -102,12 +103,15 @@ def seed(
         applications_added += applications.record_samples(
             session, exercise, sample_data.sample_applications(sample.public_id), owner
         )
+        # And their dossiers (segment AD2F), by the IDs the samples carry.
+        dossiers_added += dossiers.record_samples(session, exercise, owner)
     session.commit()
     return SeedResult(
         owner_id=owner.id,
         exercises_added=exercises_added,
         grants_added=grants_added,
         applications_added=applications_added,
+        dossiers_added=dossiers_added,
     )
 
 
@@ -210,7 +214,7 @@ def main(argv: list[str] | None = None) -> int:
         ("reset, then " if args.reset else "")
         + f"seeded: {result.exercises_added} exercises and {result.grants_added} "
         f"Owner grants added (owner person {result.owner_id}); "
-        f"{result.applications_added} applications added"
+        f"{result.applications_added} applications and {result.dossiers_added} dossiers added"
         + (f"; {len(made)} blank drafts added" if made else "")
     )
     return 0

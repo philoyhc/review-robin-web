@@ -153,6 +153,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "candidate.added": EventSchema(_EXERCISE | {"refs", "context"}),
     # Segment AD2J: the samples' applications recorded by the seed.
     "application.seeded": EventSchema(_EXERCISE | {"counts"}),
+    # Segment AD2F: the samples' dossiers recorded by the seed.
+    "dossier.seeded": EventSchema(_EXERCISE | {"counts"}),
     "candidate.removed": EventSchema(_EXERCISE | {"refs"}),
     "exercise.archived": EventSchema(_EXERCISE),
     "exercise.restored": EventSchema(_EXERCISE),
