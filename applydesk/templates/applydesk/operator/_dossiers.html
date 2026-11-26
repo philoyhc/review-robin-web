@@ -76,7 +76,7 @@
   </section>
   {% endif %}
   {% if not plan.rows %}{% from "applydesk/_empty.html" import empty %}
-  {% if exercise.state == "Draft" %}{% call empty("No applications yet", url('/operator/exercises/' ~ exercise.public_id), "Home") %}A row per dossier comes once the exercise is published and applicants start their applications.{% endcall %}
+  {% if not exercise_published %}{% call empty("No applications yet", url('/operator/exercises/' ~ exercise.public_id), "Home") %}A row per dossier comes once the exercise is published and applicants start their applications.{% endcall %}
   {% else %}{% call empty("No applications yet", url('/operator/exercises/' ~ exercise.public_id ~ '/form'), "Form") %}A row per dossier comes as applicants start their applications on the exercise's form.{% endcall %}{% endif %}
   {% endif %}
   {# With no rows the table is kept for the page's script, out of view

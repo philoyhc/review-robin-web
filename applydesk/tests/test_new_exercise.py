@@ -1135,3 +1135,54 @@ def test_a_process_page_older_than_the_last_save_is_refused() -> None:
     stale = client.post(f"{LOBBY}/{made}/process", json={**first, "revision": 0})
     assert stale.status_code == 409 and "Reload" in stale.json()["error"], stale.text
     assert client.post(f"{LOBBY}/{made}/process", json={**first, "revision": 1}).status_code == 200
+
+
+def test_an_ordinary_exercise_published_by_its_stages_fixes_its_code() -> None:
+    """Codex on cordware#230: an exercise made with New exercise is built
+    a Draft and published by its stages; once one is published, G2 fixes
+    its code in the Lobby and on Details, and who may apply on Details,
+    as for a sample. Its name and tags still save."""
+    from applydesk.lookups import exercise_or_404
+
+    client = _client()
+    made = _create(client, "Published by its stages")
+    reply = _post_process(client, made, _process())
+    assert reply.status_code == 200, reply.text
+    shown, revision = exercises.stored_at(exercise_or_404(made))
+    assert shown.state == "Draft"  # its own, as built
+    details = {
+        "revision": revision,
+        "name": shown.name,
+        "code": "NEW-CODE",
+        "description": shown.summary,
+        "contact": shown.help_contact,
+        "timezone": shown.timezone or sample_data.DEFAULT_TIMEZONE,
+        "eligibility": shown.eligibility,
+        "blind": shown.blind,
+    }
+    refused = client.post(f"{LOBBY}/{made}/details", json=details)
+    assert refused.status_code == 400 and "Fixed once published" in refused.text
+    # The page's controls agree: Details' code and eligibility disabled,
+    # the Lobby row marked published (its panel's code then read-only).
+    home = client.get(f"{LOBBY}/{made}").text
+    assert 'data-dt="code" value="' in home
+    code_input = home[home.index('data-dt="code"') :]
+    assert code_input[: code_input.index(">")].count("disabled") == 1
+    lobby = client.get(LOBBY).text
+    row = lobby[lobby.index(f'data-id="{made}"') :]
+    assert 'data-published="true"' in row[: row.index(">")]
+    session = db.new_session()
+    try:
+        with pytest.raises(exercises.Refused) as lobby:
+            exercises.save_panel(session, made, shown.name, "NEW-CODE", [], revision, None)
+        assert lobby.value.key == "code_fixed"
+    finally:
+        session.rollback()
+        session.close()
+    session = db.new_session()
+    try:
+        exercises.save_panel(session, made, "Renamed", shown.code, ["t"], revision, None)
+        session.commit()
+    finally:
+        session.close()
+    assert exercises.stored(exercise_or_404(made)).name == "Renamed"

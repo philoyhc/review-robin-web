@@ -98,6 +98,7 @@ def exercises(request: Request) -> Response:
         most_made=exercise_store.MOST_MADE,
         lobby_said=SAID.get(request.query_params.get("said", ""), ""),
         exercise_status=locks.exercise_status,
+        is_draft=locks.is_draft,
         status_counts=locks.status_counts(mine),
         stage_position=workflow.stage_position,
         timezone=sample_data.timezone,
@@ -998,7 +999,7 @@ def _locks_hold(exercise: sample_data.Exercise, values: dict[str, Any]) -> None:
     holding a gate is published (`locks.blind_lock`)."""
     if values["blind"] != exercise.blind and locks.blind_lock(exercise).fixed:
         raise _Refusal("blind", locks.blind_lock(exercise).reason)
-    if exercise.state != "Draft":
+    if not locks.is_draft(exercise):  # by its state or its stages (Codex on cordware#230)
         if values["code"] != (exercise.code or None):
             raise _Refusal("code", "Fixed once published: a change waits for re-publishing.")
         if values["eligibility"] != exercise_store.eligibility_of(exercise.eligibility):
@@ -1285,6 +1286,9 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         timezones=sample_data.TIMEZONES,
         default_contact=sample_data.DEFAULT_HELP_CONTACT,
         blind_lock=locks.blind_lock(exercise),
+        # G2's code and eligibility lock: published by its state or its
+        # stages (Codex on cordware#230).
+        exercise_published=not locks.is_draft(exercise),
         revision=revision,
         # Read-only until restored (the author, 2026-11-22).
         archived=exercise_store.is_archived(exercise.public_id),

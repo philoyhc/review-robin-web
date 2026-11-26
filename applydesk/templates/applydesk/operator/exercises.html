@@ -63,7 +63,7 @@
     {% for e in exercises %}
       {% set n, m, stage_name = stage_position(e) %}
       {% set zone = timezone(e) %}
-      <tr data-lb-row data-id="{{ e.public_id }}" data-revision="{{ revisions.get(e.public_id, 0) }}" data-name="{{ e.name }}" data-code="{{ e.code }}" data-published="{{ 'false' if e.state == 'Draft' else 'true' }}" data-owner="{{ 'true' if roles[e.public_id] == 'Owner' else 'false' }}" data-tags="{{ e.tags | join(', ') }}">
+      <tr data-lb-row data-id="{{ e.public_id }}" data-revision="{{ revisions.get(e.public_id, 0) }}" data-name="{{ e.name }}" data-code="{{ e.code }}" data-published="{{ 'false' if is_draft(e) else 'true' }}" data-owner="{{ 'true' if roles[e.public_id] == 'Owner' else 'false' }}" data-tags="{{ e.tags | join(', ') }}">
         <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a></td>
         <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
         <td data-lb-role>{% if roles[e.public_id] == "Owner" %}<span class="chip chip-ok">Owner</span>{% else %}<span class="chip chip-mute">Operator</span>{% endif %}</td>
