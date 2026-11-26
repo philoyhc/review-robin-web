@@ -1,16 +1,19 @@
-"""An exercise's Candidates (ruling 77, segment AD2C rung 9): people kept
-by hand, added through the people search (ruling 75) or a CSV upload,
-removed in the list. The form's roster on an *Invitation only* exercise;
-fed to gates where the timeline holds no form: each candidate's dossier
-minted once the exercise is published (ruling 81, `dossiers`).
+"""An exercise's Candidates, shown as *Populate Dossiers* (rulings 77, 83;
+segments AD2C rung 9, AD2K): entries kept by hand, added through the people
+search (ruling 75) or a CSV upload, removed in the list. The form's roster
+on an *Invitation only* exercise; where the item is the first, each entry's
+dossier is minted once the exercise is published (rulings 81, 83,
+`dossiers`).
 
-A person is listed once per exercise (``uq_candidate_pair``). Removing
-someone sets ``removed_at``; adding them again clears it on the same row.
-A CSV saves its good rows and lists the rest back, as the Panels roster
-import does: each row is one address and, if given, a name. A row's
-address is matched to a person on record, else stored as a pending
-person (``people.pending``); the directory is searched one person at a
-time, from the search, not per CSV row. Each add and removal is audited.
+Each entry is one dossier, so a person may hold several, up to the
+exercise's ``dossiers_per_person``; an add past it is refused. Removing an
+entry sets ``removed_at``; adding the person again is a new entry, never
+the old one back (ruling 83). A CSV saves its good rows and lists the rest
+back, as the Panels roster import does: each row is one address and, if
+given, a name and a title. A row's address is matched to a person on
+record, else stored as a pending person (``people.pending``); the
+directory is searched one person at a time, from the search, not per CSV
+row. Each add and removal is audited.
 """
 
 from __future__ import annotations
@@ -21,8 +24,7 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from applydesk import audit, dossiers, people
@@ -32,6 +34,10 @@ from applydesk.models import Candidate, Exercise, Person
 VIA = ("search", "csv")
 #: The most rows one CSV adds.
 MAX_ROWS = 2000
+#: The most dossiers one person may hold in an exercise (segment AD2K).
+MAX_PER_PERSON = 20
+#: The longest title an entry holds (``Candidate.title``).
+MAX_TITLE = 300
 #: The longest address a person row holds (``Person.email``, ``String(320)``):
 #: a longer one is a bad row, not a failed insert (Codex on #4161).
 MAX_EMAIL = 320
@@ -44,29 +50,34 @@ class Refused(Exception):
 
 @dataclass(frozen=True)
 class Listed:
-    """One candidate as the list shows them."""
+    """One entry as the list shows it."""
 
+    id: int
     person_id: int
     name: str
     email: str
     via: str
     added_at: datetime
+    title: str = ""
 
 
 @dataclass(frozen=True)
 class Imported:
-    """What a CSV did: how many it added, how many were listed already,
-    and each row it could not read, as said back to the operator."""
+    """What a CSV did: how many it added, how many were listed already as
+    often as the exercise allows, and each row it could not read, as said
+    back to the operator."""
 
     added: int
     already: int
     bad: tuple[str, ...]
 
 
-def _exercise(session: Session, public_id: str) -> Exercise:
-    found = session.scalar(
-        select(Exercise).where(Exercise.public_id == public_id, Exercise.deleted_at.is_(None))
-    )
+def _exercise(session: Session, public_id: str, *, lock: bool = False) -> Exercise:
+    query = select(Exercise).where(Exercise.public_id == public_id, Exercise.deleted_at.is_(None))
+    # Locked while an add counts a person's entries, so two adds at once
+    # cannot both pass the per-person limit (Postgres; SQLite writes one at
+    # a time anyway).
+    found = session.scalar(query.with_for_update() if lock else query)
     if found is None:
         raise Refused("That exercise is no longer on record.")
     if found.archived_at is not None:
@@ -75,7 +86,7 @@ def _exercise(session: Session, public_id: str) -> Exercise:
 
 
 def listing(session: Session, public_id: str) -> tuple[Listed, ...]:
-    """The exercise's current candidates, in the order they were added."""
+    """The exercise's current entries, in the order they were added."""
     exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
     if exercise is None:
         return ()
@@ -86,8 +97,46 @@ def listing(session: Session, public_id: str) -> tuple[Listed, ...]:
         .order_by(Candidate.added_at, Candidate.id)
     )
     return tuple(
-        Listed(p.id, p.display_name or "", p.email or "", c.via, c.added_at) for c, p in rows
+        Listed(c.id, p.id, p.display_name or "", p.email or "", c.via, c.added_at, c.title)
+        for c, p in rows
     )
+
+
+def held(session: Session, exercise: Exercise, person_id: int) -> int:
+    """How many live entries ``person_id`` holds in ``exercise``."""
+    return (
+        session.scalar(
+            select(func.count())
+            .select_from(Candidate)
+            .where(
+                Candidate.exercise_id == exercise.id,
+                Candidate.person_id == person_id,
+                Candidate.removed_at.is_(None),
+            )
+        )
+        or 0
+    )
+
+
+def full(session: Session, public_id: str) -> frozenset[int]:
+    """The people holding as many entries as the exercise allows: the
+    search leaves them out."""
+    exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
+    if exercise is None:
+        return frozenset()
+    rows = session.execute(
+        select(Candidate.person_id)
+        .where(Candidate.exercise_id == exercise.id, Candidate.removed_at.is_(None))
+        .group_by(Candidate.person_id)
+        .having(func.count() >= exercise.dossiers_per_person)
+    )
+    return frozenset(r for (r,) in rows)
+
+
+def already(session: Session, public_id: str) -> str:
+    """What an add past the limit says."""
+    most = _exercise(session, public_id).dossiers_per_person
+    return "Already listed." if most == 1 else f"Already listed {most} times, the most allowed."
 
 
 def add(
@@ -98,44 +147,33 @@ def add(
     actor: Person | None,
     *,
     mint: bool = True,
+    title: str = "",
 ) -> bool:
-    """List ``person``; False if they were listed already. Flushes. With
-    ``mint``, their dossier is given where Candidates feed gates (ruling
-    81); a CSV mints once, after its rows."""
+    """Add an entry for ``person``; False if they already hold as many as
+    the exercise allows (``dossiers_per_person``). Flushes. With ``mint``,
+    its dossier is given where Populate Dossiers is the first item (rulings
+    81, 83); a CSV mints once, after its rows."""
     if via not in VIA:
         raise ValueError(via)
-    exercise = _exercise(session, public_id)
-    row = session.scalar(
-        select(Candidate).where(
-            Candidate.exercise_id == exercise.id, Candidate.person_id == person.id
-        )
-    )
-    now = datetime.now(UTC)
-    if row is not None and row.removed_at is None:
+    exercise = _exercise(session, public_id, lock=True)
+    if held(session, exercise, person.id) >= exercise.dossiers_per_person:
         return False
-    if row is not None:  # removed before: listed again on the same row
-        row.removed_at, row.via, row.added_by_id, row.added_at = None, via, _id(actor), now
-    else:
-        try:
-            with session.begin_nested():
-                session.add(
-                    Candidate(
-                        exercise_id=exercise.id,
-                        person_id=person.id,
-                        via=via,
-                        added_by_id=_id(actor),
-                        added_at=now,
-                    )
-                )
-        except IntegrityError:
-            return False  # another request listed them meanwhile
+    row = Candidate(
+        exercise_id=exercise.id,
+        person_id=person.id,
+        via=via,
+        title=title[:MAX_TITLE],
+        added_by_id=_id(actor),
+        added_at=datetime.now(UTC),
+    )
+    session.add(row)
     session.flush()
     audit.write_event(
         session,
         event_type="candidate.added",
         actor=actor,
         exercise=exercise,
-        refs={"person_id": person.id},
+        refs={"person_id": person.id, "candidate_id": row.id},
         context={"via": via},
     )
     if mint:
@@ -143,13 +181,14 @@ def add(
     return True
 
 
-def remove(session: Session, public_id: str, person_id: int, actor: Person | None) -> bool:
-    """Take someone off the list; False if they were not on it. Flushes."""
+def remove(session: Session, public_id: str, entry_id: int, actor: Person | None) -> bool:
+    """Take one entry off the list, retiring its dossier; False if it was
+    not on it. Flushes."""
     exercise = _exercise(session, public_id)
     row = session.scalar(
         select(Candidate).where(
             Candidate.exercise_id == exercise.id,
-            Candidate.person_id == person_id,
+            Candidate.id == entry_id,
             Candidate.removed_at.is_(None),
         )
     )
@@ -162,7 +201,7 @@ def remove(session: Session, public_id: str, person_id: int, actor: Person | Non
         event_type="candidate.removed",
         actor=actor,
         exercise=exercise,
-        refs={"person_id": person_id},
+        refs={"person_id": row.person_id, "candidate_id": row.id},
     )
     dossiers.retire_for(session, exercise, row, actor)
     return True
@@ -186,10 +225,12 @@ def _on_record(session: Session, address: str) -> Person | None:
 
 
 def import_csv(session: Session, public_id: str, text: str, actor: Person | None) -> Imported:
-    """Add each good row of a CSV with an *Email* column and, if given, a
-    *Name* one (any case, any order); the rest are listed back by row
-    number. Flushes; the caller commits."""
-    _exercise(session, public_id)
+    """Add each good row of a CSV with an *Email* column and, if given,
+    *Name* and *Title* ones (any case, any order), one entry a row; the rest
+    are listed back by row number. A person may be in the file as often as
+    the exercise allows entries (segment AD2K). Flushes; the caller
+    commits."""
+    most = _exercise(session, public_id).dossiers_per_person
     reader = csv.reader(io.StringIO(text.lstrip("﻿")))
     try:
         header = next(reader, None)
@@ -202,8 +243,9 @@ def import_csv(session: Session, public_id: str, text: str, actor: Person | None
         raise Refused("The file has no Email column.")
     at_email = names.index("email")
     at_name = names.index("name") if "name" in names else None
+    at_title = names.index("title") if "title" in names else None
     bad: list[str] = []
-    seen: set[str] = set()
+    seen: dict[str, int] = {}
     added = already = 0
     n = 1
     while True:
@@ -222,19 +264,24 @@ def import_csv(session: Session, public_id: str, text: str, actor: Person | None
             break
         address = row[at_email].strip() if at_email < len(row) else ""
         name = row[at_name].strip() if at_name is not None and at_name < len(row) else ""
+        title = row[at_title].strip() if at_title is not None and at_title < len(row) else ""
         if len(address) > MAX_EMAIL or not _EMAIL.fullmatch(address):
             shown = address if len(address) <= 60 else address[:57] + "…"
             bad.append(f"Row {n}: “{shown}” is not an email address.")
             continue
         key = people.email_key(address) or ""
-        if key in seen:
-            bad.append(f"Row {n}: {address} is in the file twice.")
+        if seen.get(key, 0) >= most:
+            bad.append(
+                f"Row {n}: {address} is in the file twice."
+                if most == 1
+                else f"Row {n}: {address} is in the file more than {most} times."
+            )
             continue
-        seen.add(key)
+        seen[key] = seen.get(key, 0) + 1
         person = _on_record(session, address) or people.pending(session, address, actor)
         if name and not person.display_name and person.object_id is None:
             person.display_name = name[:200]  # a pending person's name, from the file
-        if add(session, public_id, person, "csv", actor, mint=False):
+        if add(session, public_id, person, "csv", actor, mint=False, title=title):
             added += 1
         else:
             already += 1

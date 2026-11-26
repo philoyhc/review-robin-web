@@ -1699,7 +1699,8 @@
 })();
 </script>
 <script>
-// Ruling 77: the Candidates list, kept as each change is made (not by
+// Rulings 77, 83: the Populate Dossiers list, an entry a dossier (segment
+// AD2K), kept as each change is made (not by
 // Process's Save, which places the item): the people search, Add, Remove
 // and a CSV upload, each answered with the list as it now stands.
 (function () {
@@ -1712,17 +1713,17 @@
     body.textContent = "";
     if (!got.candidates.length) {
       var none = el("tr"), td = el("td", "muted", "No one yet.");
-      none.setAttribute("data-cand-none", ""); td.colSpan = 4; none.appendChild(td); body.appendChild(none);
+      none.setAttribute("data-cand-none", ""); td.colSpan = 5; none.appendChild(td); body.appendChild(none);
     }
     got.candidates.forEach(function (c) {
       var tr = el("tr"), b = el("button", "btn btn-destructive btn-short", "Remove");
       tr.dataset.candId = c.id;
-      tr.appendChild(el("td", "", c.name || "—")); tr.appendChild(el("td", "", c.email)); tr.appendChild(el("td", "", c.added));
-      b.type = "button"; b.dataset.candRemove = c.id; b.setAttribute("aria-label", "Remove " + (c.name || c.email));
+      tr.appendChild(el("td", "", c.name || "—")); tr.appendChild(el("td", "", c.email)); tr.appendChild(el("td", "", c.title || "—")); tr.appendChild(el("td", "", c.added));
+      b.type = "button"; b.dataset.candRemove = c.id; b.setAttribute("aria-label", "Remove " + (c.name || c.email) + (c.title ? " (" + c.title + ")" : ""));
       var cell = el("td"); cell.appendChild(b); tr.appendChild(cell); body.appendChild(tr);
     });
     var n = got.candidates.length;
-    item.querySelector("[data-cand-count]").textContent = n ? n + (n === 1 ? " person" : " people") : "No one yet";
+    item.querySelector("[data-cand-count]").textContent = n ? n + (n === 1 ? " dossier" : " dossiers") : "No one yet";
     var bad = item.querySelector("[data-cand-bad]");
     bad.textContent = "";
     (got.bad || []).forEach(function (t) { bad.appendChild(el("li", "", t)); });
@@ -1798,7 +1799,7 @@
       return;
     }
     var rm = e.target.closest("[data-cand-remove]");
-    if (rm) { change(item, { action: "remove", person_id: Number(rm.dataset.candRemove) }); return; }
+    if (rm) { change(item, { action: "remove", entry_id: Number(rm.dataset.candRemove) }); return; }
     if (e.target.closest("[data-cand-csv]")) item.querySelector("[data-cand-file]").click();
   });
   root.addEventListener("change", function (e) {

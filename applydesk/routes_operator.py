@@ -625,11 +625,13 @@ def _check_process(exercise_id: str, sent: Any) -> Response:
 @router.get("/exercises/{exercise_id}/candidates/search", name="applydesk_candidates_search")
 def candidates_search(request: Request, exercise_id: str, q: str = "") -> Response:
     """The Candidates item's people search (ruling 75): people on record,
-    then the directory's not on record; those listed already left out."""
+    then the directory's not on record; those listed as often as allowed
+    left out."""
     exercise = exercise_or_404(exercise_id)
     session = db.new_session()
     try:
-        listed = frozenset(c.person_id for c in candidates.listing(session, exercise.public_id))
+        # Those holding as many entries as the exercise allows (segment AD2K).
+        listed = candidates.full(session, exercise.public_id)
         found = allowlist.search(session, q, lambda: directory_for(request), exclude=listed)
     finally:
         session.close()
@@ -654,8 +656,9 @@ def candidates_search(request: Request, exercise_id: str, q: str = "") -> Respon
 
 @router.post("/exercises/{exercise_id}/candidates", name="applydesk_candidates_change")
 async def candidates_change(request: Request, exercise_id: str) -> Response:
-    """The Candidates item's changes (ruling 77): add someone picked in the
-    search, remove someone, or upload a CSV; the list as it now stands."""
+    """The Candidates item's changes (rulings 77, 83): add an entry for
+    someone picked in the search, remove an entry, or upload a CSV; the
+    list as it now stands."""
     sent = await _page_json(request)
     return await run_in_threadpool(_change_candidates, request, exercise_id, sent)
 
@@ -663,7 +666,9 @@ async def candidates_change(request: Request, exercise_id: str) -> Response:
 def _listed_json(rows: tuple[candidates.Listed, ...]) -> list[dict[str, object]]:
     return [
         {
-            "id": c.person_id,
+            "id": c.id,
+            "person_id": c.person_id,
+            "title": c.title,
             "name": c.name,
             "email": c.email,
             "via": c.via,
@@ -693,7 +698,7 @@ def _change_candidates(request: Request, exercise_id: str, sent: Any) -> Respons
             said = (
                 "Added."
                 if candidates.add(session, exercise.public_id, person, "search", actor)
-                else "Already listed."
+                else candidates.already(session, exercise.public_id)
             )
         elif (
             action == "add"
@@ -714,12 +719,12 @@ def _change_candidates(request: Request, exercise_id: str, sent: Any) -> Respons
             said = (
                 "Added."
                 if candidates.add(session, exercise.public_id, person, "search", actor)
-                else "Already listed."
+                else candidates.already(session, exercise.public_id)
             )
-        elif action == "remove" and isinstance(got.get("person_id"), int):
+        elif action == "remove" and isinstance(got.get("entry_id"), int):
             said = (
                 "Removed."
-                if candidates.remove(session, exercise.public_id, got["person_id"], actor)
+                if candidates.remove(session, exercise.public_id, got["entry_id"], actor)
                 else "Not on the list: removed already."
             )
         elif action == "csv" and isinstance(got.get("text"), str):

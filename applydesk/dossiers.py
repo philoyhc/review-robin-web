@@ -4,9 +4,10 @@ application or a Candidates row.
 
 Until AD4 mints a form's dossiers at submit or at its close, the only
 application dossiers are the samples', which the localhost seed records
-with the IDs they carry (ruling 74). A Candidates item mints a dossier per
-candidate where the timeline holds no form, once the exercise is
-published and on each later add (ruling 81, `sync_candidates`)."""
+with the IDs they carry (ruling 74). *Populate Dossiers* (the Candidates
+item) mints a dossier per entry where it is the first item, once the
+exercise is published and on each later add (rulings 81, 83,
+`sync_candidates`)."""
 
 from __future__ import annotations
 
@@ -64,18 +65,19 @@ def record_samples(session: Session, exercise: Exercise, actor: Person | None) -
 
 
 def feeds_gates(session: Session, exercise: Exercise) -> bool:
-    """Whether the exercise's Candidates feed gates (ruling 81, author
-    2026-11-26): its stored timeline holds the Candidates item and no form.
-    A timeline never saved holds the form a new exercise starts with, so
-    it is a roster."""
-    if exercise.process_revision < 1:  # never saved: the starting stage holds the form
+    """Whether the exercise's Candidates (*Populate Dossiers*) populate its
+    dossiers (ruling 83, segment AD2K): its stored timeline's first stage
+    holds the item, not the form. A timeline never saved has a blank first
+    stage, so nothing populates yet."""
+    if exercise.process_revision < 1:
         return False
-    live = select(StageRow).where(
-        StageRow.exercise_id == exercise.id, StageRow.retired_at.is_(None)
-    )
-    if session.scalar(select(exists(live.where(StageRow.holds_candidates.is_(True))))) is not True:
-        return False  # no Candidates item on the timeline: nothing to feed
-    return session.scalar(select(exists(live.where(StageRow.holds_form.is_(True))))) is not True
+    first = session.scalars(
+        select(StageRow)
+        .where(StageRow.exercise_id == exercise.id, StageRow.retired_at.is_(None))
+        .order_by(StageRow.position, StageRow.id)
+        .limit(1)
+    ).first()
+    return first is not None and first.holds_candidates and not first.holds_form
 
 
 def published(session: Session, exercise: Exercise) -> bool:
@@ -111,56 +113,48 @@ def _fresh_id(session: Session) -> str:
 
 
 def sync_candidates(session: Session, exercise: Exercise, actor: Person | None) -> int:
-    """Give each current candidate a dossier where the exercise's Candidates
-    feed gates and it is published (ruling 81): minted once. A re-added
-    candidate's retired dossier is revived whatever the timeline holds now
-    (the dossier they had back, cold read). Returns how many were minted
-    or revived, audited as one event when any were. Flushes."""
-    mints = feeds_gates(session, exercise) and published(session, exercise)
+    """Give each current entry a dossier where Populate Dossiers is the
+    exercise's first item and it is published (rulings 81, 83): minted
+    once, one per entry. A removed entry's dossier stays retired; adding the
+    person again is a new entry with a dossier of its own (segment AD2K).
+    Returns how many were minted, audited as one event when any were.
+    Flushes."""
+    if not (feeds_gates(session, exercise) and published(session, exercise)):
+        return 0
+    held = select(Dossier.candidate_id).where(Dossier.candidate_id.is_not(None))
     listed = session.scalars(
         select(Candidate)
-        .where(Candidate.exercise_id == exercise.id, Candidate.removed_at.is_(None))
+        .where(
+            Candidate.exercise_id == exercise.id,
+            Candidate.removed_at.is_(None),
+            Candidate.id.not_in(held),
+        )
         .order_by(Candidate.added_at, Candidate.id)
     ).all()
-    held = {
-        d.candidate_id: d
-        for d in session.scalars(
-            select(Dossier).where(
-                Dossier.exercise_id == exercise.id, Dossier.candidate_id.is_not(None)
-            )
-        )
-    }
-    made = revived = 0
+    made = 0
     for candidate in listed:
-        dossier = held.get(candidate.id)
-        if dossier is None:
-            if not mints:
-                continue
-            try:
-                with session.begin_nested():  # another request may mint it meanwhile
-                    session.add(
-                        Dossier(
-                            public_id=_fresh_id(session),
-                            exercise_id=exercise.id,
-                            candidate_id=candidate.id,
-                        )
+        try:
+            with session.begin_nested():  # another request may mint it meanwhile
+                session.add(
+                    Dossier(
+                        public_id=_fresh_id(session),
+                        exercise_id=exercise.id,
+                        candidate_id=candidate.id,
                     )
-            except IntegrityError:
-                continue
-            made += 1
-        elif dossier.retired_at is not None:
-            dossier.retired_at = None
-            revived += 1
-    if made or revived:
+                )
+        except IntegrityError:
+            continue
+        made += 1
+    if made:
         session.flush()
         audit.write_event(
             session,
             event_type="dossier.minted",
             actor=actor,
             exercise=exercise,
-            payload=audit.counts(minted=made, revived=revived),
+            payload=audit.counts(minted=made),
         )
-    return made + revived
+    return made
 
 
 def retire_for(

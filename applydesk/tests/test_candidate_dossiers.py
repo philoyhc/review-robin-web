@@ -1,7 +1,7 @@
-"""Candidates' dossiers (segment AD2F rung 5; ruling 81, author
-2026-11-26): where the stored timeline holds no form, each candidate's
+"""Candidates' dossiers (segment AD2F rung 5, AD2K; rulings 81, 83):
+where Populate Dossiers is the stored timeline's first item, each entry's
 dossier is minted once the exercise is published and on each later add;
-with a form, Candidates is only the form's roster."""
+otherwise the item is only the form's roster."""
 
 from __future__ import annotations
 
@@ -85,23 +85,44 @@ def test_a_draft_mints_at_publish() -> None:
     assert len(_live(ex)) == 1
 
 
-def test_removing_retires_and_adding_again_revives_the_same_dossier() -> None:
+def _remove(public_id: str) -> None:
+    """Take the exercise's first entry off."""
+    session = db.new_session()
+    entry = candidates.listing(session, public_id)[0].id
+    assert candidates.remove(session, public_id, entry, None)
+    session.commit()
+    session.close()
+
+
+def test_removing_retires_and_adding_again_mints_a_new_dossier() -> None:
+    """Segment AD2K (ruling 83): adding again is a new entry, so a new
+    dossier; the old one stays retired."""
     ex = _exercise(form=False, published=True)
     _add(ex, "ann@example.edu")
     [first] = _live(ex)
-    session = db.new_session()
-    ann = people.pending(session, "ann@example.edu", None)
-    assert candidates.remove(session, ex, ann.id, None)
-    session.commit()
-    session.close()
+    _remove(ex)
     assert _live(ex) == []
     _add(ex, "ann@example.edu")
-    assert _live(ex) == [first]
+    [second] = _live(ex)
+    assert second != first
     session = db.new_session()
     kinds = list(session.scalars(select(AuditEvent.event_type).order_by(AuditEvent.id)))
     assert kinds.count("dossier.minted") == 2 and kinds.count("dossier.retired") == 1
-    assert session.scalars(select(Dossier).where(Dossier.public_id == first)).one().candidate_id
+    assert session.scalars(select(Dossier).where(Dossier.public_id == first)).one().retired_at
     session.close()
+
+
+def test_one_person_holds_two_dossiers_where_the_exercise_allows() -> None:
+    ex = _exercise(form=False, published=True)
+    session = db.new_session()
+    exercise = session.scalars(select(Exercise).where(Exercise.public_id == ex)).one()
+    exercise.dossiers_per_person = 2
+    session.commit()
+    session.close()
+    _add(ex, "ann@example.edu")
+    _add(ex, "ann@example.edu")
+    _add(ex, "ann@example.edu")  # past the most: refused
+    assert len(_live(ex)) == 2
 
 
 def test_the_dossiers_page_lists_a_candidate_s_dossier() -> None:
@@ -157,19 +178,18 @@ def test_a_publishing_process_save_mints_and_the_grid_draws_every_column() -> No
     assert 'aria-label="Decision for ' + dossier in page.text
 
 
-def test_a_form_added_later_keeps_the_dossiers_and_revives_a_returner() -> None:
+def test_a_form_placed_first_later_keeps_the_dossiers_and_mints_no_more() -> None:
+    """Ruling 83: Populate Dossiers populates only as the first item; a
+    stage placed before it leaves the dossiers made and mints no more."""
     ex = _exercise(form=False, published=True)
     _add(ex, "ann@example.edu")
     [first] = _live(ex)
     session = db.new_session()
     exercise = session.scalars(select(Exercise).where(Exercise.public_id == ex)).one()
     session.add(StageRow(exercise_id=exercise.id, key="s0", position=0, holds_form=True))
-    ann = people.pending(session, "ann@example.edu", None)
-    assert candidates.remove(session, ex, ann.id, None)
     session.commit()
     session.close()
-    _add(ex, "bob@example.edu")  # a roster now: Bob gets none
-    _add(ex, "ann@example.edu")  # Ann gets hers back
+    _add(ex, "bob@example.edu")  # not the first item now: Bob gets none
     assert _live(ex) == [first]
 
 

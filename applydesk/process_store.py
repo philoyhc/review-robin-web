@@ -841,7 +841,7 @@ def save(
             reason=why or None,
             refs={"stage_id": row.id},
         )
-    # Ruling 81: a timeline with no form, published, gives Candidates dossiers.
+    # Rulings 81, 83: Populate Dossiers as the first item, published, mints.
     dossiers.sync_candidates(session, exercise, actor)
     return exercise.process_revision
 

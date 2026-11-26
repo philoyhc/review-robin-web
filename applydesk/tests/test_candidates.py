@@ -1,7 +1,8 @@
-"""The Candidates list (ruling 77, segment AD2C rung 9,
-`applydesk/candidates.py`): people added through the search or a CSV,
-listed once, removed and added again on the same row, each change
-audited; the item placed on one stage by Process's Save."""
+"""The Candidates list, shown as Populate Dossiers (rulings 77, 83;
+segments AD2C rung 9, AD2K; `applydesk/candidates.py`): entries added
+through the search or a CSV, one dossier each, up to the most a person may
+hold; each change audited; the item placed on one stage by Process's
+Save."""
 
 from __future__ import annotations
 
@@ -11,7 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
 from applydesk import candidates, db, people, stages
-from applydesk.models import AuditEvent, Candidate, Person
+from applydesk.models import AuditEvent, Candidate, Exercise, Person
 from applydesk.tests._host import host_with
 
 MODEL = "wa9juxbc2t"
@@ -26,19 +27,55 @@ def _post(client: TestClient, body: dict[str, Any]) -> Any:
     return client.post(f"{LOBBY}/{MODEL}/candidates", json=body)
 
 
-def test_someone_is_listed_once_and_removed_then_added_again_on_the_same_row() -> None:
+def test_an_entry_a_dossier_up_to_the_most_per_person_and_no_revival() -> None:
+    """Segment AD2K (ruling 83): each add is an entry; past the exercise's
+    ``dossiers_per_person`` it is refused; removing an entry and adding the
+    person again makes a new one, not the old one back."""
     session = db.new_session()
     try:
         ann = people.pending(session, "ann@example.edu", None)
         assert candidates.add(session, MODEL, ann, "search", None)
-        assert not candidates.add(session, MODEL, ann, "search", None)  # listed already
+        assert not candidates.add(session, MODEL, ann, "search", None)  # one per person
+        assert candidates.already(session, MODEL) == "Already listed."
         assert [c.email for c in candidates.listing(session, MODEL)] == ["ann@example.edu"]
-        assert candidates.remove(session, MODEL, ann.id, None)
+        assert candidates.full(session, MODEL) == frozenset({ann.id})
+        first = candidates.listing(session, MODEL)[0].id
+        assert candidates.remove(session, MODEL, first, None)
+        assert not candidates.remove(session, MODEL, first, None)
         assert candidates.listing(session, MODEL) == ()
         assert candidates.add(session, MODEL, ann, "csv", None)
-        assert session.scalar(select(func.count()).select_from(Candidate)) == 1
+        assert session.scalar(select(func.count()).select_from(Candidate)) == 2  # a new entry
+        assert candidates.listing(session, MODEL)[0].id != first
+        exercise = session.scalar(select(Exercise).where(Exercise.public_id == MODEL))
+        assert exercise is not None
+        exercise.dossiers_per_person = 2
+        assert candidates.add(session, MODEL, ann, "search", None, title="Second project")
+        assert [c.title for c in candidates.listing(session, MODEL)] == ["", "Second project"]
+        assert not candidates.add(session, MODEL, ann, "search", None)
+        assert candidates.already(session, MODEL) == "Already listed 2 times, the most allowed."
         events = list(session.scalars(select(AuditEvent.event_type).order_by(AuditEvent.id)))
-        assert events.count("candidate.added") == 2 and events.count("candidate.removed") == 1
+        assert events.count("candidate.added") == 3 and events.count("candidate.removed") == 1
+        session.commit()
+    finally:
+        session.close()
+
+
+def test_a_csv_row_a_dossier_with_its_title_up_to_the_most() -> None:
+    session = db.new_session()
+    try:
+        exercise = session.scalar(select(Exercise).where(Exercise.public_id == MODEL))
+        assert exercise is not None
+        exercise.dossiers_per_person = 2
+        text = (
+            "Email,Title\n"
+            "eve@example.edu,Project A\n"
+            "eve@example.edu,Project B\n"
+            "eve@example.edu,Project C\n"
+        )
+        done = candidates.import_csv(session, MODEL, text, None)
+        assert (done.added, done.already) == (2, 0)
+        assert done.bad == ("Row 4: eve@example.edu is in the file more than 2 times.",)
+        assert [c.title for c in candidates.listing(session, MODEL)] == ["Project A", "Project B"]
         session.commit()
     finally:
         session.close()
@@ -125,13 +162,16 @@ def test_the_routes_add_remove_and_upload() -> None:
     added = _post(client, {"action": "add", "person_id": cy_id})
     assert added.status_code == 200 and added.json()["said"] == "Added."
     assert [c["email"] for c in added.json()["candidates"]] == ["cy@example.edu"]
-    # Listed already: the search leaves them out.
+    # Listed as often as allowed: the search leaves them out, an add says so.
     again = client.get(f"{LOBBY}/{MODEL}/candidates/search", params={"q": "cy@ex"}).json()
     assert again["on_record"] == []
+    assert _post(client, {"action": "add", "person_id": cy_id}).json()["said"] == "Already listed."
     upload = _post(client, {"action": "csv", "text": "Email\ndee@example.edu\nbad\n"})
     assert upload.status_code == 200
     assert upload.json()["said"] == "1 added." and len(upload.json()["bad"]) == 1
-    removed = _post(client, {"action": "remove", "person_id": cy_id})
+    entry = added.json()["candidates"][0]
+    assert entry["person_id"] == cy_id and entry["title"] == ""
+    removed = _post(client, {"action": "remove", "entry_id": entry["id"]})
     assert [c["email"] for c in removed.json()["candidates"]] == ["dee@example.edu"]
     for bad in ({"action": "add"}, {"action": "nothing"}, {"action": "csv", "text": 3}):
         refused = _post(client, bad)

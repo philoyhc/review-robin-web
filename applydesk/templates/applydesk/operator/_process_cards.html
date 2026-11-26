@@ -71,24 +71,24 @@
    made (`applydesk/candidates.py`). #}
 {% macro candidates_item(open=False, listed=()) %}
 <div class="pc-item" data-item="candidates"{% if open %} data-open{% endif %}>
-  {% set chips %}<span class="chip chip-mute" data-cand-count>{{ listed | length if listed else "No one yet" }}{% if listed %} {{ "person" if listed | length == 1 else "people" }}{% endif %}</span>{% endset %}
+  {% set chips %}<span class="chip chip-mute" data-cand-count>{{ listed | length if listed else "No one yet" }}{% if listed %} {{ "dossier" if listed | length == 1 else "dossiers" }}{% endif %}</span>{% endset %}
   {{ head("Populate Dossiers", "Populate Dossiers", chips, open) }}
   <div class="pi-body">
-  <p class="pc-line">People added by hand, each a dossier. On an <em>Invitation only</em> exercise they are who may apply; with no form, each becomes a dossier for the gates that follow.</p>
+  <p class="pc-line">People added by hand, one dossier each. As the first item, each dossier goes to the gates that follow; on an <em>Invitation only</em> exercise, they are who may apply.</p>
   <div data-cand-live>
   <div class="pc-row pi-sec">
     <label class="fc-l pc-wide">Add someone<input class="fc-in" type="search" data-cand-search placeholder="Search by name or email" autocomplete="off"></label>
     <label class="fc-l">Or a file<button type="button" class="btn btn-secondary" data-cand-csv>Upload CSV…</button><input type="file" accept=".csv,text/csv" data-cand-file hidden></label>
   </div>
   <ul class="pc-cand-found" data-cand-found hidden></ul>
-  <p class="pc-line muted pc-hint">A CSV has an <em>Email</em> column and, if you like, a <em>Name</em>. Rows that do not read are listed back, not saved.</p>
+  <p class="pc-line muted pc-hint">A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier. Rows that do not read are listed back, not saved.</p>
   <p class="muted fb-said" data-cand-said role="status"></p>
   <ul class="pc-issues" data-cand-bad hidden></ul>
   <table class="pc-cands" data-cand-list>
-    <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Added</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
+    <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Title</th><th scope="col">Added</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
     <tbody>
-    {% for c in listed %}<tr data-cand-id="{{ c.person_id }}"><td>{{ c.name or "—" }}</td><td>{{ c.email }}</td><td>{{ short(c.added_at) }}</td><td><button type="button" class="btn btn-destructive btn-short" data-cand-remove="{{ c.person_id }}" aria-label="Remove {{ c.name or c.email }}">Remove</button></td></tr>
-    {% else %}<tr data-cand-none><td colspan="4" class="muted">No one yet.</td></tr>{% endfor %}
+    {% for c in listed %}<tr data-cand-id="{{ c.id }}"><td>{{ c.name or "—" }}</td><td>{{ c.email }}</td><td>{{ c.title or "—" }}</td><td>{{ short(c.added_at) }}</td><td><button type="button" class="btn btn-destructive btn-short" data-cand-remove="{{ c.id }}" aria-label="Remove {{ c.name or c.email }}{% if c.title %} ({{ c.title }}){% endif %}">Remove</button></td></tr>
+    {% else %}<tr data-cand-none><td colspan="5" class="muted">No one yet.</td></tr>{% endfor %}
     </tbody>
   </table>
   </div>
