@@ -848,7 +848,7 @@ Unlocked, each is a field with a line saying where it is used.
   chosen as the default, is stored unset and reads the operator settings'
   default followed by *· the default*. Who may apply is stored as `open`
   (*Open to all signed in*) or `invitation` (*Invitation only*); who is
-  invited is the Candidates stage item ("The Process page").
+  invited is the *Populate Dossiers* stage item ("The Process page").
 - Process shows Help contact and Timezone read-only.
 
 ## The Process page
@@ -1245,13 +1245,13 @@ but the lobby's *Stage* column reads:
   carries a key for takes its old label's key if unclaimed, else a new key;
   carried keys are assigned first, so reordering rows hands no key to
   another value. A removed value's key stays on its retired row.
-- **The Candidates item** (ruling 77, `applydesk/candidates.py`): people
+- **The *Populate Dossiers* item** (rulings 77 and 83, `applydesk/candidates.py`; *Candidates* in code): people
   kept by hand, shown as a stage item with a count, a search, *Upload CSV…*
   and a list (name, email, when added, *Remove*). It is the form's roster
   when Who may apply is *Invitation only*; feeding gates as dossiers is not
   built. At most one stage holds it, with the form, with gates or alone
-  (`stages.problems`): *+Candidates* is disabled with its reason once an
-  exercise has one, and *Take Candidates off this stage* removes the item,
+  (`stages.problems`): *+Populate Dossiers* is disabled with its reason once an
+  exercise has one, and *Take Populate Dossiers off this stage* removes the item,
   not the list. A person is listed once, and each add and removal is made at
   once, audited, not waiting for *Save*.
   - **Search** is the people search of ruling 75 (`applydesk/directory.py`:

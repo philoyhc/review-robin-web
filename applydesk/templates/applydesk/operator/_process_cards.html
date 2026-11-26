@@ -72,9 +72,9 @@
 {% macro candidates_item(open=False, listed=()) %}
 <div class="pc-item" data-item="candidates"{% if open %} data-open{% endif %}>
   {% set chips %}<span class="chip chip-mute" data-cand-count>{{ listed | length if listed else "No one yet" }}{% if listed %} {{ "person" if listed | length == 1 else "people" }}{% endif %}</span>{% endset %}
-  {{ head("Candidates", "Candidates", chips, open) }}
+  {{ head("Populate Dossiers", "Populate Dossiers", chips, open) }}
   <div class="pi-body">
-  <p class="pc-line">People added by hand. On an <em>Invitation only</em> exercise they are who may apply; with no form, each becomes a dossier for the gates that follow.</p>
+  <p class="pc-line">People added by hand, each a dossier. On an <em>Invitation only</em> exercise they are who may apply; with no form, each becomes a dossier for the gates that follow.</p>
   <div data-cand-live>
   <div class="pc-row pi-sec">
     <label class="fc-l pc-wide">Add someone<input class="fc-in" type="search" data-cand-search placeholder="Search by name or email" autocomplete="off"></label>
@@ -88,11 +88,11 @@
     <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Added</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
     <tbody>
     {% for c in listed %}<tr data-cand-id="{{ c.person_id }}"><td>{{ c.name or "—" }}</td><td>{{ c.email }}</td><td>{{ short(c.added_at) }}</td><td><button type="button" class="btn btn-destructive btn-short" data-cand-remove="{{ c.person_id }}" aria-label="Remove {{ c.name or c.email }}">Remove</button></td></tr>
-    {% else %}<tr data-cand-none><td colspan="4" class="muted">No candidates yet.</td></tr>{% endfor %}
+    {% else %}<tr data-cand-none><td colspan="4" class="muted">No one yet.</td></tr>{% endfor %}
     </tbody>
   </table>
   </div>
-  <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-candidates">Take Candidates off this stage</button></div>
+  <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-candidates">Take Populate Dossiers off this stage</button></div>
   </div>
 </div>
 {% endmacro %}
@@ -483,7 +483,7 @@
     <div class="pc-adds">
       <button type="button" class="btn btn-secondary" data-pc-act="gate"{% if st.form %} disabled title="A stage holding the form holds no gate"{% endif %}>+Gate</button>
       <button type="button" class="btn btn-secondary" data-pc-act="outcome"{% if outs %} disabled title="A stage holds one outcome at most"{% endif %}>+Outcome</button>
-      <button type="button" class="btn btn-secondary" data-pc-act="candidates"{% if st.candidates %} disabled title="This stage holds Candidates"{% elif plan.stages | selectattr("candidates") | list %} disabled title="Another stage holds Candidates"{% endif %}>+Candidates</button>
+      <button type="button" class="btn btn-secondary" data-pc-act="candidates"{% if st.candidates %} disabled title="This stage holds Populate Dossiers"{% elif plan.stages | selectattr("candidates") | list %} disabled title="Another stage holds Populate Dossiers"{% endif %}>+Populate Dossiers</button>
       <button type="button" class="btn btn-secondary" data-pc-act="form"{% if st.form %} disabled title="This stage holds the form"{% elif gates %} disabled title="A stage holding gates holds no form"{% elif plan.form_stage %} disabled title="Another stage holds the form"{% endif %}>+Form</button>
     </div>
     <div class="fc-foot">
