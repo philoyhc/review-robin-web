@@ -891,7 +891,7 @@ def test_panels_save_is_checked() -> None:
 
 def test_a_panel_made_on_form_or_process_joins_the_panels() -> None:
     """Rung 5 lifts the refusal Form's and Process's saves had: a panel
-    made with + New panel… is kept with the page that names it."""
+    made with +New panel… is kept with the page that names it."""
     client = _client()
     made = _create(client)
     form = {

@@ -116,16 +116,16 @@
   {% else %}
   <div class="btnrow ev-ops">
     {# Ruling 48: a fill is never re-made once made, only edited by hand,
-       so an Automatic gate takes + Pair and Remove, as the others do. #}
+       so an Automatic gate takes +Pair and Remove, as the others do. #}
     {% if gate.mode == "suggested" %}<button type="button" class="btn btn-primary" data-ev-act="approve-all"{{ off }}>Approve all</button>{% endif %}
-    <button type="button" class="btn btn-secondary" data-ev-act="add" {% if ev_data %} aria-expanded="false" aria-controls="ev-add"{% endif %}{{ off }}>+ Pair</button>
+    <button type="button" class="btn btn-secondary" data-ev-act="add" {% if ev_data %} aria-expanded="false" aria-controls="ev-add"{% endif %}{{ off }}>+Pair</button>
     {% if sent %}<span class="muted">Its session has opened: its pairs are Review Robin's to change.</span>
     {% else %}<span class="fb-unsaved" data-ev-unsaved hidden>Changes in this tab, not saved</span>
     <button type="button" class="btn btn-secondary" data-ev-act="discard" hidden>Discard changes</button>{% endif %}
     <span class="muted" data-ev-said role="status"></span>
   </div>
   {% if ev_data %}
-  {# + Pair: a dossier and an evaluator from its panel sources, within
+  {# +Pair: a dossier and an evaluator from its panel sources, within
      the Total's max; never the candidate themself. #}
   <div class="ev-add" id="ev-add" data-ev-add hidden>
     <label class="fc-l">{{ "Dossier" if ids_only else "Applicant" }}<select class="fc-in" data-ev-add-who></select></label>

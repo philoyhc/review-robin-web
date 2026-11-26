@@ -135,8 +135,8 @@ def test_a_pair_is_removed_and_added_within_the_total(page: Page) -> None:
     more; the head's counts and the load line follow every pair."""
     page.goto(GATE3)
     assert _counts(page) == "40 dossiers · 40 filled"
-    assert not page.locator("[data-ev-add]").is_visible()  # closed until + Pair
-    page.get_by_role("button", name="+ Pair").click()
+    assert not page.locator("[data-ev-add]").is_visible()  # closed until +Pair
+    page.get_by_role("button", name="+Pair").click()
     page.get_by_role("button", name="Cancel").click()
     assert not page.locator("[data-ev-add]").is_visible()
     load = page.locator("[data-ev-load]").inner_text()
@@ -148,8 +148,8 @@ def test_a_pair_is_removed_and_added_within_the_total(page: Page) -> None:
     assert other.locator("[data-ev-state]").text_content() == "Short by 1"
     assert _counts(page) == "40 dossiers · 39 filled · 1 short"
     assert page.locator("[data-ev-load]").inner_text() != load
-    # + Pair: Kenji's own evaluator is not offered again; another is.
-    page.get_by_role("button", name="+ Pair").click()
+    # +Pair: Kenji's own evaluator is not offered again; another is.
+    page.get_by_role("button", name="+Pair").click()
     page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
     offered = page.locator("[data-ev-add-evaluator] option").all_inner_texts()
     other_name = other.locator("td").nth(1).inner_text()
@@ -190,7 +190,7 @@ def test_an_assigned_gate_starts_empty_and_takes_pairs(
     assert _counts(page) == "40 dossiers · 0 filled · 40 short"
     kenji = page.locator("#ev-table-card tbody tr:not([data-ev-added])", has_text="Kenji Russo")
     assert kenji.locator("[data-ev-state]").text_content() == "Not assigned"
-    page.get_by_role("button", name="+ Pair").click()
+    page.get_by_role("button", name="+Pair").click()
     page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
     page.get_by_role("button", name="Add the pair").click()
     first = page.locator("#ev-table-card tbody tr[data-ev-added]")
@@ -207,11 +207,11 @@ def test_an_automatic_gate_is_edited_by_hand_never_re_run(
     page: Page, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Ruling 48: an Automatic fill is never re-made, only edited by hand:
-    no Re-run, and + Pair and Remove as the other modes."""
+    no Re-run, and +Pair and Remove as the other modes."""
     _as(monkeypatch, "g3", mode="automatic")
     page.goto(GATE3)
     assert page.get_by_role("button", name="Re-run").count() == 0
-    assert page.get_by_role("button", name="+ Pair").count() == 1
+    assert page.get_by_role("button", name="+Pair").count() == 1
     pair = page.locator("#ev-table-card tbody tr").first
     pair.get_by_role("button", name="Remove").click()
     assert pair.locator("[data-ev-state]").text_content() == "Removed"
@@ -234,7 +234,7 @@ def test_an_approval_stands_through_undo_and_goes_with_an_added_pair(page: Page)
     assert pair.locator("[data-ev-state]").text_content() == "Approved"
     page.get_by_role("button", name="Discard changes").click()
     # An added pair approved, then removed: no change is left behind.
-    page.get_by_role("button", name="+ Pair").click()
+    page.get_by_role("button", name="+Pair").click()
     page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
     pair.get_by_role("button", name="Remove").click()
     page.get_by_role("button", name="Add the pair").click()
@@ -265,7 +265,7 @@ def test_added_pairs_show_on_the_first_page_and_as_the_search_finds(
     pair = _row(page, "Kenji Russo")
     gone = pair.locator("td").nth(1).inner_text()
     pair.get_by_role("button", name="Remove").click()
-    page.get_by_role("button", name="+ Pair").click()
+    page.get_by_role("button", name="+Pair").click()
     page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
     fresh = next(
         o
@@ -306,7 +306,7 @@ def test_a_source_s_min_and_max_hold_as_the_total_s(
     page: Page, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """As the server's fill: a dossier its second source gives fewer than
-    that source's min is short, its Total met or not; + Pair stops at a
+    that source's min is short, its Total met or not; +Pair stops at a
     source's max."""
     from applydesk.stages import Source, Total
 
@@ -329,7 +329,7 @@ def test_a_source_s_min_and_max_hold_as_the_total_s(
     page.locator("#ev-table-card tbody tr", has_text="Kenji Russo").filter(
         has_text="Residential staff"
     ).first.get_by_role("button", name="Remove").click()
-    page.get_by_role("button", name="+ Pair").click()
+    page.get_by_role("button", name="+Pair").click()
     page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
     ra = next(
         o
@@ -348,7 +348,7 @@ def test_no_one_is_offered_to_review_themself(page: Page, monkeypatch: pytest.Mo
     an RA applying to return, is not offered for her own dossier."""
     _as(monkeypatch, "g1", mode="suggested")
     page.goto(GATE3.replace("g3", "g1"))
-    page.get_by_role("button", name="+ Pair").click()
+    page.get_by_role("button", name="+Pair").click()
     page.locator("[data-ev-add-who]").select_option(label="Aisha Bello")
     # Her 29 reviewers are on it already: no one is left but herself, and
     # she is not offered.
@@ -359,13 +359,13 @@ def test_no_one_is_offered_to_review_themself(page: Page, monkeypatch: pytest.Mo
 
 def test_undo_and_add_hold_the_limits_and_the_picker_follows(page: Page) -> None:
     """Codex on #3961: Undo cannot take a dossier past its max, and the
-    open + Pair picker follows an Undo, so no evaluator is added twice."""
+    open +Pair picker follows an Undo, so no evaluator is added twice."""
     page.goto(GATE3)
     rows = page.locator("#ev-table-card tbody tr:not([data-ev-added])", has_text="Kenji Russo")
     first, second = rows.nth(0), rows.nth(1)
     gone = first.locator("td").nth(1).inner_text()
     first.get_by_role("button", name="Remove").click()
-    page.get_by_role("button", name="+ Pair").click()
+    page.get_by_role("button", name="+Pair").click()
     page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
     fresh = next(
         o
@@ -413,7 +413,7 @@ def test_approved_takes_back_though_a_pair_was_added_since(page: Page) -> None:
     pair = _row(page, "Kenji Russo")
     pair.get_by_role("button", name="Approve").click()
     # The box filled before the swap, so its evaluator is a newcomer.
-    page.get_by_role("button", name="+ Pair").click()
+    page.get_by_role("button", name="+Pair").click()
     page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
     pair.get_by_role("button", name="Remove").click()
     page.get_by_role("button", name="Add the pair").click()
@@ -500,7 +500,7 @@ def test_ticked_discard_puts_a_removed_pair_back_and_ticks_follow_their_rows(
     assert head.is_checked() and not head.evaluate("b => b.indeterminate")
     head.uncheck()
     # An added pair ticked, then removed, leaves no tick behind.
-    page.get_by_role("button", name="+ Pair").click()
+    page.get_by_role("button", name="+Pair").click()
     page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
     pair.get_by_role("button", name="Remove").click()
     page.get_by_role("button", name="Add the pair").click()
