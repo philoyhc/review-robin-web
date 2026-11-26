@@ -35,12 +35,6 @@ is the author's call.
 
 **Order (author, 2026-11-12):** 14G when IT answers.
 
-2. **23J — A linked session set up before its rosters** (author,
-   2026-11-25; Apply Desk ruling 80). A linked create may omit its
-   rosters, so Apply Desk sets a gate's session up early, with *Open in
-   Review Robin ↗*, and sends the rosters when the gate is *Ready*.
-   **Plan:** `guide/segment_23J_linked_setup_first.md`.
-
 1. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
    and confirmations from 14E's clock, turning the offset fields from

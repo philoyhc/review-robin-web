@@ -54,6 +54,17 @@ query param or column value — may name a `closed` state.
 | URL | `GET /operator/sessions/{id}` |
 | Grouping | Per Session Control Panel |
 
+### Opening by code
+
+`GET /operator/sessions/by-code/{code}` sends an operator of the session
+with that code to its Session Home (`307`), for a linked application that
+knows the code it sent. An unknown code, or anyone who does not operate
+the session, gets the uniform `404`, so a code tells nothing about another
+operator's session. A sys-admin who is not an owner is sent on for a
+session that exists, to Session Home's legible `403` and the adopt door
+(`require_session_operator`). A refusal is logged. The code is one path
+segment: a code containing `/` is not reached.
+
 ## Layout
 
 Two full-width stacked cards below the chrome and status strip,

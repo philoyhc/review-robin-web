@@ -133,6 +133,10 @@ The application shows results; Review Robin has no release window.
 - **Holds:** the rosters as a whole picture the re-send replaces; an
   absent Relationships file leaves no pairs. A linked session's roster
   tags are unused: assignment is by relationship.
+- **An empty linked draft** (set up before its rosters, `spec/handoffs.md`
+  §5) shows as a draft with empty rosters. Validate names the missing
+  rosters and refuses it, so it cannot open until the application's re-send
+  fills them.
 
 ### `settings_import`
 

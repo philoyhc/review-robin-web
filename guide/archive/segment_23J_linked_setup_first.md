@@ -75,62 +75,31 @@ Taken 2026-11-25 at `d23dffcd2`.
 
 ## Status
 
-**Rung 2 (2026-11-25):**
-- A linked sender may omit both roster files (`handoffs.carries_rosters`). One roster without the other is `invalid_package`, as is a `relationships` file without rosters. A header with no rows is still `empty_roster`.
-- The create's audit `context` gains `rosters`.
-- Replay needed no change. A completed set-up answers `already_created`; one cut off before its record is `transfer_in_progress`, then `transfer_incomplete`. Only the incomplete message no longer names rosters.
-- **Taken beyond the ladder:** a re-send may also carry the settings alone, before the rosters, so Process edits after set-up reach the draft. The pipeline had no file to save and returned before the re-send's guard and record. Now, with no files, it runs them under the session lock (`quick_setup_pipeline.run_contents`).
-- The cumulative read for rungs 2–5 runs from `8e2eb04ec`.
+**Closed 2026-11-26.** Rungs 2–8 shipped as #4225–#4231; the plan was #4224. The author amended the segment after rung 5 to add rungs 6–8, a Process button and links by code, and moved the close to rung 9. The author checked both pages locally.
 
-**Rung 3 (2026-11-25):**
-- `POST /operator/handoffs/{transfer_id}/discard` takes an envelope with operation `reviewrobin.discard_draft_session` and no files (`handoffs.parse_discard`). It deletes the draft through `sessions.delete_session`. That writes `session.deleted` with no session, now with a `context`: the creating `transfer_id`, `source_app`, and the discard's own `discard_transfer_id`. `session.deleted` gains `context` in `EVENT_SCHEMAS`.
-- Refusals: `not_linked` (unknown transfer, another application, or unlinked since), `not_authorized` (not the operator who set it up), `session_opened`, and `session_not_empty` (rosters or responses), each rechecked under the session lock.
-- A retry answers `already_discarded` with the session code, read from that delete.
-- A transfer cut off before completion may also be discarded: its draft is just as empty.
+**Intended vs done**
+- **Review Robin, a create without rosters (rung 2):**
+  - **As planned:** a linked sender may omit both rosters (`handoffs.carries_rosters`). Replay reads the completion record.
+  - **Diverged:** a roster with a header and no rows stays `empty_roster`. Semantics allowed it; a test pins the refusal.
+  - **Beyond the ladder:** a re-send may carry the settings alone, run under the session lock (`quick_setup_pipeline.run_contents`), so Process edits after set-up reach the draft.
+- **Review Robin, discard (rung 3):**
+  - **As planned:** the call and its refusals.
+  - **Added at the cumulative read:** `transfer_in_progress` while a create is still running, and `409 session_discarded` for a create replayed after its discard.
+  - **Narrowed:** discard also removes instrument work built in Review Robin, accepted by the author (2026-11-26). "Can never delete work" holds for rosters and responses.
+- **Apply Desk, the card's two steps (rungs 4–5):**
+  - **As planned:** the steps, simulated in the tab. Process confirms before removing a set-up gate.
+  - **Changed:** *Set up* is Secondary, so the region keeps one Primary.
+- **Amendment (rungs 6–8):**
+  - `GET /operator/sessions/by-code/{code}` opens a session for its operators. A sys-admin is sent on to the adopt door.
+  - Process's *Create Review Robin session* sits outside the gate's lock and is on only while nothing is unsaved.
+  - *Open* links go by code, so the judgment call "the link uses `session_home_url`" and the stored URL owed to AD2F are superseded.
 
-**Rung 4 (2026-11-25, scaffold):** on the gate page's Review Robin card:
-- *Set up in Review Robin* comes before *Send rosters* (renamed from *Send to Review Robin*). It is disabled, with its reason in its title; the card's script leaves it so.
-- The facts gain *In Review Robin*, an inert *Open in Review Robin ↗*.
-- The Progress line says what each step does.
+**Reads: 2, both `diff-reviewer` on cumulative diffs.**
+- **Rungs 2–5 (`8e2eb04ec..7ac0a8132`):** 1 high (lock waits on the event loop), 5 medium, 4 low; all fixed in rung 5 except two lows. One low: a set-up record outlives a removed gate in the tab. The other: a re-send racing a discard can 500, as one racing a delete already could.
+- **Rungs 6–8 (`540b669fb..561021aa8`):** 0 high, 1 medium (Doc impact), 7 low; fixed in rung 8 except three lows. A code holding `/` misses the one-segment route: Apply Desk's codes never hold one, and the URL crawl cannot format `:path`. The other two: `public_id_for_code`'s tuple, and the link styled differently on the two pages.
+- **Codex:** four findings, all fixed in their rungs: #4221 (23G), #4226, #4227, #4228.
 
-**Rung 5 (2026-11-25):** the steps are simulated in the tab, as sends are (`_rr_js.html`).
-- **Set up** checks the session's name and code (and the other gates' codes, set-up ones included) and any field Review Robin would refuse; its pairs and readiness wait for the rosters. It is kept under `applydesk-rr-setup:<exercise>` with its transfer and link.
-- **The link line** reads *Linked; set up, its rosters not yet sent*.
-- **Open in Review Robin ↗** is live, in a new tab, once a gate is set up, sent or opened. The sample's stand-in for `session_home_url` is Review Robin's session list (`_rr_home`).
-- **Send rosters** after a set-up sends to the set-up's transfer.
-- **Process** asks before removing a gate set up but not sent.
-
-**Cumulative read (1, at rung 5, on `8e2eb04ec..7ac0a8132`):** one high, five medium, four low; fixed in rung 5 unless noted.
-- **High:** the settings-only re-send's unit, and discard, waited on the session lock on the event loop (findings Bc3). Both now run in the threadpool.
-- **Medium:**
-  - A create retried after its discard made a fresh draft; it is now `409 session_discarded`.
-  - A discard during a create still running would have broken the create; it is now `transfer_in_progress` within `IN_PROGRESS`.
-  - A roster with a header and no rows stays `empty_roster`. Semantics' "header and no rows" is superseded by Status rung 2, and a test pins it.
-  - A settings-only re-send after the rosters keeps them; a test pins it.
-  - Discard also removes instrument work built in Review Robin: the gate is the operator's to drop, and Process's confirm now says so. The judgment call "can never delete work" holds for rosters and responses only.
-- **Low:**
-  - *Set up* is Secondary, one Primary per region.
-  - A discard that loses the lock race to another answers `already_discarded` or `not_linked`, not a 500.
-  - A replayed discard checks its sender.
-  - The unused `rr-open-off` class is gone.
-  - Not fixed: a set-up record outlives a removed gate in the tab. It is harmless, since no page reads a gate that is gone.
-  - Not fixed: a re-send racing a discard can still 500 on the lock, as a re-send racing an operator's delete already could.
-
-**Rung 6 (2026-11-25):** `GET /operator/sessions/by-code/{code}` (`sessions.public_id_for_code`) redirects an operator of the session to its Session Home (307). Anyone else, or an unknown code, gets the uniform 404 (a sys-admin's exception came with rung 8's fixes). The URL crawl visits it. The cumulative read for rungs 6–8 runs from `540b669fb`.
-
-**Rung 7 (2026-11-26, scaffold):** the gate card ends with *Create Review Robin session*, after *Remove the gate* and outside the gate's lock: a published stage's gate, locked for editing, is the one to set up.
-
-**Rung 8 (2026-11-26):**
-- *Create Review Robin session* is off, its reason in its title, until the exercise is published, the gate saved, and no field is one Review Robin would refuse. It is also off while the page has unsaved changes, as the gate is set up as saved.
-- A click keeps the set-up in the store Evaluations uses (`applydesk-rr-setup:<exercise>`), with the gate's default name and code (ruling 56). It opens `…/reviewrobin/operator/sessions/by-code/<code>` in a new tab. The card then offers *Open Review Robin session ↗*, as it does for a gate already sent.
-- Evaluations' *Open in Review Robin ↗* goes by the session's code: the one it was sent or set up with, else the sample's. `_rr_home` gives way to `_rr_by_code`.
-- A replicated stage's gates start with the button off until saved.
-- **Cumulative read (rungs 6–8, on `540b669fb..561021aa8`):** no high; one medium, seven low. Fixed in rung 8:
-  - Doc impact gained `spec/session_home.md` (the route) and the Process button under `applydesk/spec/applications.md`.
-  - By code, a sys-admin who is not an owner is sent on to Session Home's legible 403 and the adopt door, as `require_session_operator` answers. A refusal is logged as that gate logs one.
-  - Ruling 80 and Out of scope no longer owe a stored `session_home_url`.
-  - A replicated gate's button says the draft exercise's reason.
-  - Left as they are: a code holding `/` misses the one-segment route (Apply Desk's codes never hold one; the URL crawl cannot format a `:path` route); `public_id_for_code`'s tuple; Process's link styled as a button, Evaluations' as a link in its facts list.
+**At close:** `spec-writer` wrote the four doc-impact specs. It flagged that `spec/permissions.md` owns the by-code route's gate, so that spec gained its row and a Doc impact bullet.
 
 **Amended (author, 2026-11-25, after rung 5).** The gate card on Process gains *Create Review Robin session* at its end, active once the gate's set-up fields are complete; a click creates the session and opens its home in a new tab. *Open in Review Robin ↗* on Evaluations goes straight to that session's home by its code, which Apply Desk already knows. Review Robin gains a lookup by code for it (rung 6). Rungs 6–8 build this; the close moves to 9.
 
@@ -188,5 +157,6 @@ Real sends, and storing `session_home_url` with the gate's transfer record, are 
 - `applydesk/spec/applications.md` — the Review Robin card's two steps, the *Set up* state and *Open in Review Robin ↗* by code; removing a set-up gate discards its draft; the Process gate card's *Create Review Robin session* (rungs 7–8).
 - `applydesk/guide/todo_master.md` — ruling 80 and its amendment; AD6's row (the link by code).
 - `spec/session_home.md` — `GET /operator/sessions/by-code/{code}`: the redirect, the uniform 404, and the sys-admin exception (rung 6).
+- `spec/permissions.md` — the by-code route's row in the route-gate table (rung 6, added at close).
 - `guide/todo_master.md` — the queue entry (rung 1); deleted at close.
 - `guide/README.md` — this plan's row (rung 1); moved to the archive's index at close.
