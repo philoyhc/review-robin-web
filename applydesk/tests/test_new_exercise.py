@@ -260,6 +260,13 @@ def _post_form(client: TestClient, public_id: str, form: dict[str, Any]) -> Any:
     return client.post(f"{LOBBY}/{public_id}/form", json=sent)
 
 
+def _with_form(client: TestClient, made: str) -> None:
+    """A Form on the first stage, with its receipt: a new exercise starts
+    blank (segment AD2K), so the receipt it owes comes with the Form."""
+    form = {"from": "", "to": "", "receipt": True, "reminder": False}
+    assert _post_process(client, made, {"stages": [_stage(form=form)]}).status_code == 200
+
+
 def _post_email(client: TestClient, public_id: str, card: dict[str, Any]) -> Any:
     """An Emails card's Save as the page sends it, with the version of the
     template it opened at (segment AD2L) unless the test names one."""
@@ -447,6 +454,25 @@ def _process() -> dict[str, object]:
             ),
         ]
     }
+
+
+def test_a_new_exercise_starts_with_a_blank_stage() -> None:
+    """Segment AD2K rung 2 (ruling 83): one stage, holding nothing, with
+    +Form and +Candidates both offered; a sample keeps its form."""
+    client = _client()
+    made = _create(client)
+    cards = _cards(client.get(f"{LOBBY}/{made}/process").text)
+    assert cards.count('class="fc pc"') == 1 and "pc-body-empty" in cards
+    assert 'data-item="form"' not in cards and 'data-item="candidates"' not in cards
+    assert 'data-pc-act="form">+Form</button>' in cards
+    assert 'data-pc-act="candidates">+Candidates</button>' in cards
+    assert 'data-item="form"' in _cards(client.get(f"{LOBBY}/c4xh2ndv6s/process").text)
+
+
+def _cards(page: str) -> str:
+    """Process's stage cards alone, without the templates +Stage and the
+    add buttons clone."""
+    return page[page.index('id="pc-cards"') : page.index('<template id="pc-new-stage">')]
 
 
 def test_process_saves_into_a_new_exercise() -> None:
@@ -930,6 +956,7 @@ def test_an_email_saves_into_a_new_exercise() -> None:
     written once it has a subject and a body, which the status row follows."""
     client = _client()
     made = _create(client)
+    _with_form(client, made)
     page = client.get(f"{LOBBY}/{made}/emails").text
     assert 'data-em-item="receipt"' in page and "data-em-save=" in page
     assert ">Owed<" in page
@@ -940,7 +967,7 @@ def test_an_email_saves_into_a_new_exercise() -> None:
             "item": "receipt",
             "audience": "Applicants",
             "name": "Stage 1: Receipt · Applicants",
-            "revision": 0,
+            "revision": 1,
             "subject": "Received: $exercise_name",
             "body": "Dear $applicant_name, thank you.",
         },
@@ -958,7 +985,7 @@ def test_an_email_saves_into_a_new_exercise() -> None:
             "item": "receipt",
             "audience": "Applicants",
             "name": "Stage 1: Receipt · Applicants",
-            "revision": 0,
+            "revision": 1,
             "subject": "Hi",
             "body": " ",
         },
@@ -970,18 +997,19 @@ def test_an_email_saves_into_a_new_exercise() -> None:
 def test_email_save_is_checked() -> None:
     client = _client()
     made = _create(client)
+    _with_form(client, made)
     good = {
         "item": "receipt",
         "audience": "Applicants",
         "name": "Stage 1: Receipt · Applicants",
-        "revision": 0,
+        "revision": 1,
         "subject": "S",
         "body": "B",
     }
     for bad, reason in (
         ({**good, "item": "o9"}, "not one Process owes"),
         ({**good, "name": "Stage 2: Receipt · Applicants"}, "not one Process owes"),
-        ({**good, "revision": 1}, "not one Process owes"),
+        ({**good, "revision": 2}, "not one Process owes"),
         ({**good, "audience": "Evaluators"}, "not one Process owes"),
         ({**good, "subject": 3}, "malformed"),
         ({**good, "body": "x" * 20001}, "at most"),

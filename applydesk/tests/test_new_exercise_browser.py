@@ -246,6 +246,11 @@ def test_an_email_saved_into_a_new_exercise_survives_a_reload(page: Page) -> Non
     page.get_by_role("button", name="Create").click()
     page.wait_for_url(f"{LOBBY}/*")
     home = page.url
+    # A new exercise starts blank (segment AD2K): the receipt comes with a Form.
+    page.goto(home + "/process")
+    page.locator('[data-pc-act="form"]').first.click()
+    page.locator("[data-fb-save]").click()
+    page.locator("[data-unsaved]").wait_for(state="hidden")
     page.goto(home + "/emails")
     card = page.locator('[data-em-item="receipt"]')
     assert card.locator("[data-em-chip]").text_content() == "Owed"

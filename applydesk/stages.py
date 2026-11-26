@@ -827,7 +827,9 @@ def plan_of(exercise_id: str) -> Plan:
         e = sample_data.sample(exercise_id)  # an ordinary one: Draft, no dates
         when = _exercise_span(e) if e else None
         status = "Draft" if e is None or e.state == "Draft" else "Published"
-        only = Stage(1, "", when, form=True, status=status)
+        # A new exercise starts blank (segment AD2K, ruling 83): the operator
+        # adds a Form or Candidates as its first item. A sample keeps its form.
+        only = Stage(1, "", when, form=e is not None, status=status)
         return Plan((only,), tuple(Row(dossier_of(a), {}) for a in apps), exercise_id)
     rows = _model_rows(apps) if exercise_id == "wa9juxbc2t" else _small_rows(apps)
     return Plan(form_keyed(_STAGES[exercise_id], exercise_id), rows, exercise_id)
