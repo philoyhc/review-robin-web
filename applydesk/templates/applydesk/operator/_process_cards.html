@@ -74,7 +74,7 @@
   {% set chips %}<span class="chip chip-mute" data-cand-count>{{ listed | length if listed else "No one yet" }}{% if listed %} {{ "person" if listed | length == 1 else "people" }}{% endif %}</span>{% endset %}
   {{ head("Populate Dossiers", "Populate Dossiers", chips, open) }}
   <div class="pi-body">
-  <p class="pc-line">People added by hand, each a dossier (ruling 83). On an <em>Invitation only</em> exercise they are who may apply; with no form, each becomes a dossier for the gates that follow.</p>
+  <p class="pc-line">People added by hand, each a dossier. On an <em>Invitation only</em> exercise they are who may apply; with no form, each becomes a dossier for the gates that follow.</p>
   <div data-cand-live>
   <div class="pc-row pi-sec">
     <label class="fc-l pc-wide">Add someone<input class="fc-in" type="search" data-cand-search placeholder="Search by name or email" autocomplete="off"></label>
