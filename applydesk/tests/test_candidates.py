@@ -205,3 +205,39 @@ def test_process_places_candidates_on_one_stage() -> None:
         refused.status_code == 400
         and "More than one stage holds Populate Dossiers" in refused.json()["error"]
     )
+
+
+def test_dossiers_per_person_is_saved_with_process_and_refused_below_what_is_held() -> None:
+    """Segment AD2K: set on the first stage's populating item, saved with
+    Process, audited; lowering it below what someone holds names them."""
+    from applydesk.tests.test_new_exercise import _post_process, _stage
+
+    client = _client()
+    page = client.get(f"{LOBBY}/{MODEL}/process").text
+    assert 'data-rel="per-person" value="1"' in page
+    sent = {"stages": [_stage("People", candidates=True)], "per_person": 2}
+    saved = _post_process(client, MODEL, sent)
+    assert saved.status_code == 200, saved.text
+    session = db.new_session()
+    try:
+        assert candidates.per_person(session, MODEL) == 2
+        ann = people.pending(session, "ann@example.edu", None)
+        ann.display_name = "Ann Lee"
+        assert candidates.add(session, MODEL, ann, "search", None)
+        assert candidates.add(session, MODEL, ann, "search", None)
+        session.commit()
+        kinds = list(session.scalars(select(AuditEvent.event_type)))
+        assert "exercise.dossiers_per_person_set" in kinds
+    finally:
+        session.close()
+    assert 'data-rel="per-person" value="2"' in client.get(f"{LOBBY}/{MODEL}/process").text
+    lowered = _post_process(client, MODEL, {**sent, "per_person": 1})
+    assert lowered.status_code == 400
+    assert lowered.json()["error"] == (
+        "Not saved: Ann Lee holds more than 1 dossier; remove entries first."
+    )
+    for bad in (0, 21):
+        refused = _post_process(client, MODEL, {**sent, "per_person": bad})
+        assert refused.status_code == 400 and "1 to 20" in refused.json()["error"]
+    # Left out, it is unchanged.
+    assert _post_process(client, MODEL, {"stages": sent["stages"]}).status_code == 200

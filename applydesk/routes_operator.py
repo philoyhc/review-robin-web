@@ -573,10 +573,15 @@ def _save_process(request: Request, exercise_id: str, sent: object) -> Response:
         taken = process_store.taken_keys(session, exercise.public_id)
         built, ticks = process_save.build(sent, exercise.public_id, renamed, taken)
         process_store.save(session, exercise.public_id, built, opened, actor)
+        # How many dossiers one person may hold, from the populating item
+        # (segment AD2K): after the save, so its minting reads the old value.
+        most = process_save.per_person(sent)
+        if most is not None:
+            candidates.set_per_person(session, exercise.public_id, most, actor)
         # The emails each item ticks, kept with the timeline (segment AD2L).
         email_store.save_sends(session, exercise.public_id, ticks)
         session.commit()
-    except (process_save.Refused, panels_store.Refused) as why:
+    except (process_save.Refused, panels_store.Refused, candidates.Refused) as why:
         session.rollback()
         return JSONResponse({"error": str(why)}, status_code=400)
     except process_store.Refused as why:
@@ -757,6 +762,14 @@ def _change_candidates(request: Request, exercise_id: str, sent: Any) -> Respons
     finally:
         session.close()
     return JSONResponse({"said": said, "bad": list(bad), "candidates": _listed_json(listed)})
+
+
+def _per_person_of(public_id: str) -> int:
+    session = db.new_session()
+    try:
+        return candidates.per_person(session, public_id)
+    finally:
+        session.close()
 
 
 def _candidates_of(public_id: str) -> tuple[candidates.Listed, ...]:
@@ -1753,6 +1766,9 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         },
         # Ruling 77: the Candidates list, read only where Process draws it.
         cand_list=_candidates_of(exercise.public_id) if section == "process" else (),
+        # Segment AD2K: how many dossiers one person may hold, on the
+        # populating item.
+        per_person=_per_person_of(exercise.public_id) if section == "process" else 1,
         short=clock.short,
         rule_text=stages.rule_text,
         rule_json=stages.rule_json,

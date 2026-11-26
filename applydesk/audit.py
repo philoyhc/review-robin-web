@@ -151,6 +151,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "exercise.stage_reverted": EventSchema(_EXERCISE | {"refs", "reason"}),
     "exercise.form_closed": EventSchema(_EXERCISE),
     "candidate.added": EventSchema(_EXERCISE | {"refs", "context"}),
+    # Segment AD2K: how many dossiers one person may hold, saved with Process.
+    "exercise.dossiers_per_person_set": EventSchema(_EXERCISE | {"changes"}),
     # Segment AD2J: the samples' applications recorded by the seed.
     "application.seeded": EventSchema(_EXERCISE | {"counts"}),
     # Segment AD2F: the samples' dossiers recorded by the seed.
