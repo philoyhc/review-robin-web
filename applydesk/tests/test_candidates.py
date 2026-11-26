@@ -153,7 +153,7 @@ def test_process_places_candidates_on_one_stage() -> None:
     assert (
         page.count('class="pc-item" data-item="candidates"') == 2
     )  # the stage's, and the template
-    assert 'data-pc-act="candidates" disabled title="Another stage holds Candidates"' in page
+    assert 'data-pc-act="candidates" disabled title="Another stage holds Populate Dossiers"' in page
     both = {
         "stages": [
             _stage("Applications", form=form, candidates=True),
@@ -163,5 +163,5 @@ def test_process_places_candidates_on_one_stage() -> None:
     refused = _post_process(client, MODEL, both)
     assert (
         refused.status_code == 400
-        and "More than one stage holds Candidates" in refused.json()["error"]
+        and "More than one stage holds Populate Dossiers" in refused.json()["error"]
     )

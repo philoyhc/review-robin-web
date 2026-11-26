@@ -289,7 +289,7 @@
     all.forEach(function (card) {
       var hasForm = items(card, "form").length > 0, hasGates = items(card, "gate").length > 0;
       // Ruling 77: at most one stage holds Candidates.
-      guard(card, "candidates", card === candHolder ? "This stage holds Candidates" : candHolder ? "Another stage holds Candidates" : "");
+      guard(card, "candidates", card === candHolder ? "This stage holds Populate Dossiers" : candHolder ? "Another stage holds Populate Dossiers" : "");
       guard(card, "form", hasForm ? "This stage holds the form" : hasGates ? "A stage holding gates holds no form" : holder ? "Another stage holds the form" : "");
       var gate = card.querySelector('[data-pc-act="gate"]'), out = card.querySelector('[data-pc-act="outcome"]');
       gate.disabled = hasForm;
@@ -518,7 +518,7 @@
       li.appendChild(document.createTextNode(" "));
       li.appendChild(el("span", "muted", datesOf(card)));
       card.querySelectorAll(".pc-item").forEach(function (item) {
-        var kind = item.dataset.item, text = kind === "candidates" ? "Candidates" : "Form";
+        var kind = item.dataset.item, text = kind === "candidates" ? "Populate Dossiers" : "Form";
         if (kind === "gate" || kind === "outcome") {
           var label = kind === "gate" ? "Gate " + (++g) : "Outcome " + (++o);
           item.querySelector("[data-pc-kicker]").textContent = label;
@@ -1711,7 +1711,7 @@
     var body = item.querySelector("[data-cand-list] tbody");
     body.textContent = "";
     if (!got.candidates.length) {
-      var none = el("tr"), td = el("td", "muted", "No candidates yet.");
+      var none = el("tr"), td = el("td", "muted", "No one yet.");
       none.setAttribute("data-cand-none", ""); td.colSpan = 4; none.appendChild(td); body.appendChild(none);
     }
     got.candidates.forEach(function (c) {

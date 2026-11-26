@@ -32,9 +32,9 @@ def test_candidates_is_drawn_as_itself_not_an_outcome(page: Page) -> None:
     _held()
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
     item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
-    assert item.locator("[data-pc-kicker]").text_content() == "Candidates"
-    assert item.locator("[data-pi-name]").text_content() == "Candidates"
+    assert item.locator("[data-pc-kicker]").text_content() == "Populate Dossiers"
+    assert item.locator("[data-pi-name]").text_content() == "Populate Dossiers"
     outcomes = page.locator('#pc-cards .pc-item[data-item="outcome"]').count()
     counts = page.locator("[data-pc-counts]").text_content() or ""
     assert f"{outcomes} outcome" in counts, counts
-    assert "Candidates" in (page.locator("[data-pc-outline]").text_content() or "")
+    assert "Populate Dossiers" in (page.locator("[data-pc-outline]").text_content() or "")
