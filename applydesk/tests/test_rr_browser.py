@@ -266,7 +266,11 @@ def test_set_up_then_send_rosters_and_the_link_opens(page: Page) -> None:
     assert card.locator("[data-rr-last]").inner_text().startswith("Set up ")
     link = card.locator("[data-rr-open] a")
     assert link.get_attribute("target") == "_blank" and link.get_attribute("rel") == "noopener"
-    assert (link.get_attribute("href") or "").endswith("/reviewrobin/operator/sessions")
+    # Straight to the session by its code (segment 23J, amended).
+    code = card.locator("[data-rr-code]").input_value()
+    assert (link.get_attribute("href") or "").endswith(
+        f"/reviewrobin/operator/sessions/by-code/{code}"
+    )
     assert set_up.is_disabled()
     page.reload()  # kept in the tab
     card = _card(page)

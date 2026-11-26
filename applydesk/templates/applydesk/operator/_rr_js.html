@@ -146,7 +146,10 @@
     off(setupBtn, fixed || (made ? "Its session is in Review Robin" : ""));
     if (made) {
       var a = document.createElement("a");
-      a.href = (setUp() && setUp().url) || DATA.rrHome;
+      // Straight to the session by its code (segment 23J, amended): the
+      // code it was sent or set up with, else the sample's.
+      var code = (rec && rec.code) || (setUp() && setUp().code) || DATA.code;
+      a.href = DATA.rrByCode + encodeURIComponent(code);
       a.target = "_blank";
       a.rel = "noopener";
       a.textContent = "Open in Review Robin ↗";
@@ -293,7 +296,7 @@
       var nope = setUpRefusal();
       if (nope) { said.textContent = nope; return; }
       var all = setups();
-      all[DATA.key] = { at: new Date().toISOString(), transfer: uuid(), url: DATA.rrHome, name: nameIn.value.trim(), code: codeIn.value.trim() };
+      all[DATA.key] = { at: new Date().toISOString(), transfer: uuid(), url: DATA.rrByCode + encodeURIComponent(codeIn.value.trim()), name: nameIn.value.trim(), code: codeIn.value.trim() };
       try { sessionStorage.setItem(SETUP, JSON.stringify(all)); } catch (e2) { /* kept for the page only */ }
       draw();
       said.textContent = "Set up (simulated): Review Robin would now hold an empty draft, " + codeIn.value.trim() + ", with the gate's settings and response fields; Open in Review Robin ↗ opens it. Its rosters follow once the gate is ready.";

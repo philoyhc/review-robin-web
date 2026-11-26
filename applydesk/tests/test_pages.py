@@ -2303,5 +2303,15 @@ def test_a_gate_card_ends_with_create_review_robin_session(client: TestClient) -
     foot = gate[gate.index('class="pc-item-foot pc-rr-foot"') :]
     button = foot[foot.index("<button") : foot.index("</button>")]
     assert "data-pc-rr-create disabled" in button
-    assert "title=\"Creates the gate's Review Robin session" in button
+    assert f'data-code="{EX}-g' in foot and "data-name=" in foot
+    assert 'title="Creates the gate&#39;s Review Robin session' in button
     assert button.endswith(">Create Review Robin session")
+
+
+def test_a_draft_exercise_s_gate_is_created_once_published(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text
+    gate = text[text.index('data-item="gate"') :]
+    box = gate[gate.index("data-pc-rr-box") :]
+    box = box[: box.index("</button>")]
+    assert 'data-off="Once the exercise is published"' in box
+    assert 'title="Once the exercise is published"' in box

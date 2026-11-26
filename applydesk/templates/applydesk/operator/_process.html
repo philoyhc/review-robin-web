@@ -11,7 +11,7 @@
 {% set issues = stage_problems(plan.stages) %}
 <script type="application/json" id="pc-pools">{{ people | tojson }}</script>
 <script type="application/json" id="pc-form-lists">{{ form_lists | tojson }}</script>
-<div class="fb-split" data-process data-ex="{{ exercise.public_id }}" data-cand-url="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/candidates') }}" data-unsaved-root data-now="{{ now_value }}" data-pc-problems="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process/problems') }}">
+<div class="fb-split" data-process data-ex="{{ exercise.public_id }}" data-cand-url="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/candidates') }}" data-unsaved-root data-rr-by-code="{{ rr_by_code }}" data-now="{{ now_value }}" data-pc-problems="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process/problems') }}">
   <div class="fb-main">
     <p class="muted pc-intro">The exercise's timeline, stage by stage. A stage holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Dossiers applies them.</p>
     <div class="fb-cards" id="pc-cards">
@@ -1110,6 +1110,18 @@
         line.className = "pc-line muted pc-rr";
         line.textContent = line.dataset.pcRr;
       });
+      // Nor a session: Create Review Robin session waits for the save
+      // (segment 23J, amended), whatever its original's was.
+      added.querySelectorAll("[data-pc-rr-box]").forEach(function (box) {
+        ["data-name", "data-code", "data-made"].forEach(function (a) { box.removeAttribute(a); });
+        // As a new gate says it (the template's own reason): a draft
+        // exercise's gates wait for publishing first.
+        var fresh = document.getElementById("pc-new-gate").content.querySelector("[data-pc-rr-box]");
+        box.dataset.off = (fresh && fresh.dataset.off) || "Once the gate is saved";
+        box.innerHTML = '<button type="button" class="btn btn-secondary" data-pc-rr-create disabled></button><span class="muted" data-pc-rr-said role="status"></span>';
+        box.firstChild.textContent = "Create Review Robin session";
+        box.firstChild.title = box.dataset.off;
+      });
       added.querySelectorAll(".pc-item[data-key]").forEach(function (item) {
         var k = item.dataset.item[0] + "new" + (++keys);
         renamed[item.dataset.key] = k;
@@ -1795,5 +1807,80 @@
     if (!file) return;
     file.text().then(function (text) { change(item, { action: "csv", text: text }); e.target.value = ""; });
   });
+})();
+</script>{# Create Review Robin session at a gate card's end (segment 23J, amended
+   2026-11-25), simulated in the tab as Evaluations' Set up in Review Robin
+   is (_rr_js.html), into the same store, so either page reads it as set
+   up. On once the server finds nothing in the way (data-off) and nothing
+   is unsaved, as the gate is set up as saved; a click keeps the set-up
+   and opens the session by its code in a new tab, and the button gives
+   way to the link. #}
+<script>
+(function () {
+  var root = document.querySelector("[data-process]");
+  if (!root) return;
+  var mark = root.querySelector("[data-unsaved]");
+  var SETUP = "applydesk-rr-setup:" + root.dataset.ex, STORE = "applydesk-rr:" + root.dataset.ex;
+  function kept(name) {
+    var all;
+    try { all = JSON.parse(sessionStorage.getItem(name) || "null"); } catch (e) { all = null; }
+    return all && typeof all === "object" && !Array.isArray(all) ? all : {};
+  }
+  // The code a gate's session was sent or set up with in this tab, or "".
+  function codeOf(key) {
+    var r = kept(STORE)[key], s = kept(SETUP)[key];
+    if (r && typeof r.code === "string") return r.code;
+    return s && typeof s.code === "string" ? s.code : "";
+  }
+  function urlOf(code) { return root.dataset.rrByCode + encodeURIComponent(code); }
+  function link(box, code) {
+    var a = document.createElement("a");
+    a.className = "btn btn-secondary";
+    a.href = urlOf(code);
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = "Open Review Robin session ↗";
+    a.setAttribute("data-pc-rr-open", "");
+    var b = box.querySelector("[data-pc-rr-create]");
+    if (b) b.replaceWith(a);
+  }
+  function boxes() { return Array.prototype.slice.call(root.querySelectorAll("[data-pc-rr-box]")); }
+  function draw() {
+    var unsaved = mark && !mark.hidden;
+    boxes().forEach(function (box) {
+      var key = box.closest(".pc-item").dataset.key, b = box.querySelector("[data-pc-rr-create]");
+      if (!b) return;
+      var code = codeOf(key);
+      if (code || (box.hasAttribute("data-made") && box.dataset.code)) { link(box, code || box.dataset.code); return; }
+      var why = box.dataset.off || (unsaved ? "Save the page first: the gate is set up as saved" : "");
+      b.disabled = !!why;
+      b.title = why || "Creates the gate's Review Robin session and opens it in a new tab";
+    });
+  }
+  // Another gate's code, sent or set up in this tab, or the sample's.
+  function clash(key, code) {
+    return boxes().some(function (box) {
+      var other = box.closest(".pc-item").dataset.key;
+      if (!other || other === key) return false;
+      var theirs = codeOf(other) || box.dataset.code || "";
+      return theirs.toLowerCase() === code.toLowerCase();
+    });
+  }
+  root.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-pc-rr-create]");
+    if (!b || b.disabled) return;
+    var box = b.closest("[data-pc-rr-box]"), key = box.closest(".pc-item").dataset.key;
+    var said = box.querySelector("[data-pc-rr-said]"), code = box.dataset.code, name = box.dataset.name;
+    if (clash(key, code)) { said.textContent = "Not set up (session_code_conflict): " + code + " is another gate's session code. Choose another on its Evaluations page."; return; }
+    var all = kept(SETUP), transfer = window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+    all[key] = { at: new Date().toISOString(), transfer: transfer, url: urlOf(code), name: name, code: code };
+    try { sessionStorage.setItem(SETUP, JSON.stringify(all)); } catch (e2) { /* kept for the page only */ }
+    window.open(urlOf(code), "_blank", "noopener");
+    link(box, code);
+    said.textContent = "Set up (simulated): Review Robin would now hold an empty draft, " + code + ", with the gate's settings and response fields. Its rosters follow from its Evaluations page.";
+  });
+  // The Save's marker turns the buttons off and on as it shows and hides.
+  if (mark) new MutationObserver(draw).observe(mark, { attributes: true, attributeFilter: ["hidden"] });
+  draw();
 })();
 </script>

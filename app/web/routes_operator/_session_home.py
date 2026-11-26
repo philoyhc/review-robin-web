@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
+from app.logging_config import get_logger
 from app.schemas.sessions import SessionCreate
 from app.services import (
     date_formatting,
@@ -62,6 +63,8 @@ from app.web.routes_operator._shared import (
     render_session_home,
     session_payload_error,
 )
+
+log = get_logger(__name__)
 
 router = APIRouter()
 
@@ -107,12 +110,26 @@ def session_by_code(
 ) -> RedirectResponse:
     """A session's home named by its code, for a linked application that
     knows the code it sent (segment 23J): a redirect for an operator of
-    that session, the uniform 404 for anyone else or an unknown code, as
-    Session Home itself answers."""
+    that session, the uniform 404 for anyone else or an unknown code. A
+    sys-admin is sent on for a session that exists, where Session Home's
+    gate gives them its legible refusal and the adopt door
+    (`require_session_operator`); a refusal is logged as that gate logs
+    one. A code holding a ``/`` is not reached: the path is one segment."""
     found = sessions.public_id_for_code(db, code)
-    if found is None or not permissions.user_can_view_session(db, user, found[0]):
-        raise HTTPException(status_code=404)
-    return urls.redirect(request, f"/operator/sessions/{found[1]}")
+    if found is not None and permissions.user_can_view_session(db, user, found[0]):
+        return urls.redirect(request, f"/operator/sessions/{found[1]}")
+    log.warning(
+        "permission denied",
+        extra={
+            "gate": "session_by_code",
+            "user_id": user.id,
+            "session_id": found[0] if found else None,
+            "code": code,
+        },
+    )
+    if found is not None and user.is_sys_admin:
+        return urls.redirect(request, f"/operator/sessions/{found[1]}")
+    raise HTTPException(status_code=404)
 
 
 @router.get("/sessions/{session_id}", response_class=HTMLResponse)
