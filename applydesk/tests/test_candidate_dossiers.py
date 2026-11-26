@@ -196,3 +196,23 @@ def test_extract_offers_a_candidates_only_exercise_s_data() -> None:
     assert extract.of(found).submitted == 1
     _, rows = extract.alias_key(found)
     assert [r[0] for r in rows] == _live(ex) and rows[0][1] == ""
+
+
+def test_a_sample_s_saved_timeline_lists_its_candidates_dossiers() -> None:
+    """Codex on #4246: a sample exercise saved with Candidates and no form
+    lists the minted dossiers after its applications, cells kept."""
+    from applydesk import process_store
+
+    sample = "c4xh2ndv6s"
+    before = stages.plan_of(sample).rows
+    session = db.new_session()
+    owner = session.scalars(select(Person).where(Person.may_operate)).first()
+    built = (stages.Stage(1, "Shortlist", None, (), status="Published", candidates=True),)
+    process_store.save(session, sample, built, process_store.revision(sample), owner)
+    session.commit()
+    session.close()
+    _add(sample, "ann@example.edu")
+    [dossier] = _live(sample)
+    rows = stages.plan_of(sample).rows
+    assert [r.dossier.key for r in rows] == [r.dossier.key for r in before] + [dossier]
+    assert rows[-1].application is None

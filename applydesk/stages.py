@@ -807,19 +807,22 @@ def plan_of(exercise_id: str) -> Plan:
     apps = sample_data.applications_of(exercise_id)
     saved = _stored_stages(exercise_id)
     if saved is not None:
-        saved = form_keyed(saved, exercise_id)
-        if exercise_id in _STAGES:
-            rows = _model_rows(apps) if exercise_id == "wa9juxbc2t" else _small_rows(apps)
-            return Plan(saved, _blank_cells(rows, saved), exercise_id)
         from applydesk import dossiers  # it reads the store this module builds on
 
-        rows = tuple(Row(dossier_of(a), {}) for a in apps) + tuple(
+        saved = form_keyed(saved, exercise_id)
+        # Candidates' dossiers (AD2F), after the applications, on a sample's
+        # saved timeline as on any other (Codex on #4246).
+        theirs = tuple(
             Row(Dossier(public_id, public_id, name, email), {})
             for public_id, name, email in dossiers.candidate_rows(exercise_id)
         )
-        # Every column blank until AD2H stores cells (cold read: the grid
-        # reads each row's cell for every column).
-        return Plan(saved, _blank_cells(rows, saved), exercise_id)
+        if exercise_id in _STAGES:
+            rows = _model_rows(apps) if exercise_id == "wa9juxbc2t" else _small_rows(apps)
+        else:
+            rows = tuple(Row(dossier_of(a), {}) for a in apps)
+        # Every column blank where a row has none, until AD2H stores cells:
+        # the grid reads each row's cell for every column (cold read).
+        return Plan(saved, _blank_cells(rows + theirs, saved), exercise_id)
     if exercise_id not in _STAGES:
         e = sample_data.sample(exercise_id)  # an ordinary one: Draft, no dates
         when = _exercise_span(e) if e else None
