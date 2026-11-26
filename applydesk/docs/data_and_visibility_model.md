@@ -26,8 +26,8 @@ The rule between them:
 
 Every value is kept, whatever is shown of it.
 
-- **The dossier is its own record** (ruling 32). It carries its own ID, and pairs, cells, results, parts and the alias key hang off it, not the application. It is proposed to be minted at submit, so a draft has none.
-- **What writes a dossier** (ruling 26): an application submitted through the form, or *Create dossiers*, an upload of candidates from upstream where no form comes first. *Add dossiers* takes late or paper entries by the same upload. A candidate with two applications has two dossiers.
+- **The dossier is its own record, with or without an application** (rulings 32, 81). It carries its own ID, and pairs, cells, results, parts and the alias key hang off it, not the application. From the form it is minted at submit or at the form's close, the operator's choice, so a draft has none; from a Candidates item feeding gates, at publish and on each later add.
+- **What writes a dossier** (rulings 26, 77, 81): an application submitted through the form, or the Candidates item, by people search or CSV, where no form comes first; it absorbs ruling 26's *Create dossiers* and *Add dossiers*. A candidate with two applications has two dossiers.
 - **Form answers**, as submitted. There are no uploads in the MVP (ruling 3).
 - **Evaluators' responses**, pulled from Review Robin.
   - Review Robin keeps nothing visible after its window (ruling 26).
@@ -42,7 +42,7 @@ Every value is kept, whatever is shown of it.
 
 The page a candidate's readers open. It is displayable; what each reader sees of it is set where they read (ruling 79).
 
-- **Whose it is** (ruling 70): a dossier belongs to a **candidate**, the person or people it is about. An **applicant** is a candidate who submitted through a Form. A candidate from *Create dossiers* is not an applicant.
+- **Whose it is** (ruling 70): a dossier belongs to a **candidate**, the person or people it is about. An **applicant** is a candidate who submitted through a Form. A candidate from the Candidates item is not an applicant.
 - **What it holds** (ruling 68): every section of the submitted form (when there is one), every gate's results and every outcome, plus any operator entry marked as a dossier item (ruling 70).
 - **A photo is an item like any other** (rulings 70, 71): shown as the views say, even in a blind exercise. Blind review's redaction (ruling 6) covers the name and identifiers, not a photo, because a blind exercise may ask for a photo or screenshot that does not identify anyone. An operator who wants a face hidden from evaluators leaves it out of their views, or sets its ceiling to *never to evaluators*.
 - **Who sees an item, and when, is set where people read** (ruling 79, superseding the per-item grants of rulings 26, 33, 68 and 71):
@@ -105,6 +105,8 @@ Files for offline work, for operators only.
 | 70 | Extraction's two modes; operator entries of both kinds; *candidate* and *applicant*; a photo subject to grants |
 | 71 | The first grant is *Candidate*; a photo follows its grants in a blind exercise too; in-dossier or not is set on each field, and an in-dossier field needs grants (grants superseded by 79) |
 | 79 | Visibility set where people read: each gate × panel for its window, each outcome for candidates and past evaluators (continue, add or reset); a candidate sees their own form; new items start hidden; each field keeps its ceiling |
+| 81 | The dossier is its own record, with or without an application; minted at submit or form close, or at publish from Candidates, which absorbs *Create dossiers* |
+| 82 | A change recomputes only the pairs of dossiers it touches that are neither approved nor hand-edited; none once the session opens |
 
 **Superseded and not to be built:**
 - Ruling 5's "the dossier shows only the *Shown to reviewers* section" became ruling 26's parts, then ruling 68's grants per item, then ruling 79's views where people read.

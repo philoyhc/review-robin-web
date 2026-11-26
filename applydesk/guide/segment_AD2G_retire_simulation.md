@@ -138,7 +138,7 @@ Taken 2026-11-23 at `31fecbe33`.
 
 - Request-scoped loading, SQL paging, and taking the samples off production: Item 2.
 - Applicants' `/me` pages reading ordinary exercises: they have no applications until AD4.
-- Dossiers and pairs for ordinary exercises: AD2F.
+- Dossiers and pairs for ordinary exercises: AD2F and AD2P.
 
 ### Doc impact
 

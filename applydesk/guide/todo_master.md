@@ -369,6 +369,7 @@ the rulings it relied on but does not move them.
       in a stage before the first gate that needs them, where no form
       comes first. *Add dossiers* on the Dossiers page takes late or
       paper entries by the same upload, outside the timeline.
+      *Both absorbed by the Candidates item: rulings 77, 81.*
     - **Apply Desk sends Review Robin the session's settings** with its
       rosters: the instrument (a field per result, its key prescribed),
       visibility releasing nothing after the window, and the schedule
@@ -458,7 +459,8 @@ the rulings it relied on but does not move them.
     thinking through before AD2.
 32. **The dossier is its own table at AD2** (author, 2026-11-18; AD-44):
     pairs, cells, results, parts and the alias key hang off it, not the
-    application. Proposed: minted at submit, so a draft has none.
+    application. Proposed: minted at submit, so a draft has none. *When it
+    is minted, with or without an application: ruling 81.*
 33. **What a reader sees is set per dossier part** (author, 2026-11-18;
     AD-64): ~~the parts of ruling 26, each with its audiences, are the one
     vocabulary;~~ per-card *shown* and section *Shown / Not shown* go, and
@@ -522,6 +524,8 @@ the rulings it relied on but does not move them.
     not closed or completed (*Results in*): not advisable, but kept for
     the extreme case. What is locked is an evaluator fill that is not
     idempotent: once made, it is never regenerated, only edited by hand.
+    *Amended by ruling 82: a change recomputes the untouched dossiers it
+    reaches, until the session opens.*
 49. **Withdrawal and Return to draft follow the gate** (author,
     2026-11-18, amending ruling 45): an applicant may withdraw, and the
     operator return an application to draft, until a gate holding its
@@ -763,7 +767,32 @@ the rulings it relied on but does not move them.
     `/operator/sessions/by-code/<code>`. Its own segment:
     `guide/archive/segment_23J_linked_setup_first.md`. The link needs no stored
     `session_home_url` now; Apply Desk keeps the gate's transfer record
-    (AD2F) and makes the real calls with AD6.
+    (AD2T) and makes the real calls with AD6.
+
+81. **A dossier is its own record, with or without an application**
+    (author, 2026-11-26; AD-44), settling ruling 32's proposal and
+    amending rulings 26 and 77:
+    - **From the form**, a dossier is minted at submit or at the form's
+      close, the operator's choice (ruling 24); a draft application has
+      none.
+    - **From Candidates** (ruling 77), where the item feeds gates rather
+      than a form's roster, each candidate's dossier is minted when the
+      exercise is published, and on each later add. A Candidates item that
+      is only a form's roster mints nothing.
+    - **Candidates absorbs *Create dossiers* and *Add dossiers*** (ruling
+      26): its people search and CSV are the one way in for a candidate
+      with no application.
+    - Built in segment AD2F (`applydesk/guide/ad2_series.md`).
+82. **A change recomputes only the pairs it touches** (author,
+    2026-11-26; AD-47), amending ruling 48:
+    - **What recomputes:** a dossier the change touches (an evaluator
+      leaving a panel, a dossier entered or withdrawn, a dossier now short
+      of its min) that is neither approved (ruling 34) nor edited by hand.
+      Every other dossier keeps its pairs.
+    - **Approved or hand-edited dossiers** are flagged on the gate's page,
+      never changed silently.
+    - **Nothing recomputes once the session opens** (ruling 29).
+    - Built in segment AD2P (`applydesk/guide/ad2_series.md`).
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -860,7 +889,7 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| AD2 — Database (a series) | The `applydesk` database, checkable on localhost, area by area: AD2A foundations (people, operators, audit; closed 2026-11-21, `applydesk/guide/archive/segment_AD2A_foundations.md`); AD2W, Accounts Management's table as Review Robin's Workspace users (closed 2026-11-21, `applydesk/guide/archive/segment_AD2W_workspace_users.md`); then exercises, Process (AD2C closed 2026-11-23, `applydesk/guide/archive/segment_AD2C_process.md`); next, in order (author, 2026-11-23): AD2E panels (closed 2026-11-23, `applydesk/guide/archive/segment_AD2E_panels.md`), AD2D version 1, the form's questions (closed 2026-11-23, `applydesk/guide/archive/segment_AD2D_form.md`), AD2L email templates (closed 2026-11-23, `applydesk/guide/archive/segment_AD2L_emails.md`), AD2G Item 1, the browser store removed and test exercises seeded (closed 2026-11-23; plan `applydesk/guide/segment_AD2G_retire_simulation.md`, whose Item 2 follows); then dossiers and pairs (AD2F), visibility (AD2V) and the rest of the simulation's retirement (`applydesk/guide/ad2_series.md`) | Cordware: the database and its runtime principal (private), before AD2's first release |
+| AD2 — Database (a series) | The `applydesk` database, checkable on localhost, area by area: AD2A foundations (people, operators, audit; closed 2026-11-21, `applydesk/guide/archive/segment_AD2A_foundations.md`); AD2W, Accounts Management's table as Review Robin's Workspace users (closed 2026-11-21, `applydesk/guide/archive/segment_AD2W_workspace_users.md`); then exercises, Process (AD2C closed 2026-11-23, `applydesk/guide/archive/segment_AD2C_process.md`); next, in order (author, 2026-11-23): AD2E panels (closed 2026-11-23, `applydesk/guide/archive/segment_AD2E_panels.md`), AD2D version 1, the form's questions (closed 2026-11-23, `applydesk/guide/archive/segment_AD2D_form.md`), AD2L email templates (closed 2026-11-23, `applydesk/guide/archive/segment_AD2L_emails.md`), AD2G Item 1, the browser store removed and test exercises seeded (closed 2026-11-23; plan `applydesk/guide/segment_AD2G_retire_simulation.md`, whose Item 2 follows); then, split four ways (author, 2026-11-26), dossiers (AD2F), gate entries and outcomes (AD2H), pairs (AD2P) and the gate lifecycle (AD2T), visibility (AD2V) and the rest of the simulation's retirement (`applydesk/guide/ad2_series.md`) | Cordware: the database and its runtime principal (private), before AD2's first release |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form, versioned, each section carrying its visibility grants (ruling 68); drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
 | AD5 — Panels and dossiers | The rosters on Panels (rulings 19, 22), each gate's evaluators from its ranked sources (ruling 27); dossiers made from the form or by *Create dossiers* (rulings 25, 26), the dossier with its access check, audit and blind redaction | — |
