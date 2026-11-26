@@ -182,3 +182,17 @@ def test_a_csv_mints_once_for_the_file() -> None:
     session.close()
     assert done.added == 2 and len(_live(ex)) == 2
     assert kinds.count("dossier.minted") == 1
+
+
+def test_extract_offers_a_candidates_only_exercise_s_data() -> None:
+    """Codex on #4246: Extract counts a candidate's dossier as it counts a
+    submitted application, so its downloads are not disabled."""
+    from applydesk import extract, sample_data
+
+    ex = _exercise(form=False, published=True)
+    found = sample_data.exercise(ex)
+    assert found is not None and extract.of(found).submitted == 0
+    _add(ex, "ann@example.edu")
+    assert extract.of(found).submitted == 1
+    _, rows = extract.alias_key(found)
+    assert [r[0] for r in rows] == _live(ex) and rows[0][1] == ""

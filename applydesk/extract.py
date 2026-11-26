@@ -58,7 +58,7 @@ class GateFile:
 @dataclass(frozen=True)
 class Extract:
     zip_name: str
-    submitted: int  # submitted applications: none, and there is nothing to extract
+    submitted: int  # enterable dossiers (submitted, or a candidate's): none, nothing to extract
     draft: bool
     application_columns: tuple[str, ...]
     gates: tuple[GateFile, ...]
@@ -151,11 +151,12 @@ def zip_name(e: Exercise, kind: str, on: date | None = None, ext: str = "zip") -
 
 def of(e: Exercise) -> Extract:
     plan = stages.plan_of(e.public_id)
-    apps = sample_data.applications_of(e.public_id)
     gates = tuple(_gate(e, c) for c in plan.columns if isinstance(c, stages.Gate))
     return Extract(
         zip_name(e, "extract"),
-        sum(a.state == "Submitted" for a in apps),
+        # A candidate's dossier counts as a submitted application does (Codex
+        # on #4246): a candidates-only exercise has data to extract.
+        sum(r.dossier.enterable for r in plan.rows),
         locks.is_draft(e),
         APPLICATION_KEYS + tuple(c.label for c in _questions(e.public_id)),
         gates,
