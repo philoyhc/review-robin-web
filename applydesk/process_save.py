@@ -387,6 +387,15 @@ def _items(v: Any, key: str) -> list[Any]:
     return cast(list[Any], got) if isinstance(got, list) else []
 
 
+def per_person(sent: Any) -> int | None:
+    """The *Dossiers per person* the first stage's populating item sends
+    (segment AD2K), else None: unchanged."""
+    got = cast(dict[str, Any], sent).get("per_person") if isinstance(sent, dict) else None
+    if got is None:
+        return None
+    return _whole(got, "Dossiers per person")
+
+
 def made_panels(sent: Any, exercise_id: str) -> set[str]:
     """The panels the snapshot's gates name that the page made with
     *+New panel…* (``new-1``), not yet the exercise's."""

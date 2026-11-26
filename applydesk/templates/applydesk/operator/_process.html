@@ -1660,6 +1660,14 @@
       // The revision this page opened at: one opened before Process last
       // saved is refused, its keys perhaps another column's (Codex on #4028).
       revision: Number((root.querySelector("[data-fb-save]") || { dataset: {} }).dataset.revision || 0),
+      // Dossiers per person (segment AD2K): the first stage's populating
+      // item's, else null, unchanged.
+      per_person: (function () {
+        var first = cards()[0];
+        var item = first && (items(first, "candidates")[0] || items(first, "form")[0]);
+        var box = item && item.querySelector('[data-rel="per-person"]');
+        return box ? Number(box.value) : null;
+      })(),
       stages: cards().map(function (card) {
         var form = items(card, "form")[0];
         var outcome = items(card, "outcome")[0];

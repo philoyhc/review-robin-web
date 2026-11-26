@@ -39,6 +39,15 @@
 
 {% macro emails_chip(n) %}<span class="chip chip-mute" data-pi-emails>{{ "No email" if n == 0 else (n ~ (" email" if n == 1 else " emails")) }}</span>{% endmacro %}
 
+{# Segment AD2K (ruling 83): how many dossiers one person may hold, set on
+   whichever item populates them, the first stage's; saved with Process. #}
+{% macro per_person_field() %}
+  <div class="pc-row pi-sec">
+    <label class="fc-l">Dossiers per person<input class="fc-in" type="number" min="1" max="20" step="1" data-rel="per-person" value="{{ per_person }}"></label>
+    <p class="pc-line muted pc-hint">1 keeps one dossier per person; more lets someone hold several, each its own entry. Read from the first stage's item.</p>
+  </div>
+{% endmacro %}
+
 {% macro form_item(new=False, open=False, w=none) %}
 {% set n = 1 if new else ((1 if sends('receipt', 'Applicants') else 0) + (1 if sends('reminder', 'Applicants') else 0)) %}
 <div class="pc-item" data-item="form"{% if open %} data-open{% endif %}>
@@ -48,6 +57,7 @@
   {{ item_dates(w, "Opens", "Closes") }}
   {{ lock_open(form_lock) }}
   <p class="pc-line">The application form opens and closes on these dates, or its stage's. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.</p>
+  {{ per_person_field() }}
   {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
   <div class="pc-release pi-sec" data-pc-release>
     <span class="fc-l">Emails</span>
@@ -75,6 +85,7 @@
   {{ head("Populate Dossiers", "Populate Dossiers", chips, open) }}
   <div class="pi-body">
   <p class="pc-line">People added by hand, one dossier each. As the first item, each dossier goes to the gates that follow; on an <em>Invitation only</em> exercise, they are who may apply.</p>
+  {{ per_person_field() }}
   <div data-cand-live>
   <div class="pc-row pi-sec">
     <label class="fc-l pc-wide">Add someone<input class="fc-in" type="search" data-cand-search placeholder="Search by name or email" autocomplete="off"></label>

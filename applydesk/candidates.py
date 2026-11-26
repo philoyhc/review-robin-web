@@ -133,6 +133,53 @@ def full(session: Session, public_id: str) -> frozenset[int]:
     return frozenset(r for (r,) in rows)
 
 
+def set_per_person(session: Session, public_id: str, most: int, actor: Person | None) -> bool:
+    """Set how many dossiers one person may hold (segment AD2K), saved with
+    Process from the item that populates them; refused, naming who, if
+    someone already holds more. True if it changed. Flushes."""
+    if not 1 <= most <= MAX_PER_PERSON:
+        raise Refused(f"Dossiers per person is a whole number from 1 to {MAX_PER_PERSON}.")
+    exercise = _exercise(session, public_id, lock=True)
+    was = exercise.dossiers_per_person
+    if most == was:
+        return False
+    over = session.execute(
+        select(Person.display_name, Person.email)
+        .join(Candidate, Candidate.person_id == Person.id)
+        .where(Candidate.exercise_id == exercise.id, Candidate.removed_at.is_(None))
+        .group_by(Person.id, Person.display_name, Person.email)
+        .having(func.count() > most)
+        .order_by(Person.id)
+    ).all()
+    if over:
+        names = [name or email or "someone" for name, email in over]
+        shown = ", ".join(names[:3]) + (f" and {len(names) - 3} more" if len(names) > 3 else "")
+        held_ = "holds" if len(names) == 1 else "hold"
+        raise Refused(
+            f"Not saved: {shown} {held_} more than {most} "
+            f"{'dossier' if most == 1 else 'dossiers'}; remove entries first."
+        )
+    exercise.dossiers_per_person = most
+    session.flush()
+    audit.write_event(
+        session,
+        event_type="exercise.dossiers_per_person_set",
+        actor=actor,
+        exercise=exercise,
+        payload=audit.changes({"dossiers_per_person": [was, most]}),
+    )
+    return True
+
+
+def per_person(session: Session, public_id: str) -> int:
+    """How many dossiers one person may hold in the exercise (1 if it is
+    not on record)."""
+    found = session.scalar(
+        select(Exercise.dossiers_per_person).where(Exercise.public_id == public_id)
+    )
+    return found or 1
+
+
 def already(session: Session, public_id: str) -> str:
     """What an add past the limit says."""
     most = _exercise(session, public_id).dossiers_per_person
