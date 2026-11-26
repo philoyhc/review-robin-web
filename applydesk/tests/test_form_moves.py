@@ -13,7 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from applydesk import db, process_store, stages, workflow
+from applydesk import db, extract, handoff, process_store, stages, workflow
 from applydesk.lookups import exercise_or_404
 from applydesk.models import AuditEvent
 from applydesk.models import Stage as StageRow
@@ -265,6 +265,17 @@ def test_a_draft_published_by_its_stages_opens_its_gate_pages() -> None:
     assert "Once the exercise is published" not in process
     evaluations = client.get(f"{LOBBY}/{DRAFT}/evaluations").text
     assert "Nothing to send yet" not in evaluations
+    # The rest of the gate path reads it so too (the cold read on #4234):
+    # its bundle, an old gate_<n> link, Home's gate link and next step,
+    # and Extract.
+    kind = handoff.KINDS[0]
+    assert client.get(f"{LOBBY}/{DRAFT}/evaluations/{gate.key}/{kind}.csv").status_code == 200
+    old = client.get(f"{LOBBY}/{DRAFT}/evaluations/gate_{gate.number}")
+    assert old.status_code == 302 and old.headers["location"].endswith(f"/evaluations/{gate.key}")
+    home = client.get(f"{LOBBY}/{DRAFT}").text
+    assert f"/evaluations/{gate.key}" in home
+    assert "A draft: the timeline" not in home
+    assert not extract.of(exercise_or_404(DRAFT)).draft
 
 
 def test_process_reads_its_revision_before_its_timeline(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
-from applydesk import clock, sample_data, stages
+from applydesk import clock, locks, sample_data, stages
 from applydesk.sample_data import Exercise
 
 
@@ -148,7 +148,7 @@ def next_step(e: Exercise, t: Timeline) -> str:
     """The line under the timeline, only where the today marker cannot
     say it (segment AD1S): a draft, or no stage under way. While a stage
     is under way the timeline itself carries *Now* and *Next*, so none."""
-    if e.state == "Draft":
+    if locks.is_draft(e):  # by its state and its stages (Codex on cordware#230)
         return "A draft: the timeline is what participants will see once it is published."
     if t.now is not None:
         return ""
