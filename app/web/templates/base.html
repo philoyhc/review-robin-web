@@ -5157,7 +5157,12 @@
         body.ui-v2 .rs-action-row.rs-action-row-top { justify-content: stretch; }
         body.ui-v2 .rs-action-row-controls,
         body.ui-v2 .rs-page-nav-cluster { flex: 1 1 100%; flex-wrap: nowrap; }
-        body.ui-v2 .rs-action-row-controls > .btn { flex: 1 1 0; justify-content: center; text-align: center; }
+        /* As a flex box each centers its label down as well as across: a
+           `<button>` does so itself, but Cancel is an `<a>`, whose text
+           sat at the top of a row stretched taller (author's phone,
+           2026-11-26). */
+        body.ui-v2 .rs-action-row-controls > .btn { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
+        body.ui-v2 .rs-action-row-controls > .btn[hidden] { display: none; }
         body.ui-v2 .rs-page-nav-cluster { justify-content: space-between; }
         body.ui-v2 .rs-action-divider { display: none; }
         body.ui-v2 .rs-role-nav,

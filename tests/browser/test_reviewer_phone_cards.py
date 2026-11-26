@@ -332,3 +332,24 @@ def test_the_bottom_action_row_floats_on_a_phone(
     desktop = _surface(page_as, api, live_server, new_session, size={"width": 1400, "height": 1000})
     desktop_row = desktop.locator(".rs-action-row:not(.rs-action-row-top)")
     assert desktop_row.evaluate("r => getComputedStyle(r).position") == "static"
+
+
+def test_the_action_buttons_center_their_labels(page_as, api, live_server, new_session) -> None:
+    """On a phone Save, Cancel and Submit share a row and its height;
+    Cancel is a link, whose text sat at the top of a box stretched taller
+    than it (author's phone, 2026-11-26). Each centers its label down."""
+    reviewer = _surface(page_as, api, live_server, new_session)
+    # A row taller than the labels, as a wrapped label makes it.
+    reviewer.add_style_tag(content=".rs-action-row-controls > .btn { min-height: 60px; }")
+    offsets = reviewer.evaluate(
+        """() => [...document.querySelectorAll('.rs-action-row-top .rs-action-row-controls > .btn')]
+             .map(b => {
+               const r = document.createRange();
+               r.selectNodeContents(b);
+               const t = r.getBoundingClientRect(), box = b.getBoundingClientRect();
+               return [b.textContent.trim(),
+                       Math.abs((t.top + t.bottom) / 2 - (box.top + box.bottom) / 2)];
+             })"""
+    )
+    assert [name for name, _ in offsets] == ["Save", "Cancel", "Submit"]
+    assert all(off < 2 for _, off in offsets), offsets
