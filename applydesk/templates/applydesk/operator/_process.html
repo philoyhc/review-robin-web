@@ -17,7 +17,7 @@
     <div class="fb-cards" id="pc-cards">
       {% for st in plan.stages %}{{ pc.stage(plan, st, rule_text, last=(plan.stages | length == 1), open=(plan.stages | length == 1)) }}{% endfor %}
     </div>
-    {# What + Stage and + Form add: the same macros as the server's own. #}
+    {# What +Stage and +Form add: the same macros as the server's own. #}
     <template id="pc-new-stage">{{ pc.stage(plan, blank_stage, rule_text, last=False, open=True) }}</template>
     <template id="pc-new-form">{{ pc.form_item(new=True, open=True) }}</template>
     <template id="pc-new-candidates">{{ pc.candidates_item(open=True, listed=cand_list) }}</template>
@@ -58,7 +58,7 @@
 <script>
 // Segment AD1E rung 3: the stage card moves, in the browser only; a reload
 // restores the sample. Collapse and expand; the name and dates feeding the
-// card's head and the Outline; + Stage, Replicate and Delete (never the
+// card's head and the Outline; +Stage, Replicate and Delete (never the
 // last stage); dragging a handle or the arrow keys; the form added or
 // removed within ruling 15 (one stage holds it, never beside a gate).
 // Gates and outcomes are numbered by timeline as cards move.
@@ -159,7 +159,7 @@
       row.dataset.kind = kind;
       row.querySelector("[data-ps-rank]").textContent = String(n);
       row.querySelectorAll("[data-ps-for]").forEach(function (f) { f.hidden = f.dataset.psFor !== kind; });
-      // The + New panel box is the panel's: a Nominated source shuts it.
+      // The +New panel box is the panel's: a Nominated source shuts it.
       if (kind !== "panel") row.querySelector("[data-newpanel]").hidden = true;
       row.querySelector('[data-ps="kind"]').setAttribute("aria-label", "Source " + n + ": kind");
       row.querySelector('[data-ps="panel"]').setAttribute("aria-label", "Source " + n + ": panel");
@@ -193,7 +193,7 @@
     if (allTotal) { tlo.value = String(b[0]); thi.value = String(b[1]); }
     if (!sent) { tlo.disabled = allTotal; thi.disabled = allTotal; }
     item.querySelector("[data-ps-bounds]").textContent = rows.length ? "within " + b[0] + "–" + b[1] : "No sources";
-    // The columns' names show over rows; with none, + Source stands alone.
+    // The columns' names show over rows; with none, +Source stands alone.
     item.querySelector("[data-ps-headrow]").hidden = !rows.length;
     item.querySelector("[data-ps-empty]").hidden = rows.length > 0;
   }
@@ -203,7 +203,7 @@
     var item = b.closest(".pc-item");
     var act = b.dataset.psAct, row = b.closest("[data-ps-row]");
     if (act === "add" || act === "insert") {
-      // A row's + adds the next source under it; + Source, the first.
+      // A row's + adds the next source under it; +Source, the first.
       var added = fresh("pc-new-source");
       if (row) row.after(added); else item.querySelector("[data-ps-total]").before(added);
       drawSources(item);
@@ -211,7 +211,7 @@
       added.querySelector('[data-ps="kind"]').focus();
     } else if (act === "remove") {
       // Focus goes to the row taking its place, else the one above, else
-      // + Source.
+      // +Source.
       var next = row.nextElementSibling, prev = row.previousElementSibling;
       row.remove();
       drawSources(item);
@@ -943,7 +943,7 @@
         box.appendChild(head);
       }
       b.when.forEach(function (cond, i) { box.appendChild(condRow(item, cond, i, bi)); });
-      box.appendChild(button("+ Condition", "add", bi));
+      box.appendChild(button("+Condition", "add", bi));
       if (rule) {
         var lt = el("label", "fc-l", "Then"), then = select(pairs(results), b.then || results[0] || "", bi ? "Then, branch " + (bi + 1) : "Then");
         then.dataset.rulePart = "then"; then.dataset.branch = String(bi);
@@ -955,7 +955,7 @@
       ed.appendChild(box);
     });
     if (!rule) return;
-    ed.appendChild(button("+ Else if", "add-branch"));
+    ed.appendChild(button("+Else if", "add-branch"));
     var tail = el("div", "pc-row pc-cond-then"), lo = el("label", "fc-l", "Otherwise");
     var other = select(pairs(results), rule.otherwise || results[1] || results[0] || "", "Otherwise");
     other.dataset.rulePart = "otherwise";
@@ -1012,7 +1012,7 @@
   }
   // Puts focus back after the editor is redrawn: in branch `at.b`, the
   // control at `n` in row `at.i` (-1, its last), else that branch's
-  // + Condition, else the first.
+  // +Condition, else the first.
   function focusIn(item, at, n) {
     var ed = item.querySelector("[data-rule-ed]"), t = null;
     var box = at ? ed.querySelectorAll(".pc-branch")[at.b] : null;
@@ -1144,7 +1144,7 @@
           item.querySelectorAll("[data-pc-sources] [data-ps], [data-pc-sources] [data-ps-act], [data-ps=\"mode\"], [data-pc=\"description\"], [data-pc=\"confidential\"], [data-pc=\"type\"]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
           drawSources(item);
         }
-        // Its fields, results, + Field and + Result are its own to set too.
+        // Its fields, results, +Field and +Result are its own to set too.
         item.querySelectorAll("[data-pr-ed], [data-rf-ed]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
         var addF = item.querySelector('[data-rf-act="add"]');
         if (addF) { addF.removeAttribute("data-sent"); addF.disabled = false; addF.removeAttribute("title"); }
@@ -1655,7 +1655,7 @@
   }
   window.applydeskProcessSnapshot = function () {
     return {
-      // Panels made here with + New panel…, kept with the gates naming them.
+      // Panels made here with +New panel…, kept with the gates naming them.
       pools: window.applydeskMadePanels || {},
       // The revision this page opened at: one opened before Process last
       // saved is refused, its keys perhaps another column's (Codex on #4028).
@@ -1728,7 +1728,7 @@
     (got.bad || []).forEach(function (t) { bad.appendChild(el("li", "", t)); });
     bad.hidden = !(got.bad || []).length;
     item.querySelector("[data-cand-said]").textContent = got.said || "";
-    // The item + Candidates adds is drawn from a template: it keeps the list
+    // The item +Candidates adds is drawn from a template: it keeps the list
     // as it now stands, so moving Candidates to another stage shows it
     // (Codex on #4161).
     var tpl = document.getElementById("pc-new-candidates");

@@ -1,6 +1,6 @@
 {# A gate page's operations (AD1G rung 6b, ruling 27), by the gate's mode:
-   Suggested, then approved: Approve a dossier's pairs (ruling 34), Approve all, Remove, + Pair;
-   Assigned by the operator and Automatic: + Pair, Remove (an Automatic fill
+   Suggested, then approved: Approve a dossier's pairs (ruling 34), Approve all, Remove, +Pair;
+   Assigned by the operator and Automatic: +Pair, Remove (an Automatic fill
    is never re-made, only edited by hand, ruling 48). The page
    shows 200 of the gate's pairs and reloads to page or sort, so the
    changes are kept in this tab (sessionStorage, by exercise and gate)
@@ -84,7 +84,7 @@
     return DATA.mode === "assigned" ? "Assigned" : "Filled";
   }
   // Why dossier d cannot take evaluator e from source src, or "": the
-  // Total's max, then the source's, as + Pair and Undo both hold them.
+  // Total's max, then the source's, as +Pair and Undo both hold them.
   function full(d, e, src) {
     if (pairs().some(function (p) { return p[0] === d && p[1] === e; })) return (sources[e] ? sources[e][0] : e) + " is already on " + names[d] + ".";
     if (count(d) >= DATA.max) return names[d] + " already has the most evaluators, " + DATA.max + ".";
@@ -211,7 +211,7 @@
     }
   });
 
-  // + Pair: a dossier, then an evaluator from its panel sources who is
+  // +Pair: a dossier, then an evaluator from its panel sources who is
   // not the candidate, not already on it, while it is under the max.
   var box = card.querySelector("[data-ev-add]");
   function fillEvaluators() {

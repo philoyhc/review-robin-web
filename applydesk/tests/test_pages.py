@@ -545,14 +545,14 @@ def test_process_is_a_stack_of_stage_cards(client: TestClient) -> None:
     assert "3 stages · 3 gates · 2 outcomes" in full
     assert "announcement" not in text.lower()  # the exercise's own setup (author)
     # Ruling 15's shape, as the inert buttons say it.
-    assert 'disabled title="A stage holding the form holds no gate">+ Gate' in text
-    assert 'disabled title="A stage holding gates holds no form">+ Form' in text
-    assert 'disabled title="A stage holds one outcome at most">+ Outcome' in text
+    assert 'disabled title="A stage holding the form holds no gate">+Gate' in text
+    assert 'disabled title="A stage holding gates holds no form">+Form' in text
+    assert 'disabled title="A stage holds one outcome at most">+Outcome' in text
     # The buttons ruling 15 refuses say why; the rest work in the
     # browser. Cards load collapsed, as Form's.
     assert not re.findall(r"<article [^>]*data-open", text)
     assert (
-        '<button type="button" class="btn btn-secondary" data-fc-act="new">+ Stage</button>' in text
+        '<button type="button" class="btn btn-secondary" data-fc-act="new">+Stage</button>' in text
     )
     assert re.findall(r'data-pc-act="gate" disabled', text)
 
@@ -612,19 +612,19 @@ def test_a_gate_item_carries_its_evaluators(client: TestClient) -> None:
     at = text.index("data-pc-panel")
     menu = text[at : text.index("</select>", at)]
     assert ">Institution-wide<" not in menu and ">Residential staff<" in menu
-    assert ">+ New panel…</option>" in menu
+    assert ">+New panel…</option>" in menu
     # No gate page to send anyone to.
     assert "/gates" not in text
 
 
 def test_a_gate_with_no_panel_has_no_evaluators(client: TestClient) -> None:
     """The draft's selection gate was added just in time: no sources yet,
-    and + Source to add one."""
+    and +Source to add one."""
     text = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text
     assert re.findall(r"data-pi-panel>([^<]*)<", text)[:1] == ["No evaluators"]
     gate = text[text.index('data-item="gate"') : text.index('data-pc-act="remove-gate"')]
     assert "data-ps-row" not in gate and ">No sources<" in gate
-    assert 'data-ps-act="add">+ Source<' in gate
+    assert 'data-ps-act="add">+Source<' in gate
 
 
 def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> None:
@@ -1784,7 +1784,7 @@ def test_a_gate_lists_its_evaluator_sources(client: TestClient) -> None:
 
 
 def test_a_new_source_is_a_panel_of_one(client: TestClient) -> None:
-    """+ Source adds the page's blank source: a panel, none chosen yet,
+    """+Source adds the page's blank source: a panel, none chosen yet,
     one per dossier; its controls live (not sent)."""
     text = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text
     tpl = text[text.index('<template id="pc-new-source">') :]
@@ -2191,22 +2191,22 @@ def test_evaluations_says_what_the_link_is_in_words(client: TestClient) -> None:
 
 
 def test_one_label_and_role_creates_a_panel(client: TestClient) -> None:
-    """U8 and U6, AD-72: + Panel, Secondary, on Panels and in the inline
-    box on Form and Process; Form's add is + Question."""
+    """U8 and U6, AD-72: +Panel, Secondary, on Panels and in the inline
+    box on Form and Process; Form's add is +Question."""
     panels = client.get(f"/applydesk/operator/exercises/{EX}/panels").text
     assert (
-        '<button type="button" class="btn btn-secondary" data-pn-act="create">+ Panel</button>'
+        '<button type="button" class="btn btn-secondary" data-pn-act="create">+Panel</button>'
         in panels
     )
     for section in ("form", "process"):
         text = client.get(f"/applydesk/operator/exercises/{DRAFT}/{section}").text
         assert (
-            '<button type="button" class="btn btn-secondary" data-np-act="create">+ Panel</button>'
+            '<button type="button" class="btn btn-secondary" data-np-act="create">+Panel</button>'
             in text
         ), section
         assert "Create panel" not in text, section
     form = client.get(f"/applydesk/operator/exercises/{EX}/form").text
-    assert 'data-fc-act="new">+ Question</button>' in form and ">+ New</button>" not in form
+    assert 'data-fc-act="new">+Question</button>' in form and ">+ New</button>" not in form
 
 
 # --- Segment AD1S rung 3: the copy sweep ---

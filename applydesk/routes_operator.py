@@ -448,7 +448,7 @@ async def _page_json(request: Request) -> Any:
 
 def _made_pools(cards: Any, known: dict[str, Any]) -> set[str]:
     """The panels a Form snapshot's questions name that the page made
-    with *+ New panel…* (``new-1``), not yet the exercise's."""
+    with *+New panel…* (``new-1``), not yet the exercise's."""
     if not isinstance(cards, list):
         return set()
     return {
@@ -478,7 +478,7 @@ async def exercise_form_save(request: Request, exercise_id: str) -> Response:
 
 def _save_form(request: Request, exercise_id: str, sent: Any) -> Response:
     """Form's *Save*, past the request's own checks: the transaction. A
-    panel made with *+ New panel…* is stored with it (segment AD2E), or
+    panel made with *+New panel…* is stored with it (segment AD2E), or
     not at all."""
     exercise = exercise_or_404(exercise_id)
     identity = current_identity(request)
@@ -566,7 +566,7 @@ def _save_process(request: Request, exercise_id: str, sent: object) -> Response:
         # The exercise's row lock before its panels are read, so a Panels
         # save cannot retire one between the check and this save (AD2E).
         panels_store.lock(session, exercise.public_id)
-        # A panel made with *+ New panel…* joins the exercise's panels,
+        # A panel made with *+New panel…* joins the exercise's panels,
         # stored with the process or not at all (segment AD2E).
         wanted = process_save.made_panels(sent, exercise.public_id)
         renamed = panels_store.adopt(session, exercise.public_id, got.get("pools"), wanted, actor)

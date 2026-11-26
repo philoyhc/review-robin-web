@@ -212,7 +212,7 @@
 {# One evaluator source (ruling 27): its rank, kind, which question or
    panel, min and max per dossier, and its moves. Both the question and
    the panel menus are here, the kind showing one; the panel's is the
-   shared picker with its *+ New panel* box (AD1F). #}
+   shared picker with its *+New panel* box (AD1F). #}
 {% macro source_row(s, n, sent) %}
 <div class="ps-row" data-ps-row data-kind="{{ s.kind }}" data-pick-wrap>
   <span class="ps-rank" data-ps-rank>{{ n }}</span>
@@ -300,7 +300,7 @@
       </div>
     </div>
     {# A row's + adds the next source; with none, this does. #}
-    <div class="pc-item-foot" data-ps-empty{% if ev[0] %} hidden{% endif %}><button type="button" class="btn btn-secondary" data-ps-act="add"{{ sent_attr(sent) }}>+ Source</button></div>
+    <div class="pc-item-foot" data-ps-empty{% if ev[0] %} hidden{% endif %}><button type="button" class="btn btn-secondary" data-ps-act="add"{{ sent_attr(sent) }}>+Source</button></div>
   </div>
   {# How the pairs are made (ruling 27): a menu, as the card's other
      settings (author, 2026-11-17). A panel's members are on Panels, each
@@ -317,7 +317,7 @@
     <p class="pc-line muted pc-hint">What each evaluator answers in Review Robin, field by field. Evaluators read the dossier's <em>Shown to evaluators</em> part{% if exercise.blind %}, redacted{% endif %}.</p>
     <div class="pr-list" data-rf-list>{% for f in fields_of(g) %}{{ field_row(f, sent) }}{% endfor %}</div>
     <p class="pc-line muted" data-rf-none{% if fields_of(g) %} hidden{% endif %}>No response fields yet: a result collates one.</p>
-    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-rf-act="add"{% if sent %} data-sent disabled title="Its session has opened: the gate keeps its fields"{% endif %}>+ Field</button></div>
+    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-rf-act="add"{% if sent %} data-sent disabled title="Its session has opened: the gate keeps its fields"{% endif %}>+Field</button></div>
   </div>
   {# Its results (rulings 21, 28): up to three, each naming the response
      field it collates and how the answers become the result, which sets
@@ -327,7 +327,7 @@
     <p class="pc-line muted pc-hint">What the gate yields, collated from the response fields: each shows on Dossiers and feeds outcomes and later gates' rules. Up to three.</p>
     <div class="pr-list" data-pr-list>{% for r in g.results %}{{ result_row(r, sent, source_field(g, r), fields_of(g)) }}{% endfor %}</div>
     <p class="pc-line muted" data-pr-none{% if g.results %} hidden{% endif %}>No results yet: a gate yields up to three.</p>
-    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-pr-act="add"{% if sent %} data-sent disabled title="Its session has opened: the gate keeps its results"{% elif g.results | length >= 3 %} disabled title="A gate yields three results at most"{% endif %}>+ Result</button></div>
+    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-pr-act="add"{% if sent %} data-sent disabled title="Its session has opened: the gate keeps its results"{% elif g.results | length >= 3 %} disabled title="A gate yields three results at most"{% endif %}>+Result</button></div>
   </div>
   {% set fs = fields_of(g) %}
   {# What will be sent (AD1G amendment): the instrument, its window in
@@ -377,7 +377,7 @@
     <ol class="pc-value-list" data-pc-value-list>
       {% for v in o.values %}<li data-value-key="{{ o.value_keys[loop.index0] if o.value_keys | length > loop.index0 else '' }}"><input class="fc-in" data-pc="value" maxlength="200" value="{{ v }}" data-was="{{ v }}" aria-label="Value {{ loop.index }}"><button type="button" class="btn btn-secondary btn-short" data-pc-act="remove-value" aria-label="Remove {{ v }}">Remove</button></li>{% endfor %}
     </ol>
-    <button type="button" class="btn btn-secondary btn-short" data-pc-act="add-value">+ Value</button>
+    <button type="button" class="btn btn-secondary btn-short" data-pc-act="add-value">+Value</button>
   </div>
   {# Its combined result: weights over the gates in its scope, those since
      the previous outcome (ruling 13); redrawn by the script as gates move. #}
@@ -481,14 +481,14 @@
     {% if st.candidates %}{{ candidates_item(listed=cand_list) }}{% endif %}
     <p class="pc-line muted pc-empty">Nothing in this stage yet: add the form, a gate or an outcome.</p>
     <div class="pc-adds">
-      <button type="button" class="btn btn-secondary" data-pc-act="gate"{% if st.form %} disabled title="A stage holding the form holds no gate"{% endif %}>+ Gate</button>
-      <button type="button" class="btn btn-secondary" data-pc-act="outcome"{% if outs %} disabled title="A stage holds one outcome at most"{% endif %}>+ Outcome</button>
-      <button type="button" class="btn btn-secondary" data-pc-act="candidates"{% if st.candidates %} disabled title="This stage holds Candidates"{% elif plan.stages | selectattr("candidates") | list %} disabled title="Another stage holds Candidates"{% endif %}>+ Candidates</button>
-      <button type="button" class="btn btn-secondary" data-pc-act="form"{% if st.form %} disabled title="This stage holds the form"{% elif gates %} disabled title="A stage holding gates holds no form"{% elif plan.form_stage %} disabled title="Another stage holds the form"{% endif %}>+ Form</button>
+      <button type="button" class="btn btn-secondary" data-pc-act="gate"{% if st.form %} disabled title="A stage holding the form holds no gate"{% endif %}>+Gate</button>
+      <button type="button" class="btn btn-secondary" data-pc-act="outcome"{% if outs %} disabled title="A stage holds one outcome at most"{% endif %}>+Outcome</button>
+      <button type="button" class="btn btn-secondary" data-pc-act="candidates"{% if st.candidates %} disabled title="This stage holds Candidates"{% elif plan.stages | selectattr("candidates") | list %} disabled title="Another stage holds Candidates"{% endif %}>+Candidates</button>
+      <button type="button" class="btn btn-secondary" data-pc-act="form"{% if st.form %} disabled title="This stage holds the form"{% elif gates %} disabled title="A stage holding gates holds no form"{% elif plan.form_stage %} disabled title="Another stage holds the form"{% endif %}>+Form</button>
     </div>
     <div class="fc-foot">
       <button type="button" class="btn btn-secondary" data-fc-act="replicate">Replicate</button>
-      <button type="button" class="btn btn-secondary" data-fc-act="new">+ Stage</button>
+      <button type="button" class="btn btn-secondary" data-fc-act="new">+Stage</button>
       <button type="button" class="btn btn-destructive fc-del" data-fc-act="delete"{% if last %} disabled title="The last stage cannot be deleted"{% endif %}>Delete</button>
     </div>
   </div>

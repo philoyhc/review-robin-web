@@ -138,7 +138,7 @@
       .catch(function () { refuse(field("name"), "Not saved: the server could not be reached."); });
   });
   form.addEventListener("keydown", function (e) {
-    // Esc discards, as Panels' and + Pair's close (AD-104).
+    // Esc discards, as Panels' and +Pair's close (AD-104).
     if (e.key === "Escape") { e.preventDefault(); form.querySelector('[data-dt-act="discard"]').click(); return; }
     if (e.key === "Enter" && e.target.tagName === "INPUT" && e.target.type !== "checkbox") { e.preventDefault(); form.querySelector('[data-dt-act="lock"]').click(); }
   });

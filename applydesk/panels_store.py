@@ -6,7 +6,7 @@ AD2E, rulings 19, 20, 22, 23 and 39).
 first saved, so the pages keep the sample's. ``save`` replaces the roster
 with the page's snapshot under the exercise's row lock, guarded by
 ``exercise.panels_revision``. ``adopt`` stores the panels Form and Process
-make with *+ New panel…*, with those pages' own saves.
+make with *+New panel…*, with those pages' own saves.
 
 Keys are ``panel-<n>``, minted here past every key the exercise has held,
 retired ones and the sample's included, so a key is never given twice
@@ -439,7 +439,7 @@ def save(
 def adopt(
     session: Session, public_id: str, made: Any, wanted: set[str], actor: Person | None
 ) -> dict[str, str]:
-    """Store the panels a page made with *+ New panel…* that its save names
+    """Store the panels a page made with *+New panel…* that its save names
     (``wanted``, keys such as ``new-1``), each given a key of its own and
     added to the exercise's panels, its members to the roster; the key
     map. ``made`` is the page's ``applydeskMadePanels``:
