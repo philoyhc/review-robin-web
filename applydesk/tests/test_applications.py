@@ -38,6 +38,7 @@ def test_each_state_keeps_the_times_it_has() -> None:
         assert row.started_at is not None
         assert (row.submitted_at is None) == (row.state == "draft")
         assert (row.withdrawn_at is None) == (row.state != "withdrawn")
+        assert (row.form_revision is None) == (row.state == "draft")
     session.close()
 
 

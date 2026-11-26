@@ -14,7 +14,7 @@ import math
 import random
 import re
 from dataclasses import dataclass, replace
-from datetime import date, datetime
+from datetime import UTC, datetime
 
 from applydesk import clock, sample_data
 from applydesk.sample_data import Application
@@ -641,6 +641,10 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
     submitted = [a for a in apps if a.state == "Submitted"]
     returning = [a for a in submitted if a.email.casefold() in ras]
     new = [a for a in submitted if a.email.casefold() not in ras]
+    if len(returning) < 15 or len(new) < 41:
+        # Not the seeded samples (a database migrated but not seeded,
+        # segment AD2J's cold read): no cells rather than a failed page.
+        return tuple(Row(a, {}) for a in apps)
     # Aisha returns and Kenji is interviewed: the pages' examples.
     back = {returning[0].public_id, *(a.public_id for a in rng.sample(returning[1:], 14))}
     ahead = {new[0].public_id, *(a.public_id for a in rng.sample(new[1:], 39))}
@@ -867,18 +871,30 @@ def counts(plan: Plan, column: Gate | Outcome) -> str:
     return " · ".join(parts) or "none yet"
 
 
+def _newest(a: Application, at: datetime | None) -> tuple[datetime, str]:
+    """A sort key for "the latest": the time, in UTC, then the public ID
+    (segment AD2J); a row with no time sorts first."""
+    when = at.astimezone(UTC) if at is not None else datetime.min.replace(tzinfo=UTC)
+    return (when, a.public_id)
+
+
 def last_submitted(rows: tuple[Row, ...]) -> frozenset[str]:
     """Application IDs shown under *Last applications*: per applicant (by
-    email), the latest submitted, else the latest of any status (ruling
-    13). Rows are in the order the applications came in."""
-    latest: dict[str, str] = {}
-    submitted: dict[str, str] = {}
+    email), the latest submitted, else the latest started of any status
+    (ruling 13), by time (segment AD2J)."""
+    latest: dict[str, tuple[tuple[datetime, str], str]] = {}
+    submitted: dict[str, tuple[tuple[datetime, str], str]] = {}
     for r in rows:
         a = r.application
-        latest[a.email.lower()] = a.public_id
+        who = a.email.lower()
+        started = (_newest(a, a.started_at), a.public_id)
+        if who not in latest or started[0] > latest[who][0]:
+            latest[who] = started
         if a.state == "Submitted":
-            submitted[a.email.lower()] = a.public_id
-    return frozenset({**latest, **submitted}.values())
+            sent = (_newest(a, a.submitted_at), a.public_id)
+            if who not in submitted or sent[0] > submitted[who][0]:
+                submitted[who] = sent
+    return frozenset(i for _, i in {**latest, **submitted}.values())
 
 
 def scope(plan: Plan, outcome: Outcome) -> tuple[Gate, ...]:
@@ -1122,16 +1138,15 @@ def submitted_rank(rows: tuple[Row, ...]) -> dict[str, int]:
     """Each submitted application's place among its applicant's submitted
     ones, newest first (1 = last submitted); for "the last N submitted by
     each applicant" in a gate's rule (author, 2026-11-13)."""
-    by_applicant: dict[str, list[tuple[date, int, str]]] = {}
-    for n, r in enumerate(rows):
+    by_applicant: dict[str, list[tuple[datetime, str]]] = {}
+    for r in rows:
         a = r.application
-        if a.state == "Submitted" and a.submitted_at is not None:
-            when = a.submitted_at.date()
-            by_applicant.setdefault(a.email.lower(), []).append((when, n, a.public_id))
+        if a.state == "Submitted":
+            by_applicant.setdefault(a.email.lower(), []).append(_newest(a, a.submitted_at))
     return {
         app_id: rank
         for subs in by_applicant.values()
-        for rank, (_, _, app_id) in enumerate(sorted(subs, reverse=True), start=1)
+        for rank, (_, app_id) in enumerate(sorted(subs, reverse=True), start=1)
     }
 
 

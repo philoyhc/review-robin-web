@@ -118,6 +118,7 @@ def record_samples(
                 started_at=when,
                 submitted_at=None if state == "draft" else when,
                 withdrawn_at=when if state == "withdrawn" else None,
+                form_revision=None if state == "draft" else exercise.form_revision,
             )
         )
         added += 1

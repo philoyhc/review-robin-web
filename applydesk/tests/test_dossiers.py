@@ -6,6 +6,7 @@ columns, every application a row; the sample's logic
 from __future__ import annotations
 
 import re
+from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -351,3 +352,50 @@ def test_a_stage_holds_one_outcome_at_most() -> None:
     assert stages.problems(two) == ("Stage 1 holds more than one outcome.",)
     with_application = (stages.Stage(1, "Applications", None, (o,), form=True),)
     assert stages.problems(with_application) == ()
+
+
+def _timed(i: str, started: str, submitted: str | None) -> sample_data.Application:
+    """An application of z@e.edu with its started and submitted times."""
+    return sample_data.Application(
+        i,
+        EX,
+        "X",
+        "z@e.edu",
+        "",
+        "Submitted" if submitted else "Draft",
+        "",
+        "d" + i,
+        started_at=datetime.fromisoformat(started),
+        submitted_at=datetime.fromisoformat(submitted) if submitted else None,
+    )
+
+
+def test_the_last_submitted_goes_by_time_within_a_day_and_across_days() -> None:
+    """Segment AD2J's cold read: the rule's "last N" and *Last
+    applications* agree, by the submitted time, not the day or the order."""
+    same_day = (
+        _timed("aa", "2026-09-05T08:00+00:00", "2026-09-05T15:00+00:00"),
+        _timed("bb", "2026-09-05T09:00+00:00", "2026-09-05T10:00+00:00"),
+    )
+    rows = tuple(stages.Row(a, {}) for a in same_day)
+    assert stages.submitted_rank(rows) == {"aa": 1, "bb": 2}
+    assert stages.last_submitted(rows) == {"aa"}
+    across = (
+        _timed("aa", "2026-09-03T08:00+00:00", "2026-09-05T08:00+00:00"),
+        _timed("bb", "2026-09-04T08:00+00:00", "2026-09-04T09:00+08:00"),
+    )
+    rows = tuple(stages.Row(a, {}) for a in across)
+    assert stages.submitted_rank(rows) == {"aa": 1, "bb": 2}
+    assert stages.last_submitted(rows) == {"aa"}
+    drafts = (
+        _timed("aa", "2026-09-04T08:00+00:00", None),
+        _timed("bb", "2026-09-03T08:00+00:00", None),
+    )
+    assert stages.last_submitted(tuple(stages.Row(a, {}) for a in drafts)) == {"aa"}
+
+
+@pytest.mark.usefixtures("unseeded")
+def test_the_model_exercise_without_its_applications_shows_no_cells() -> None:
+    """A database migrated but not seeded (cold read): no applications, so
+    the model exercise's rows are empty rather than a failed page."""
+    assert stages._model_rows(()) == ()  # pyright: ignore[reportPrivateUsage]  -- the guard itself
