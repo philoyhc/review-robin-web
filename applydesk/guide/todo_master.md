@@ -710,7 +710,7 @@ the rulings it relied on but does not move them.
     2026-11-22; AD2C): the action `workflow.steps` already words
     (*Open form…*, *Close form…*) becomes live there, not a button on
     Process.
-77. **Candidates is a stage item** (author, 2026-11-22; AD2C, replacing
+77. **Candidates is a stage item** *(renamed Populate Dossiers, its role recast: ruling 83)* (author, 2026-11-22; AD2C, replacing
     an invitee list for AD-52): a list of people the operator keeps by
     hand, added through the people search (ruling 75) or a CSV upload.
     It can be a form's roster (who may apply to an *Invitation only*
@@ -769,7 +769,7 @@ the rulings it relied on but does not move them.
     `session_home_url` now; Apply Desk keeps the gate's transfer record
     (AD2T) and makes the real calls with AD6.
 
-81. **A dossier is its own record, with or without an application**
+81. **A dossier is its own record, with or without an application** *(its Candidates test, "no form", replaced by "the first item": ruling 83)*
     (author, 2026-11-26; AD-44), settling ruling 32's proposal and
     amending rulings 26 and 77:
     - **From the form**, a dossier is minted at submit or at the form's
@@ -796,6 +796,36 @@ the rulings it relied on but does not move them.
       never changed silently.
     - **Nothing recomputes once the session opens** (ruling 29).
     - Built in segment AD2P (`applydesk/guide/ad2_series.md`).
+
+83. **The first item populates dossiers: a Form, or Populate Dossiers**
+    (author, 2026-11-26), amending rulings 24, 26, 77 and 81:
+    - **Candidates is renamed *Populate Dossiers*.** Each entry on it is one
+      dossier, with its person and an optional title: one person may hold
+      more than one dossier, so an entry is a dossier, not a person.
+    - **An exercise's first item is either a Form or Populate Dossiers**,
+      and that item populates the dossier roster. A first Form mints a
+      dossier per submission; Populate Dossiers mints one per entry, at
+      publish and on each later add (ruling 81).
+    - **A Form that is not first adds to dossiers already populated**,
+      never mints one: its submission becomes a part of an existing
+      dossier (ruling 26). Who it invites is an entry rule over the
+      roster, as a gate's, defaulting to every dossier. Someone not on the
+      roster cannot apply.
+    - **"Invitation only" stops being an eligibility setting**: it is
+      Populate Dossiers first, then a Form with an entry rule. A first Form
+      is open.
+    - **The populating item sets dossiers per person**: one, or up to a
+      maximum the operator sets (replacing AD-38's allowance per
+      applicant).
+    - **Validation** (Process's Outline, publishing, Home's Validate):
+      errors when the first item is neither, when Populate Dossiers comes
+      after a Form, when a later Form has no entry rule (at most one Form
+      and one Populate Dossiers stand); warnings when Populate Dossiers
+      has no entries, and when no outcome follows the last gate.
+    - **Built**: the rename, the per-person setting, a dossier populated
+      and later linked to an application, and validation in segment AD2K
+      (`applydesk/guide/ad2_series.md`); a later Form's entry rule and its
+      submissions joining dossiers with AD4.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
