@@ -1332,7 +1332,9 @@ def _gate_or_404(exercise: sample_data.Exercise, gate: str) -> stages.Gate:
     """The gate a path names by its key (ruling 37, AD-48), 404 for one
     the exercise lacks or a draft exercise."""
     found = stages.gate_keyed(stages.plan_of(exercise.public_id), gate)
-    if found is None or exercise.state == "Draft":
+    # Published by its state or its stages (`locks.is_draft`, Codex on
+    # cordware#230).
+    if found is None or locks.is_draft(exercise):
         raise HTTPException(status_code=404)
     return found
 
@@ -1350,7 +1352,7 @@ def _old_gate_link(
     if number is None:
         return None
     found = stages.gate_numbered(stages.plan_of(exercise.public_id), int(number.group(1)))
-    if found is None or exercise.state == "Draft":
+    if found is None or locks.is_draft(exercise):
         raise HTTPException(status_code=404)
     path = url_path(
         request, f"/operator/exercises/{exercise.public_id}/evaluations/{found.key}{tail}"
@@ -1687,6 +1689,10 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
     # two reads makes the page stale, never newer than what it shows.
     panels_revision = panels_store.revision(exercise.public_id) if section == "panels" else 0
     form_revision = form_store.revision(exercise.public_id) if section == "form" else 0
+    # Process's too, before its timeline is read (Codex on cordware#230):
+    # read after, a save between would pair the old timeline with the new
+    # revision, and the page's next save would overwrite it unrefused.
+    process_revision = workflow.process_revision(exercise.public_id)
     return render(
         request,
         "applydesk/operator/section.html",
@@ -1783,6 +1789,9 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         gate_type=stages.gate_type,
         evaluators_summary=stages.evaluators_summary,
         gate_types=stages.GATE_TYPES,
+        # Published by its stages, as the gate pages read it (Codex on
+        # cordware#230): Evaluations' and the gate cards' links follow it.
+        exercise_published=not locks.is_draft(exercise),
         # Create Review Robin session on the gate card (segment 23J,
         # amended): the session's name and code, a field Review Robin would
         # refuse, and where a session opens by its code.
@@ -1809,7 +1818,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         tag_rows=workflow.tag_rows(owed),
         email_defaults=workflow.DEFAULT_TEMPLATES,
         email_text=functools.partial(workflow.template_text, exercise.public_id),
-        process_revision=workflow.process_revision(exercise.public_id),
+        process_revision=process_revision,
         email_fields=workflow.EMAIL_FIELDS,
         tag_help=workflow.TAG_HELP,
         email_sample=functools.partial(_email_sample, request, exercise),

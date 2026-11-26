@@ -23,7 +23,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, replace
 from datetime import date
 
-from applydesk import clock, sample_data, stages, workflow
+from applydesk import clock, locks, sample_data, stages, workflow
 from applydesk.sample_data import Exercise
 
 #: Every application file's first columns: who and when.
@@ -106,7 +106,7 @@ def _gate(e: Exercise, g: stages.Gate) -> GateFile:
         f"{g.key}_{slug(g.label or 'untitled')}.csv",
         columns,
         pairs,
-        e.state != "Draft" and workflow.gate_opened(state, line),
+        not locks.is_draft(e) and workflow.gate_opened(state, line),
         g.confidential,
     )
 
@@ -156,7 +156,7 @@ def of(e: Exercise) -> Extract:
     return Extract(
         zip_name(e, "extract"),
         sum(a.state == "Submitted" for a in apps),
-        e.state == "Draft",
+        locks.is_draft(e),
         APPLICATION_KEYS + tuple(c.label for c in _questions(e.public_id)),
         gates,
         _outcome_columns(plan, names_by_default(e, "outcomes.csv")),

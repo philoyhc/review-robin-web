@@ -6,7 +6,7 @@
 {% from "applydesk/_empty.html" import empty %}
 {% set ex_base = '/operator/exercises/' ~ exercise.public_id %}
 <p class="muted pc-intro">Each gate's progress in Review Robin and its pairs, gate by gate. A gate is sent, and its results pulled, on its own page; Process sets its evaluators and rules.</p>
-{% if exercise.state == "Draft" %}
+{% if not exercise_published %}
 {% call empty("Nothing to send yet", url(ex_base), "Home") %}The exercise is a draft: once it is published, each gate is sent to Review Robin from here when it is Ready, even before its stage's dates.{% endcall %}
 {% elif not gates %}
 {% call empty("No gates yet", url(ex_base ~ '/process'), "Process") %}Each gate's progress shows here once it is sent; stages and their gates are added on Process.{% endcall %}

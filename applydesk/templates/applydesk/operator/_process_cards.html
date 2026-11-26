@@ -250,8 +250,8 @@
      seen shut or open: there once the gate is saved and the exercise
      published (ruling 60 opens it on saving, with AD2); until then the
      line says why. #}
-  {% set rr_new = "Its page, with its pairs and Review Robin session, is on Evaluations once the exercise is published." if exercise.state == "Draft" else "Its page, with its pairs and Review Robin session, is on Evaluations once this gate is saved." %}
-  {% if g.number and g.key and exercise.state != "Draft" %}<p class="pc-line pc-rr" data-pc-rr="{{ rr_new }}">Its pairs, its Review Robin session and its progress are on its page under Evaluations. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/' ~ g.key) }}">Open Gate {{ g.number }} →</a></p>
+  {% set rr_new = "Its page, with its pairs and Review Robin session, is on Evaluations once the exercise is published." if not exercise_published else "Its page, with its pairs and Review Robin session, is on Evaluations once this gate is saved." %}
+  {% if g.number and g.key and exercise_published %}<p class="pc-line pc-rr" data-pc-rr="{{ rr_new }}">Its pairs, its Review Robin session and its progress are on its page under Evaluations. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/' ~ g.key) }}">Open Gate {{ g.number }} →</a></p>
   {% else %}<p class="pc-line muted pc-rr" data-pc-rr="{{ rr_new }}">{{ rr_new }}</p>{% endif %}
   {# A sent gate says so once, for all of it (ruling 29). Its progress is
      Evaluations' to show, not Process's. #}
@@ -348,7 +348,7 @@
      script then turns it on while nothing is unsaved, and swaps it for
      the link once the gate is set up or sent (in this tab, or by the
      sample). #}
-  {% if exercise.state == "Draft" %}{% set rr_off = "Once the exercise is published" %}
+  {% if not exercise_published %}{% set rr_off = "Once the exercise is published" %}
   {% elif not (g.key and g.number) %}{% set rr_off = "Once the gate is saved" %}
   {% else %}{% set rr_off = (field_problems(g) | first | default("")) %}{% endif %}
   <div class="pc-item-foot pc-rr-foot"><span class="pc-rr-create" data-pc-rr-box{% if g.key and g.number %} data-name="{{ session_name(g) }}" data-code="{{ session_code(g) }}"{% endif %}{% if state == "Sent" or sent %} data-made{% endif %} data-off="{{ rr_off }}"><button type="button" class="btn btn-secondary" data-pc-rr-create disabled title="{{ rr_off or "Creates the gate's Review Robin session and opens it in a new tab" }}">Create Review Robin session</button><span class="muted" data-pc-rr-said role="status"></span></span></div>
