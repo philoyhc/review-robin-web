@@ -14,6 +14,12 @@ from playwright.sync_api import Page
 from ._builder import REVIEWER_EMAIL, activate, seed_rosters
 from .conftest import LiveServer, app_url
 
+# A phone's width: the pills wrap there, the page's sides narrowed to it
+# (author, 2026-11-26).
+_PHONE = 360
+_INSET = (
+    "() => window.innerWidth - document.querySelector('.rs-role-nav').getBoundingClientRect().width"
+)
 _WRAPPED = "() => document.querySelector('.rs-role-nav-statuses-wrapped') !== null"
 _UNWRAPPED = "() => document.querySelector('.rs-role-nav-statuses-wrapped') === null"
 # A ResizeObserver loop reaches `window.onerror`, which Playwright's
@@ -59,7 +65,7 @@ def test_the_separator_goes_when_the_pills_wrap(page_as, api, live_server, new_s
     reviewer = _open(page_as, api, live_server, new_session, width=1400)
     assert _row(reviewer) == {"sepShown": True, "ownLine": False}
 
-    reviewer.set_viewport_size({"width": 480, "height": 900})
+    reviewer.set_viewport_size({"width": _PHONE, "height": 900})
     reviewer.wait_for_function(_WRAPPED)
     assert _row(reviewer) == {"sepShown": False, "ownLine": True}
 
@@ -90,8 +96,13 @@ def test_pills_that_fit_only_without_the_separator_keep_their_own_line(
            }"""
     )
     # A row a little narrower than the pills need with the `|`, but wider
-    # than they need without it.
+    # than they need without it. The page's sides narrow below 640 px, so
+    # the inset is read again at the width tried, and the width re-taken.
     width = round(sizes["inset"] + sizes["end"] - sizes["sep"] / 2)
+    for _ in range(2):
+        reviewer.set_viewport_size({"width": width, "height": 900})
+        inset = reviewer.evaluate(_INSET)
+        width = round(inset + sizes["end"] - sizes["sep"] / 2)
     reviewer.set_viewport_size({"width": width, "height": 900})
     reviewer.wait_for_function(_WRAPPED)
     reviewer.wait_for_timeout(100)  # a frame for the observer to settle
@@ -100,7 +111,7 @@ def test_pills_that_fit_only_without_the_separator_keep_their_own_line(
 
 
 def test_a_narrow_window_on_load_has_no_separator(page_as, api, live_server, new_session) -> None:
-    reviewer = _open(page_as, api, live_server, new_session, width=480)
+    reviewer = _open(page_as, api, live_server, new_session, width=_PHONE)
     reviewer.wait_for_function(_WRAPPED)
     assert _row(reviewer) == {"sepShown": False, "ownLine": True}
 

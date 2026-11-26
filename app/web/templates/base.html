@@ -425,7 +425,8 @@
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
         /* The bar sits close under the browser's edge, as Apply Desk's does
-           (author, 2026-11-13); the sides and foot keep their 40 px. */
+           (author, 2026-11-13); the sides and foot keep their 40 px, narrower
+           on a phone (below). */
         margin: 12px 40px 40px;
         max-width: 1400px;
         color: var(--text-body);
@@ -433,6 +434,13 @@
         line-height: 1.35;
       }
       body.narrow { max-width: 800px; }
+      /* On a phone the page keeps its width for the content: 12 px sides
+         and a 24 px foot (author, 2026-11-26, from the reviewer surface on
+         a phone). A card's padding stays 16 px, the floor
+         `spec/visual_style_general.md` sets. */
+      @media (max-width: 639px) {
+        body { margin: 12px 12px 24px; }
+      }
       p { margin: 0 0 6px 0; }
       h1, h2, h3, h4, h5, h6 { margin: 12px 0 6px 0; line-height: 1.25; }
       ul, ol, dl { margin: 0 0 6px 0; }
@@ -5146,7 +5154,12 @@
         body.ui-v2 .rs-action-row.rs-action-row-top { justify-content: stretch; }
         body.ui-v2 .rs-action-row-controls,
         body.ui-v2 .rs-page-nav-cluster { flex: 1 1 100%; flex-wrap: nowrap; }
-        body.ui-v2 .rs-action-row-controls > .btn { flex: 1 1 0; justify-content: center; text-align: center; }
+        /* As a flex box each centers its label down as well as across: a
+           `<button>` does so itself, but Cancel is an `<a>`, whose text
+           sat at the top of a row stretched taller (author's phone,
+           2026-11-26). */
+        body.ui-v2 .rs-action-row-controls > .btn { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
+        body.ui-v2 .rs-action-row-controls > .btn[hidden] { display: none; }
         body.ui-v2 .rs-page-nav-cluster { justify-content: space-between; }
         body.ui-v2 .rs-action-divider { display: none; }
         body.ui-v2 .rs-role-nav,
