@@ -177,12 +177,12 @@
     {% for p in rows %}
       {% set a = p.of %}
       {% set st = assignment_state(gate, sent, a) %}
-      <tr data-ev-row="{{ a.application.public_id }}"{% if p.email %} data-ev-pair="{{ p.email | lower }}"{% endif %}>
-        <td>{% if p.email %}<input type="checkbox" class="ev-tick" data-ev-tick aria-label="Tick {{ p.name }} for {{ a.application.dossier_id if ids_only else a.application.applicant }}"{{ off }}>{% endif %}{% if ids_only %}<code>{{ a.application.dossier_id }}</code>{% else %}{{ a.application.applicant }}{% endif %}</td>
+      <tr data-ev-row="{{ a.dossier.key }}"{% if p.email %} data-ev-pair="{{ p.email | lower }}"{% endif %}>
+        <td>{% if p.email %}<input type="checkbox" class="ev-tick" data-ev-tick aria-label="Tick {{ p.name }} for {{ a.dossier.public_id if ids_only else a.dossier.name }}"{{ off }}>{% endif %}{% if ids_only %}<code>{{ a.dossier.public_id }}</code>{% else %}{{ a.dossier.name }}{% endif %}</td>
         <td>{% if p.email %}<span title="{{ p.email }}">{{ p.name }}</span>{% else %}<span class="muted">None yet</span>{% endif %}</td>
         <td><span class="ev-src" data-ev-source="{{ p.source }}">{{ p.source or "—" }}</span></td>
         <td><span class="chip chip-{{ 'warn' if st.startswith('Short') or st == 'Not assigned' else ('info' if st == 'Suggested' else 'ok') }}" data-ev-state>{{ st }}</span></td>
-        <td class="ev-acts">{% if p.email %}<button type="button" class="btn btn-secondary" data-ev-act="remove" aria-label="Remove {{ p.name }} from {{ a.application.dossier_id if ids_only else a.application.applicant }}"{{ off }}>Remove</button>{% endif %}{% if gate.mode == "suggested" and p.email %} <button type="button" class="btn btn-toggle" data-ev-act="approve" aria-pressed="false"{{ off }}>Approve</button>{% endif %}</td>
+        <td class="ev-acts">{% if p.email %}<button type="button" class="btn btn-secondary" data-ev-act="remove" aria-label="Remove {{ p.name }} from {{ a.dossier.public_id if ids_only else a.dossier.name }}"{{ off }}>Remove</button>{% endif %}{% if gate.mode == "suggested" and p.email %} <button type="button" class="btn btn-toggle" data-ev-act="approve" aria-pressed="false"{{ off }}>Approve</button>{% endif %}</td>
       </tr>
     {% endfor %}
     </tbody>

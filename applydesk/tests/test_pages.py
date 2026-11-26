@@ -965,8 +965,10 @@ def test_an_old_numbered_gate_link_redirects_once_to_its_key(client: TestClient)
 
 def test_a_dossier_with_no_evaluator_is_one_row() -> None:
     app = sample_data.applications_of(EX)[0]
-    none = stages.Assignment(app, (), 2, ())
-    two = stages.Assignment(app, (("A", "a@x", "Panel A"), ("B", "b@x", "Panel A")), 0, ())
+    none = stages.Assignment(stages.dossier_of(app), (), 2, ())
+    two = stages.Assignment(
+        stages.dossier_of(app), (("A", "a@x", "Panel A"), ("B", "b@x", "Panel A")), 0, ()
+    )
     pairs = stages.pairs_of((none, two))
     assert [(p.name, p.source) for p in pairs] == [("", ""), ("A", "Panel A"), ("B", "Panel A")]
     assert stages.matching(pairs, "B@X") == pairs[2:]
@@ -1048,14 +1050,14 @@ def test_a_blind_gate_s_page_data_names_no_candidate() -> None:
     rows, _ = stages.assignments(BLIND, gate)
     data = json.dumps(stages.page_data(BLIND, gate, rows, blind=True))
     for a in rows:
-        assert a.application.applicant not in data
-        assert a.application.email.lower() not in data
-        assert a.application.dossier_id in data
+        assert a.dossier.name not in data
+        assert a.dossier.email.lower() not in data
+        assert a.dossier.public_id in data
 
 
 def _pair(applicant: str, dossier: str, evaluator: str, source: str = "") -> stages.Pair:
-    app = SimpleNamespace(applicant=applicant, dossier_id=dossier)
-    of = cast(stages.Assignment, SimpleNamespace(application=app))
+    d = SimpleNamespace(name=applicant, public_id=dossier)
+    of = cast(stages.Assignment, SimpleNamespace(dossier=d))
     return stages.Pair(of=of, name=evaluator, source=source)
 
 
@@ -1662,7 +1664,7 @@ def test_a_0_weight_on_an_unknown_result_leaves_the_combined_result_known() -> N
     """The 5b-5d cold read: only an unknown result tells the skip apart."""
     app = sample_data.applications_of(EX)[0]
     row = stages.Row(
-        app,
+        stages.dossier_of(app),
         {"g1": stages.Cell("Entered", "", None), "g2": stages.Cell("Entered", "", 4.0)},
     )
     o = stages.Outcome("ox", 9, "X", (), None, "", (("g2.r1", 1.0), ("g1.r1", 0.0)))

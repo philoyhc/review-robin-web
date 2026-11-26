@@ -121,23 +121,24 @@
       </tr>
     </thead>
     <tbody>
-    {% for row in plan.rows %}{% set a = row.application %}
+    {% for row in plan.rows %}{% set d = row.dossier %}{% set a = d.application %}
       {# A draft has no dossier yet (ruling 32: minted at submit): it is
-         named by its Application ID. #}
-      {% set rid = a.public_id if a.state == "Draft" else a.dossier_id %}
-      <tr data-row data-ap-i="{{ loop.index0 }}" data-ap-app="{{ a.public_id }}" data-ap-name="{{ rid }}" data-status="{{ a.state }}" data-search="{{ (('' if a.state == 'Draft' else a.dossier_id ~ ' ') ~ a.public_id ~ ' ' ~ a.applicant ~ ' ' ~ a.email) | lower }}"{% if a.public_id in last %} data-last{% endif %}{% if a.public_id in rank %} data-rank="{{ rank[a.public_id] }}"{% endif %} data-answers="{{ answers(a) | tojson | forceescape }}">
+         named by its Application ID. A candidate's dossier (AD2F) has no
+         application, so no state, date or answers. #}
+      {% set rid = d.key if d.state == "Draft" else d.public_id %}
+      <tr data-row data-ap-i="{{ loop.index0 }}" data-ap-app="{{ d.key }}" data-ap-name="{{ rid }}" data-status="{{ d.state }}" data-search="{{ (('' if d.state == 'Draft' else d.public_id ~ ' ') ~ (d.key ~ ' ' if a else '') ~ d.name ~ ' ' ~ d.email) | lower }}"{% if d.key in last %} data-last{% endif %}{% if d.key in rank %} data-rank="{{ rank[d.key] }}"{% endif %} data-answers="{{ (answers(a) if a else {}) | tojson | forceescape }}">
         {# A row per dossier, named by its Dossier ID, its application's ID
            under it (ruling 25; AD-89): the CSV still keys rows by
            Application ID. #}
         <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ rid }}">
-          {% if a.state == "Submitted" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ a.dossier_id) }}"><code>{{ a.dossier_id }}</code></a>{% elif a.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ a.dossier_id }}</code>{% endif %}<span class="ap-app">Application <code>{{ a.public_id }}</code></span></td>
-        <td class="ap-who"><strong>{{ a.applicant }}</strong><span class="ap-mail">{{ a.email }}</span></td>
-        <td class="ap-stat">{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span>{% if a.state == "Submitted" and a.public_id not in redraft_closed %}<button class="btn btn-alert btn-short ap-redraft" type="button" disabled title="Returning to draft is not built yet" aria-label="Return {{ rid }} to draft">Return to draft</button>{% endif %}</td>
+          {% if d.state == "Submitted" or not a %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ d.public_id) }}"><code>{{ d.public_id }}</code></a>{% elif d.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ d.public_id }}</code>{% endif %}{% if a %}<span class="ap-app">Application <code>{{ d.key }}</code></span>{% else %}<span class="ap-app">Candidate</span>{% endif %}</td>
+        <td class="ap-who"><strong>{{ d.name }}</strong><span class="ap-mail">{{ d.email }}</span></td>
+        <td class="ap-stat">{% if a %}{% with value = d.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span>{% endif %}{% if d.state == "Submitted" and d.key not in redraft_closed %}<button class="btn btn-alert btn-short ap-redraft" type="button" disabled title="Returning to draft is not built yet" aria-label="Return {{ rid }} to draft">Return to draft</button>{% endif %}</td>
         {% for r in plan.stages %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
           <td class="{{ 'ap-out' if c.via is not defined }} {{ 'ap-r' if loop.first }}" data-cell="{{ c.key }}"{% if cell.by_hand %} data-hand{% endif %}>
           {# A submitted application's outcomes are always settable, "—"
              until decided, so a hand change can advance it (Codex). #}
-          {% if not cell.value and (c.via is defined or a.state != "Submitted") %}<span class="muted">—</span>
+          {% if not cell.value and (c.via is defined or d.state != "Submitted") %}<span class="muted">—</span>
           {% elif c.via is defined %}{% set cl = cells_lock(c) %}<button type="button" class="ap-adm" data-ap-adm data-ap-locks disabled{% if cl.fixed %} data-ap-fixed title="{{ cl.reason }}"{% endif %} data-v="{{ cell.value }}"{% if cell.result is not none %} data-result="{{ cell.result }}"{% endif %}{% for k, v in cell.extra %} data-{{ k }}="{{ v }}"{% endfor %} aria-label="{{ c.label }} for {{ rid }}: {{ 'no status yet' if cell.value == '—' else cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
           {% else %}<span class="ap-ocw"><select class="ap-oc" data-ap-oc data-ap-locks disabled data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ rid }}">
               <option value=""{% if not cell.value %} selected{% endif %}>—</option>

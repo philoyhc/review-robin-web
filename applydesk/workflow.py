@@ -330,7 +330,7 @@ def gate_readiness(exercise_id: str, gate: stages.Gate) -> str:
     undecided = sum(
         1
         for r in plan.rows
-        if r.application.state == "Submitted"
+        if r.dossier.state == "Submitted"
         and r.cells.get(gate.key, stages.Cell("")).value not in ("Entered", "Not entered")
     )
     if undecided:
@@ -504,7 +504,7 @@ def sample_values(exercise: Exercise, email: Email) -> dict[str, str]:
     the mount.
     Only the email's kind's fields."""
     plan = stages.plan_of(exercise.public_id)
-    row = next((r for r in plan.rows if r.application.state == "Submitted"), None)
+    row = next((r for r in plan.rows if r.dossier.state == "Submitted"), None)
     stage = next((st for st in plan.stages if any(c.key == email.item for c in st.columns)), None)
     outcome = next((c for c in plan.columns if c.key == email.item), None)
     panels = {p.key: p for p in sample_data.panels_of(exercise.public_id)}
@@ -518,9 +518,9 @@ def sample_values(exercise: Exercise, email: Email) -> dict[str, str]:
     member = panels[refs[0]].members[0] if refs else None
     value = row.cells[email.item].value if row and email.item in row.cells else ""
     every = {
-        "applicant_name": row.application.applicant if row else "",
+        "applicant_name": row.dossier.name if row else "",
         "exercise_name": exercise.name,
-        "application_id": row.application.public_id if row else "",
+        "application_id": row.dossier.key if row else "",
         "closes": exercise.application_stage_ends,
         "stage_name": stage.label if stage else "",
         "outcome": (
@@ -564,12 +564,12 @@ def closed_by(exercise_id: str) -> dict[str, str]:
     ]
     out: dict[str, str] = {}
     for r in plan.rows:
-        if r.application.state != "Submitted":
+        if r.dossier.state != "Submitted":
             continue
         for c in completed:
             cell = r.cells.get(c.key)
             if cell and cell.value == "Entered":
-                out[r.application.public_id] = c.label or f"Gate {c.number}"
+                out[r.dossier.key] = c.label or f"Gate {c.number}"
                 break
     return out
 

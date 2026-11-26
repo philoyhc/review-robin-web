@@ -378,16 +378,17 @@ def rows_of(
     rank = stages.submitted_rank(plan.rows)
     out: list[Dossier] = []
     for row in plan.rows:
-        a = row.application
-        own = sent.get(a.public_id, {})
+        d = row.dossier
+        own = sent.get(d.key, {})
         cells: dict[str, Cell] = {}
         for c in plan.columns:
             cell = row.cells.get(c.key, stages.Cell(""))
             gate = isinstance(c, stages.Gate)
-            if not cell.value and (gate or a.state != "Submitted"):
+            if not cell.value and (gate or d.state != "Submitted"):
                 continue
             value, hand = own.get(c.key, (cell.value, cell.by_hand))
             cells[c.key] = Cell(value, _results(cell) if gate else {}, hand)
-        name = a.public_id if a.state == "Draft" else a.dossier_id
-        out.append(Dossier(a.public_id, name, a.state, rank.get(a.public_id), answers(a), cells))
+        name = d.key if d.state == "Draft" else d.public_id
+        said: Mapping[str, str] = answers(d.application) if d.application is not None else {}
+        out.append(Dossier(d.key, name, d.state, rank.get(d.key), said, cells))
     return tuple(out)

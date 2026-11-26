@@ -264,7 +264,7 @@ def test_an_apply_desk_gate_s_bundle_arrives_set_up(
     exercise = next(e for e in sample_data.EXERCISES if e.public_id == exercise_id)
     gate = stages.gate_numbered(stages.plan_of(exercise_id), number)
     assert gate is not None
-    sent = handoff.bundle(exercise, gate, lambda app: f"https://applydesk.invalid/{app.dossier_id}")
+    sent = handoff.bundle(exercise, gate, lambda d: f"https://applydesk.invalid/{d.public_id}")
     reply = _post(client, {**sent.envelope(), "transfer_id": str(uuid.uuid4())})
     assert reply.status_code == 201, reply.text
     review_session = db.scalars(select(ReviewSession)).one()
@@ -283,10 +283,10 @@ def test_an_apply_desk_gate_s_bundle_arrives_set_up(
     keys = {r.email_or_identifier for r in db.scalars(select(Reviewee))}
     if handoff.confidential(exercise, gate):
         assert names == {handoff.REDACTED}
-        assert keys == {a.application.dossier_id for a in rows}
+        assert keys == {a.dossier.public_id for a in rows}
     else:
-        assert names == {a.application.applicant for a in rows}
-        assert keys == {a.application.public_id for a in rows}
+        assert names == {a.dossier.name for a in rows}
+        assert keys == {a.dossier.key for a in rows}
 
 
 def test_an_apply_desk_scale_field_arrives_as_a_scale(
@@ -306,7 +306,7 @@ def test_an_apply_desk_scale_field_arrives_as_a_scale(
     first = gate.fields[0]
     scale = stages.Field("integer", "1", "5", "1", scale=True, scale_labels="Weak||Strong")
     gate = replace(gate, fields=(replace(first, field=scale), *gate.fields[1:]))
-    sent = handoff.bundle(exercise, gate, lambda app: f"https://applydesk.invalid/{app.dossier_id}")
+    sent = handoff.bundle(exercise, gate, lambda d: f"https://applydesk.invalid/{d.public_id}")
     reply = _post(client, {**sent.envelope(), "transfer_id": str(uuid.uuid4())})
     assert reply.status_code == 201, reply.text
     instrument = db.scalars(select(Instrument)).one()

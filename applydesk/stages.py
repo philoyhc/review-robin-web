@@ -385,9 +385,42 @@ class Cell:
 
 
 @dataclass(frozen=True)
+class Dossier:
+    """A row's dossier as the pages read it (segment AD2F; rulings 25, 81):
+    ``key`` is the row's handle, its application's ID, else the dossier's
+    own; ``public_id`` the Dossier ID, "" for a draft (ruling 32);
+    ``name`` and ``email`` its candidate's. ``application`` is None for a
+    candidate's dossier (rung 5), which has no state, date or answers."""
+
+    key: str
+    public_id: str
+    name: str
+    email: str
+    application: Application | None = None
+
+    @property
+    def state(self) -> str:
+        """The application's state, "" for a candidate's dossier."""
+        return self.application.state if self.application is not None else ""
+
+    @property
+    def submitted(self) -> bool:
+        return self.state == "Submitted"
+
+
+def dossier_of(app: Application) -> Dossier:
+    """An application's row: keyed by its ID, named by its applicant."""
+    return Dossier(app.public_id, app.dossier_id, app.applicant, app.email, app)
+
+
+@dataclass(frozen=True)
 class Row:
-    application: Application
+    dossier: Dossier
     cells: dict[str, Cell]
+
+    @property
+    def application(self) -> Application | None:
+        return self.dossier.application
 
 
 @dataclass(frozen=True)
@@ -644,7 +677,7 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
     if len(returning) < 15 or len(new) < 41:
         # Not the seeded samples (a database migrated but not seeded,
         # segment AD2J's cold read): no cells rather than a failed page.
-        return tuple(Row(a, {}) for a in apps)
+        return tuple(Row(dossier_of(a), {}) for a in apps)
     # Aisha returns and Kenji is interviewed: the pages' examples.
     back = {returning[0].public_id, *(a.public_id for a in rng.sample(returning[1:], 14))}
     ahead = {new[0].public_id, *(a.public_id for a in rng.sample(new[1:], 39))}
@@ -660,7 +693,7 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
         if a.state != "Submitted":
             # A draft has nothing; one withdrawn in September, before the
             # Review stage opened, was never entered.
-            rows.append(Row(a, cells))
+            rows.append(Row(dossier_of(a), cells))
             continue
         r = random.Random(f"ra {i}")
         reviewers = 29 if a.email.casefold() in ras else 30
@@ -699,14 +732,14 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
             cells["g3"] = Cell("Not entered")
         if cells["o1"].value != "Not shortlisted":
             cells["o2"] = Cell("Pending", f"Due {_O2.due}")
-        rows.append(Row(a, cells))
+        rows.append(Row(dossier_of(a), cells))
     return tuple(rows)
 
 
 def _small_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
     return tuple(
         Row(
-            a,
+            dossier_of(a),
             {
                 "g1": Cell("Entered", "Score 4.1 · 2 of 2", 4.1),
                 "g2": Cell("Entered", "Its session closed; results not pulled"),
@@ -743,8 +776,7 @@ def _blank_cells(rows: tuple[Row, ...], saved: tuple[Stage, ...]) -> tuple[Row, 
     had (added on Process) is blank for each, until AD2F stores cells."""
     keys = [c.key for st in saved for c in st.columns]
     return tuple(
-        Row(r.application, {**{k: Cell("") for k in keys if k not in r.cells}, **r.cells})
-        for r in rows
+        Row(r.dossier, {**{k: Cell("") for k in keys if k not in r.cells}, **r.cells}) for r in rows
     )
 
 
@@ -767,13 +799,13 @@ def plan_of(exercise_id: str) -> Plan:
         if exercise_id in _STAGES:
             rows = _model_rows(apps) if exercise_id == "wa9juxbc2t" else _small_rows(apps)
             return Plan(saved, _blank_cells(rows, saved), exercise_id)
-        return Plan(saved, tuple(Row(a, {}) for a in apps), exercise_id)
+        return Plan(saved, tuple(Row(dossier_of(a), {}) for a in apps), exercise_id)
     if exercise_id not in _STAGES:
         e = sample_data.sample(exercise_id)  # an ordinary one: Draft, no dates
         when = _exercise_span(e) if e else None
         status = "Draft" if e is None or e.state == "Draft" else "Published"
         only = Stage(1, "", when, form=True, status=status)
-        return Plan((only,), tuple(Row(a, {}) for a in apps), exercise_id)
+        return Plan((only,), tuple(Row(dossier_of(a), {}) for a in apps), exercise_id)
     rows = _model_rows(apps) if exercise_id == "wa9juxbc2t" else _small_rows(apps)
     return Plan(form_keyed(_STAGES[exercise_id], exercise_id), rows, exercise_id)
 
@@ -886,6 +918,8 @@ def last_submitted(rows: tuple[Row, ...]) -> frozenset[str]:
     submitted: dict[str, tuple[tuple[datetime, str], str]] = {}
     for r in rows:
         a = r.application
+        if a is None:
+            continue  # a candidate's dossier is no application
         who = a.email.lower()
         started = (_newest(a, a.started_at), a.public_id)
         if who not in latest or started[0] > latest[who][0]:
@@ -1141,7 +1175,7 @@ def submitted_rank(rows: tuple[Row, ...]) -> dict[str, int]:
     by_applicant: dict[str, list[tuple[datetime, str]]] = {}
     for r in rows:
         a = r.application
-        if a.state == "Submitted":
+        if a is not None and a.state == "Submitted":
             by_applicant.setdefault(a.email.lower(), []).append(_newest(a, a.submitted_at))
     return {
         app_id: rank
@@ -1591,11 +1625,11 @@ def fill(
 
 @dataclass(frozen=True)
 class Assignment:
-    """One dossier's row on Evaluations (AD1G): its application, its
+    """One dossier's row on Evaluations (AD1G): its dossier, its
     evaluators as (name, email, the source's label) and how ``fill``
     left it."""
 
-    application: Application
+    dossier: Dossier
     evaluators: tuple[tuple[str, str, str], ...]
     short: int
     unmet: tuple[int, ...]
@@ -1629,22 +1663,22 @@ def assignments(
     for row in plan_of(exercise_id).rows:
         if row.cells.get(gate.key, Cell("")).value != "Entered":
             continue
-        app = row.application
+        d = row.dossier
         if gate.mode == "assigned" or not sources:
-            rows.append(Assignment(app, (), total.min, ()))
+            rows.append(Assignment(d, (), total.min, ()))
             continue
         offers = tuple(
-            sample_data.nominees(exercise_id, app, s.ref)
+            (sample_data.nominees(exercise_id, d.application, s.ref) if d.application else ())
             if s.kind == "nominated"
             else tuple(e for _, e in panels.get(s.ref, {"name": "", "members": []})["members"])
             for s in sources
         )
-        got = fill(sources, total, offers, candidate=app.email, load=load)
+        got = fill(sources, total, offers, candidate=d.email, load=load)
         pills = tuple(
             (names.get(e.casefold(), e), e, source_label(sources[rank], panels))
             for e, rank in got.evaluators
         )
-        rows.append(Assignment(app, pills, got.short, got.unmet))
+        rows.append(Assignment(d, pills, got.short, got.unmet))
     spread = tuple(
         (
             panels[s.ref]["name"],
@@ -1661,7 +1695,7 @@ def released_results(exercise_id: str, public_id: str) -> tuple[tuple[str, str, 
     (outcome, its value, when), in timeline order; none until released,
     and none undecided. Read from Dossiers' cells; AD7 stores them."""
     plan = plan_of(exercise_id)
-    row = next((r for r in plan.rows if r.application.public_id == public_id), None)
+    row = next((r for r in plan.rows if r.dossier.key == public_id), None)
     out: list[tuple[str, str, str]] = []
     for c in plan.columns:
         if not isinstance(c, Outcome) or not c.released:
@@ -1716,12 +1750,8 @@ def matching(pairs: tuple[Pair, ...], query: str, blind: bool = False) -> tuple[
         return pairs
 
     def holds(p: Pair) -> bool:
-        app = p.of.application
-        who = (
-            (app.dossier_id,)
-            if blind
-            else (app.applicant, app.email, app.public_id, app.dossier_id)
-        )
+        d = p.of.dossier
+        who = (d.public_id,) if blind else (d.name, d.email, d.key, d.public_id)
         said = (*who, p.name, p.email)
         return any(q in text.casefold() for text in said)
 
@@ -1742,9 +1772,9 @@ def sorted_pairs(
     number as a number (*Short by 2* before *Short by 10*)."""
 
     def text(p: Pair, key: str) -> str:
-        app = p.of.application
+        d = p.of.dossier
         if key == "candidate":
-            return app.dossier_id if blind else app.applicant
+            return d.public_id if blind else d.name
         if key == "evaluator":
             return p.name
         if key == "source":
@@ -1800,16 +1830,14 @@ def page_data(
         "blind": blind,
         "dossiers": [
             [
-                a.application.public_id,
-                a.application.dossier_id if blind else a.application.applicant,
-                "" if blind else a.application.email.lower(),
-                a.application.email.lower() if a.application.email.lower() in on_panels else "",
+                a.dossier.key,
+                a.dossier.public_id if blind else a.dossier.name,
+                "" if blind else a.dossier.email.lower(),
+                a.dossier.email.lower() if a.dossier.email.lower() in on_panels else "",
             ]
             for a in rows
         ],
-        "pairs": [
-            [a.application.public_id, e.lower(), n, src] for a in rows for n, e, src in a.evaluators
-        ],
+        "pairs": [[a.dossier.key, e.lower(), n, src] for a in rows for n, e, src in a.evaluators],
         "panels": [
             [panels[s.ref]["name"], [[n, e.lower()] for n, e in panels[s.ref]["members"]]]
             for s in sources

@@ -130,11 +130,11 @@ def test_a_gate_s_dossiers_are_filled_and_its_panel_spread_evenly() -> None:
     rows, spread = stages.assignments("wa9juxbc2t", _gate("wa9juxbc2t", "g1"))
     plan = stages.plan_of("wa9juxbc2t")
     entered = [r for r in plan.rows if r.cells["g1"].value == "Entered"]
-    assert [a.application for a in rows] == [r.application for r in entered]
-    assert all(a.application.email not in {e for _, e, _ in a.evaluators} for a in rows)
+    assert [a.dossier for a in rows] == [r.dossier for r in entered]
+    assert all(a.dossier.email not in {e for _, e, _ in a.evaluators} for a in rows)
     ras = {m.email for m in sample_data.CURRENT_RAS}
     for a in rows:
-        assert len(a.evaluators) == (29 if a.application.email in ras else 30) and not a.short
+        assert len(a.evaluators) == (29 if a.dossier.email in ras else 30) and not a.short
     assert sum(len(a.evaluators) for a in rows) == 2_980
     ((panel, counts),) = spread
     assert panel == "Current RAs" and len(counts) == 30
@@ -152,7 +152,7 @@ def test_a_row_s_state_follows_the_mode() -> None:
     assert g3.mode == "suggested"
     assert stages.assignment_state(g3, True, rows[0]) == "Approved"
     assert stages.assignment_state(g3, False, rows[0]) == "Suggested"
-    short = stages.Assignment(rows[0].application, (), 2, ())
+    short = stages.Assignment(rows[0].dossier, (), 2, ())
     assert stages.assignment_state(g3, False, short) == "Short by 2"
     assigned = Gate("g9", 9, "x", "RRW", mode="assigned")
     assert stages.assignment_state(assigned, False, short) == "Not assigned"
@@ -231,7 +231,7 @@ def test_a_gate_with_no_evaluators_or_undecided_entry_is_not_ready(
 
     _g3(monkeypatch, mode="automatic")
     plan = stages.plan_of(RA)
-    first = next(r for r in plan.rows if r.application.state == "Submitted")
+    first = next(r for r in plan.rows if r.dossier.state == "Submitted")
     undecided = replace(first, cells={**first.cells, "g3": stages.Cell("—")})
     rows = tuple(undecided if r is first else r for r in plan.rows)
     monkeypatch.setattr(stages, "plan_of", lambda _id: replace(plan, rows=rows))

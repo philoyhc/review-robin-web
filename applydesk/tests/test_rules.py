@@ -109,8 +109,8 @@ def test_the_proposal_route_answers_for_the_table_sent(monkeypatch: pytest.Monke
     change the server has not seen is read."""
     client = _client()
     plan = stages.plan_of("wa9juxbc2t")
-    row = next(r for r in plan.rows if r.application.state == "Submitted")
-    app = row.application.public_id
+    row = next(r for r in plan.rows if r.dossier.state == "Submitted")
+    app = row.dossier.key
     body = {"only_pending": False, "replace_hand": True, "cells": {}}
     reply = client.post(URL, json=body)
     assert reply.status_code == 200, reply.text
@@ -215,12 +215,12 @@ def test_rules_are_checked_while_another_field_is_half_typed() -> None:
 def test_a_long_outcome_value_does_not_spoil_the_proposal() -> None:
     """Codex on #4156: an outcome value may run to 500 characters."""
     plan = stages.plan_of("wa9juxbc2t")
-    row = next(r for r in plan.rows if r.application.state == "Submitted")
+    row = next(r for r in plan.rows if r.dossier.state == "Submitted")
     long = "x" * 400
     body = {
         "only_pending": True,
         "replace_hand": False,
-        "cells": {row.application.public_id: {"o1": [long, True]}},
+        "cells": {row.dossier.key: {"o1": [long, True]}},
     }
     assert _client().post(URL, json=body).status_code == 200
 

@@ -77,7 +77,7 @@ def test_the_model_exercise_reads_as_partway_through() -> None:
     ras = {m.email for m in sample_data.CURRENT_RAS}
     decided: dict[str, list[bool]] = {"Re-appointment": [], "Interview": [], "Not shortlisted": []}
     for row in plan.rows:
-        a, cells = row.application, row.cells
+        a, cells = row.dossier, row.cells
         if a.state != "Submitted":
             assert all(not c.value for c in cells.values())
             continue
@@ -101,10 +101,10 @@ def test_the_model_exercise_reads_as_partway_through() -> None:
     hand = [r for r in plan.rows if r.cells["o1"].by_hand]
     assert len(hand) == 1 and hand[0].cells["o1"].note == "Set by hand: panel request"
     # Gate 1's note says how many scored, and how many were not asked.
-    aisha = next(r for r in plan.rows if r.application.public_id == "m3qx8vkt2n")
+    aisha = next(r for r in plan.rows if r.dossier.key == "m3qx8vkt2n")
     assert re.fullmatch(r"\d\.\d from \d+ of 29( · \d not asked)?", aisha.cells["g1"].note)
     assert aisha.cells["o1"].value == "Re-appointment"
-    kenji = next(r for r in plan.rows if r.application.public_id == "h6zr2tdw9p")
+    kenji = next(r for r in plan.rows if r.dossier.key == "h6zr2tdw9p")
     assert kenji.cells["o1"].value == "Interview" and " of 30" in kenji.cells["g1"].note
 
 
@@ -144,7 +144,7 @@ def test_last_applications_keep_each_applicant_s_last_submitted() -> None:
     """A gate may take an applicant's last submitted (author, 2026-11-13);
     the RA recruitment takes one each, so this reads made-up rows."""
     rows = tuple(
-        stages.Row(a, {})
+        stages.Row(stages.dossier_of(a), {})
         for a in (
             _app("a1", "x@e.edu", "Withdrawn", 3),
             _app("a2", "x@e.edu", "Submitted", 5),
@@ -220,7 +220,7 @@ def test_every_rule_reads_only_what_its_column_may() -> None:
 
 
 def _with(cells: dict[str, stages.Cell]) -> stages.Row:
-    return stages.Row(stages.plan_of(EX).rows[0].application, cells)
+    return stages.Row(stages.plan_of(EX).rows[0].dossier, cells)
 
 
 def test_a_combined_result_drops_a_gate_not_entered_and_reweights() -> None:
@@ -252,7 +252,7 @@ def test_scope_is_the_gates_since_the_previous_outcome() -> None:
 
 def test_the_last_submitted_goes_by_date_not_order() -> None:
     mine = (_app("b2", "z@e.edu", "Submitted", 20), _app("b1", "z@e.edu", "Submitted", 9))
-    rank = stages.submitted_rank(tuple(stages.Row(a, {}) for a in mine))
+    rank = stages.submitted_rank(tuple(stages.Row(stages.dossier_of(a), {}) for a in mine))
     assert rank == {"b2": 1, "b1": 2}
 
 
@@ -379,21 +379,23 @@ def test_the_last_submitted_goes_by_time_within_a_day_and_across_days() -> None:
         _timed("aa", "2026-09-05T08:00+00:00", "2026-09-05T15:00+00:00"),
         _timed("bb", "2026-09-05T09:00+00:00", "2026-09-05T10:00+00:00"),
     )
-    rows = tuple(stages.Row(a, {}) for a in same_day)
+    rows = tuple(stages.Row(stages.dossier_of(a), {}) for a in same_day)
     assert stages.submitted_rank(rows) == {"aa": 1, "bb": 2}
     assert stages.last_submitted(rows) == {"aa"}
     across = (
         _timed("aa", "2026-09-03T08:00+00:00", "2026-09-05T08:00+00:00"),
         _timed("bb", "2026-09-04T08:00+00:00", "2026-09-04T09:00+08:00"),
     )
-    rows = tuple(stages.Row(a, {}) for a in across)
+    rows = tuple(stages.Row(stages.dossier_of(a), {}) for a in across)
     assert stages.submitted_rank(rows) == {"aa": 1, "bb": 2}
     assert stages.last_submitted(rows) == {"aa"}
     drafts = (
         _timed("aa", "2026-09-04T08:00+00:00", None),
         _timed("bb", "2026-09-03T08:00+00:00", None),
     )
-    assert stages.last_submitted(tuple(stages.Row(a, {}) for a in drafts)) == {"aa"}
+    assert stages.last_submitted(tuple(stages.Row(stages.dossier_of(a), {}) for a in drafts)) == {
+        "aa"
+    }
 
 
 @pytest.mark.usefixtures("unseeded")
