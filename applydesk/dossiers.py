@@ -30,9 +30,12 @@ def record_samples(session: Session, exercise: Exercise, actor: Person | None) -
         )
         .order_by(Application.id)
     ).all()
+    carried = {
+        a.public_id: a.dossier_id for a in sample_data.sample_applications(exercise.public_id)
+    }
     added = 0
     for application_id, public_id in rows:
-        dossier_id = sample_data.sample_dossier_id(public_id)
+        dossier_id = carried.get(public_id, "")
         if not dossier_id:
             continue
         session.add(

@@ -50,7 +50,9 @@ def test_every_application_is_a_row(client: TestClient) -> None:
     # yet (ruling 32), named by its Application ID.
     assert f'/dossiers/{apps[0].dossier_id}"><code>{apps[0].dossier_id}</code></a>' in text
     draft = next(a for a in apps if a.state == "Draft")
-    assert draft.dossier_id not in text
+    assert draft.dossier_id == ""  # none stored (AD2F rung 3)
+    written = next(a for a in sample_data.APPLICATIONS if a.public_id == draft.public_id)
+    assert written.dossier_id not in text  # nor the one the sample code carries
     assert (
         f'<span class="muted">No dossier yet</span><span class="ap-app">Application '
         f"<code>{draft.public_id}</code></span>"

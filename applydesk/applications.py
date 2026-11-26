@@ -14,7 +14,7 @@ from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from applydesk import audit, db, people, sample_data
-from applydesk.models import Application, Exercise, Person
+from applydesk.models import Application, Dossier, Exercise, Person
 
 #: A sample's state, as `sample_data` words it, and the stored one.
 _STATES = {"Draft": "draft", "Submitted": "submitted", "Withdrawn": "withdrawn"}
@@ -27,7 +27,9 @@ def day(when: datetime) -> str:
     return f"{when.astimezone(UTC):%d %b %Y}".lstrip("0")
 
 
-def from_row(row: Application, person: Person, exercise_id: str) -> sample_data.Application:
+def from_row(
+    row: Application, person: Person, exercise_id: str, dossier_id: str | None
+) -> sample_data.Application:
     """A stored application in the shape the pages read."""
     started = row.started_at.replace(tzinfo=row.started_at.tzinfo or UTC)
     submitted = (
@@ -43,27 +45,30 @@ def from_row(row: Application, person: Person, exercise_id: str) -> sample_data.
         title=row.title,
         state=_SAID[row.state],
         submitted=day(submitted or started),
-        dossier_id=sample_data.sample_dossier_id(row.public_id),
+        dossier_id=dossier_id or "",
         started_at=started,
         submitted_at=submitted,
     )
 
 
-def _read(query: Select[Application, Person, str]) -> tuple[sample_data.Application, ...]:
+def _read(
+    query: Select[Application, Person, str, str],
+) -> tuple[sample_data.Application, ...]:
     session = db.new_session()
     try:
         return tuple(
-            from_row(row, person, exercise_id)
-            for row, person, exercise_id in session.execute(query)
+            from_row(row, person, exercise_id, dossier_id)
+            for row, person, exercise_id, dossier_id in session.execute(query)
         )
     finally:
         session.close()
 
 
-def _query() -> Select[Application, Person, str]:
+def _query() -> Select[Application, Person, str, str]:
     return (
-        select(Application, Person, Exercise.public_id)
+        select(Application, Person, Exercise.public_id, Dossier.public_id)
         .join(Person, Person.id == Application.person_id)
+        .outerjoin(Dossier, Dossier.application_id == Application.id)
         .join(Exercise, Exercise.id == Application.exercise_id)
         .order_by(Application.id)
     )

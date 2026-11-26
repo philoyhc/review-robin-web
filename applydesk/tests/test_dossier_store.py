@@ -53,3 +53,20 @@ def test_a_dossier_has_exactly_one_source() -> None:
     with pytest.raises(IntegrityError):  # an application's second dossier
         session.flush()
     session.close()
+
+
+def test_the_pages_read_a_dossier_id_from_the_table() -> None:
+    """Rung 3: an application's dossier ID is the stored one; a draft has
+    none, whatever the sample code carries."""
+    model = "wa9juxbc2t"
+    first = sample_data.applications_of(model)[0]
+    session = db.new_session()
+    row = session.scalars(select(Dossier).where(Dossier.public_id == first.dossier_id)).one()
+    row.public_id = "zz2zz2zz2z"
+    session.commit()
+    session.close()
+    assert sample_data.applications_of(model)[0].dossier_id == "zz2zz2zz2z"
+    assert sample_data.by_dossier(model, "zz2zz2zz2z") is not None
+    assert sample_data.by_dossier(model, first.dossier_id) is None
+    drafts = [a for a in sample_data.applications_of(model) if a.state == "Draft"]
+    assert drafts and all(a.dossier_id == "" for a in drafts)
