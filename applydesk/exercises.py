@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from applydesk import audit, db, operators, sample_data
+from applydesk import audit, db, locks, operators, sample_data
 from applydesk.ids import generate_public_id
 from applydesk.models import Exercise, ExerciseTag, Person
 
@@ -504,6 +504,13 @@ def save_panel(
 ) -> int:
     """The panel's *Save* for one exercise: its name, code and tags, if
     no one saved since the Lobby opened at revision `opened`."""
+    # A published exercise's code is fixed (G2), here as on Details (Codex on
+    # #4140): published by its state or its stages (`locks.is_draft`), as an
+    # ordinary exercise is (Codex on cordware#230). Read before the row is
+    # locked: the read opens sessions of its own, which a caller holding a
+    # transaction must not wait on (cold read on #4235).
+    shown = sample_data.exercise(public_id)
+    fixed = shown is not None and not locks.is_draft(shown)
     exercise = _locked(session, public_id)
     _live(exercise)
     if exercise.revision != opened:
@@ -518,13 +525,7 @@ def save_panel(
     if max(len(code), len(code.casefold())) > 40:  # its key is casefolded
         raise Refused("An exercise code is at most 40 characters.", key="code_long", field="code")
     _ready(session, exercise, actor)
-    # A published exercise's code is fixed (G2), here as on Details (Codex on #4140):
-    # published by its state or its stages (`locks.is_draft`), as an ordinary
-    # exercise is (Codex on cordware#230).
-    from applydesk import locks  # locks reads the stages, which read this module
-
-    shown = sample_data.exercise(public_id)
-    if shown is not None and not locks.is_draft(shown) and (code or None) != exercise.code:
+    if fixed and (code or None) != exercise.code:
         raise Refused("A published exercise's code is fixed.", key="code_fixed", field="code")
     if _clash(session, exercise, code or None) is not None:
         # Never the other exercise's name: the viewer may not operate it.
