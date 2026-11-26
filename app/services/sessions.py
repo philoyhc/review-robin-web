@@ -61,6 +61,16 @@ def ensure_code_available(db: Session, code: str, *, exclude_session_id: int | N
         raise SessionCodeTakenError(f"Session code {code!r} is already used by another session.")
 
 
+def public_id_for_code(db: Session, code: str) -> tuple[int, str] | None:
+    """The session holding ``code``, as ``(id, public_id)``, or ``None``.
+    Codes are unique (:func:`ensure_code_available`), so a linked
+    application that knows a session's code can name it (segment 23J)."""
+    row = db.execute(
+        select(ReviewSession.id, ReviewSession.public_id).where(ReviewSession.code == code)
+    ).first()
+    return (row[0], row[1]) if row is not None else None
+
+
 def create_session(
     db: Session,
     *,

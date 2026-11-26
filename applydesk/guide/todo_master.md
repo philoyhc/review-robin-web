@@ -755,7 +755,12 @@ the rulings it relied on but does not move them.
 
     The step is manual, offered once the exercise is published, and both
     gate types take it. A gate removed after set-up has its empty draft
-    discarded in Review Robin. Its own segment:
+    discarded in Review Robin. Amended (author, 2026-11-25): the step is
+    also *Create Review Robin session* at the end of the Process gate
+    card, active once the gate's set-up fields are complete, which opens
+    the new session's home in a new tab; and *Open in Review Robin ↗*
+    goes to the session by its code, through Review Robin's
+    `/operator/sessions/by-code/<code>`. Its own segment:
     `guide/segment_23J_linked_setup_first.md`. Apply Desk stores
     `session_home_url` with the gate's transfer record (AD2F) and makes
     the real calls with AD6.

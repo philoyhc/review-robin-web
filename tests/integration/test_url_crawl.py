@@ -311,6 +311,8 @@ ROUTES: dict[str, tuple[Visit, ...]] = {
     # crawl runs no rehydrate, so it answers the error page, whose chrome
     # is still read. The body it would answer is a CSV.
     "/operator/sessions/rehydrate/dropped.csv": (Visit("alice", 404),),
+    # A linked application's link by code (segment 23J): a redirect home.
+    "/operator/sessions/by-code/{code}": (Visit("alice", 307),),
     _SESSION: _EVERY_STATE,
     f"{_SESSION}/edit": (Visit("alice", 308),),
     f"{_SESSION}/reviewers": _EVERY_STATE,
@@ -416,6 +418,7 @@ def _seed_draft(client: TestClient, db: Session) -> tuple[ReviewSession, dict[st
         "reviewee_id": str(_first(db, Reviewee, review_session).id),
         "shape_id": str(_first(db, DataShape, review_session).id),
         "transfer_id": _TRANSFER,
+        "code": review_session.code,
     }
 
 

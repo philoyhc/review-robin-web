@@ -116,6 +116,10 @@ Taken 2026-11-25 at `d23dffcd2`.
   - Not fixed: a set-up record outlives a removed gate in the tab. It is harmless, since no page reads a gate that is gone.
   - Not fixed: a re-send racing a discard can still 500 on the lock, as a re-send racing an operator's delete already could.
 
+**Rung 6 (2026-11-25):** `GET /operator/sessions/by-code/{code}` (`sessions.public_id_for_code`) redirects an operator of the session to its Session Home (307). Anyone else, or an unknown code, gets the uniform 404, as Session Home answers. The URL crawl visits it. The cumulative read for rungs 6–8 runs from `540b669fb`.
+
+**Amended (author, 2026-11-25, after rung 5).** The gate card on Process gains *Create Review Robin session* at its end, active once the gate's set-up fields are complete; a click creates the session and opens its home in a new tab. *Open in Review Robin ↗* on Evaluations goes straight to that session's home by its code, which Apply Desk already knows. Review Robin gains a lookup by code for it (rung 6). Rungs 6–8 build this; the close moves to 9.
+
 ## PR ladder
 
 1. **Plan**: this file, its queue entry and README row; Apply Desk's ruling 80 in `applydesk/guide/todo_master.md`, with AD6's row naming the stored `session_home_url`. Prose only.
@@ -129,7 +133,11 @@ Taken 2026-11-25 at `d23dffcd2`.
 3. **Review Robin: discard.** The call deletes an empty linked draft for its sender, with its refusals, its replay and its audit. Integration tests cover each refusal, a retried discard, and a draft with rosters left whole. Must not touch Apply Desk.
 4. **Apply Desk: the card's two steps, scaffold.** *Set up in Review Robin* and *Send rosters*, the link line's new state, and *Open in Review Robin ↗*. Inert, with each reason in its title. Must not touch Review Robin.
 5. **Apply Desk: the steps wired, simulated in the tab** (as `_rr_js.html` sends today). Set-up keeps a sample `session_home_url`, and the link opens it in a new tab. *Send rosters* is today's *Send*, reading *Re-send* after. Removing a set-up gate on Process says its draft will be discarded. `diff-reviewer` reads 2–5.
-6. **Close**, after the author's check.
+~~6. **Close**~~: moved to 9 (author, 2026-11-25, after rung 5).
+6. **Review Robin: open a session by its code.** `GET /operator/sessions/by-code/{code}` redirects an operator of that session to its Session Home; anyone else, or an unknown code, gets the uniform 404. Apply Desk knows a gate's session code (ruling 56), so its links need no stored URL. Must not touch Apply Desk.
+7. **Apply Desk: *Create Review Robin session* on the Process gate card, scaffold.** It sits at the end of the gate card and is inert, its reason in its title.
+8. **Apply Desk: wired.** The button is active once the gate's set-up fields are complete. A click sets the gate up (as Evaluations' *Set up* does) and opens its session's home by code in a new tab. Once set up, the card offers *Open Review Robin session ↗* instead. Evaluations' *Open in Review Robin ↗* goes to the session by its code.
+9. **Close**, after the author's check.
 
 Real sends, and storing `session_home_url` with the gate's transfer record, are AD6's and AD2F's (Out of scope).
 
