@@ -10,6 +10,7 @@ UPN and name are snapshots only: nothing matches on them again.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, cast
@@ -243,6 +244,45 @@ def from_directory(
     account = Account(tenant_id, user.id, mail, user.user_principal_name, user.display_name)
     keys = (email_key(user.user_principal_name), email_key(mail))
     return _attach(session, account, keys, "directory", actor)
+
+
+def pending_many(
+    session: Session, addresses: Iterable[str], actor: Person | None
+) -> dict[str, Person]:
+    """`pending` for many addresses at once, by match key: one query for the
+    pending people already on record, one flush for the rest, each audited
+    as `pending` audits it. For the localhost seed (segment AD2J), which
+    runs alone, so it takes no part in `pending`'s race with another
+    request."""
+    wanted: dict[str, str] = {}
+    for address in addresses:
+        key = email_key(address)
+        if key is None:
+            raise ValueError("an address is needed")
+        wanted.setdefault(key, address.strip())
+    found: dict[str, Person] = {}
+    for person in session.scalars(
+        select(Person)
+        .where(Person.email_key.in_(list(wanted)), Person.object_id.is_(None))
+        .order_by(Person.id)
+    ):
+        if person.email_key is not None:
+            found.setdefault(person.email_key, person)
+    made = {key: Person(email=wanted[key], email_key=key) for key in wanted if key not in found}
+    if made:
+        session.add_all(made.values())
+        session.flush()
+        for person in made.values():
+            audit.write_event(
+                session,
+                event_type="person.created",
+                actor=actor,
+                payload=audit.snapshot(_snapshot(person)),
+                refs={"person_id": person.id},
+                context={"how": "address"},
+            )
+        found.update(made)
+    return found
 
 
 def pending(session: Session, address: str, actor: Person | None) -> Person:

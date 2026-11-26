@@ -98,7 +98,8 @@ def test_the_bulk_bar_wakes_on_a_tick_and_revoke_asks_first(page: Page) -> None:
     people.pending(session, "kim@example.edu", None)
     session.commit()
     session.close()
-    page.goto(f"{ADMIN}?show=unused")
+    # Narrowed to kim: the samples' applicants are Unused too (segment AD2J).
+    page.goto(f"{ADMIN}?show=unused&list_q=kim%40")
     admit = page.locator("[data-bulk-action][value='admit']")
     expect(admit).to_be_disabled()
     page.locator("[data-bulk-all]").check()
