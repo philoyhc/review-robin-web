@@ -330,7 +330,7 @@ def gate_readiness(exercise_id: str, gate: stages.Gate) -> str:
     undecided = sum(
         1
         for r in plan.rows
-        if r.dossier.state == "Submitted"
+        if r.dossier.enterable
         and r.cells.get(gate.key, stages.Cell("")).value not in ("Entered", "Not entered")
     )
     if undecided:

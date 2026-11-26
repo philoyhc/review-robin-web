@@ -58,7 +58,7 @@ class GateFile:
 @dataclass(frozen=True)
 class Extract:
     zip_name: str
-    submitted: int  # submitted applications: none, and there is nothing to extract
+    submitted: int  # enterable dossiers (submitted, or a candidate's): none, nothing to extract
     draft: bool
     application_columns: tuple[str, ...]
     gates: tuple[GateFile, ...]
@@ -151,11 +151,12 @@ def zip_name(e: Exercise, kind: str, on: date | None = None, ext: str = "zip") -
 
 def of(e: Exercise) -> Extract:
     plan = stages.plan_of(e.public_id)
-    apps = sample_data.applications_of(e.public_id)
     gates = tuple(_gate(e, c) for c in plan.columns if isinstance(c, stages.Gate))
     return Extract(
         zip_name(e, "extract"),
-        sum(a.state == "Submitted" for a in apps),
+        # A candidate's dossier counts as a submitted application does (Codex
+        # on #4246): a candidates-only exercise has data to extract.
+        sum(r.dossier.enterable for r in plan.rows),
         locks.is_draft(e),
         APPLICATION_KEYS + tuple(c.label for c in _questions(e.public_id)),
         gates,
@@ -212,7 +213,7 @@ def _shown(plan: stages.Plan, rows: str, drafts: bool = False) -> list[stages.Ro
         r
         for r in plan.rows
         if (last is None or r.dossier.key in last)
-        and (r.dossier.state == "Submitted" or (drafts and r.dossier.state == "Draft"))
+        and (r.dossier.enterable or (drafts and r.dossier.state == "Draft"))
     ]
 
 
@@ -449,11 +450,17 @@ def all_zip(
 
 
 def alias_key(e: Exercise) -> Table:
-    """Dossier ID to applicant, every application's, drafts included: the
-    one file joining what Review Robin sees to who it is."""
+    """Dossier ID to applicant, every application's, drafts included, and
+    every candidate's dossier (AD2F, no application ID): the one file
+    joining what Review Robin sees to who it is."""
     return ALIAS_KEYS, [
-        [a.dossier_id, a.public_id, a.applicant, a.email]
-        for a in sample_data.applications_of(e.public_id)
+        [
+            r.dossier.public_id,
+            r.dossier.key if r.application else "",
+            r.dossier.name,
+            r.dossier.email,
+        ]
+        for r in stages.plan_of(e.public_id).rows
     ]
 
 

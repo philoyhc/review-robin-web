@@ -131,14 +131,14 @@
            under it (ruling 25; AD-89): the CSV still keys rows by
            Application ID. #}
         <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ rid }}">
-          {% if d.state == "Submitted" or not a %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ d.public_id) }}"><code>{{ d.public_id }}</code></a>{% elif d.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ d.public_id }}</code>{% endif %}{% if a %}<span class="ap-app">Application <code>{{ d.key }}</code></span>{% else %}<span class="ap-app">Candidate</span>{% endif %}</td>
+          {% if d.state == "Submitted" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ d.public_id) }}"><code>{{ d.public_id }}</code></a>{% elif d.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ d.public_id }}</code>{% endif %}{% if a %}<span class="ap-app">Application <code>{{ d.key }}</code></span>{% else %}<span class="ap-app">Candidate</span>{% endif %}</td>
         <td class="ap-who"><strong>{{ d.name }}</strong><span class="ap-mail">{{ d.email }}</span></td>
-        <td class="ap-stat">{% if a %}{% with value = d.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span>{% endif %}{% if d.state == "Submitted" and d.key not in redraft_closed %}<button class="btn btn-alert btn-short ap-redraft" type="button" disabled title="Returning to draft is not built yet" aria-label="Return {{ rid }} to draft">Return to draft</button>{% endif %}</td>
+        <td class="ap-stat">{% if a %}{% with value = d.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}{% endif %}<span class="ap-note">{{ a.submitted if a else "" }}</span>{% if d.state == "Submitted" and d.key not in redraft_closed %}<button class="btn btn-alert btn-short ap-redraft" type="button" disabled title="Returning to draft is not built yet" aria-label="Return {{ rid }} to draft">Return to draft</button>{% endif %}</td>
         {% for r in plan.stages %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
           <td class="{{ 'ap-out' if c.via is not defined }} {{ 'ap-r' if loop.first }}" data-cell="{{ c.key }}"{% if cell.by_hand %} data-hand{% endif %}>
           {# A submitted application's outcomes are always settable, "—"
              until decided, so a hand change can advance it (Codex). #}
-          {% if not cell.value and (c.via is defined or d.state != "Submitted") %}<span class="muted">—</span>
+          {% if not cell.value and (c.via is defined or not d.enterable) %}<span class="muted">—</span>
           {% elif c.via is defined %}{% set cl = cells_lock(c) %}<button type="button" class="ap-adm" data-ap-adm data-ap-locks disabled{% if cl.fixed %} data-ap-fixed title="{{ cl.reason }}"{% endif %} data-v="{{ cell.value }}"{% if cell.result is not none %} data-result="{{ cell.result }}"{% endif %}{% for k, v in cell.extra %} data-{{ k }}="{{ v }}"{% endfor %} aria-label="{{ c.label }} for {{ rid }}: {{ 'no status yet' if cell.value == '—' else cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
           {% else %}<span class="ap-ocw"><select class="ap-oc" data-ap-oc data-ap-locks disabled data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ rid }}">
               <option value=""{% if not cell.value %} selected{% endif %}>—</option>
@@ -348,7 +348,7 @@
       }
       var open = rows.filter(function (r) {
         var sel = r.querySelector('[data-cell="' + col + '"] [data-ap-oc]');
-        if (!sel || r.dataset.status !== "Submitted") return false;
+        if (!sel || (r.dataset.status !== "Submitted" && r.dataset.status !== "Candidate")) return false;
         if (sel.value === "Pending") return true;
         if (sel.value) return false;
         var unreached = scoped.length > 0 && scoped.every(function (g) { var v = cur(r, g); return v === null || v === "Not entered"; });
@@ -398,7 +398,7 @@
     var m = /(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(?: (\d{4}))?/.exec(t || "");
     return m ? (+(m[3] || 0)) * 10000 + MONTHS.indexOf(m[2]) * 100 + +m[1] : Infinity;
   }
-  var STATES = { Submitted: 0, Draft: 1, Withdrawn: 2 }, ADMIT = { "Entered": 0, "Not entered": 1 };
+  var STATES = { Submitted: 0, Candidate: 0, Draft: 1, Withdrawn: 2 }, ADMIT = { "Entered": 0, "Not entered": 1 };
   function keyOf(r, col) {
     if (col === "dossier") return [r.dataset.status === "Draft" ? 1 : 0, r.dataset.apName];
     if (col === "applicant") return [r.querySelector(".ap-who strong").textContent.toLowerCase()];

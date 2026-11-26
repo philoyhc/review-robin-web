@@ -233,7 +233,7 @@ def propose(
             continue
         reach: list[Dossier] = []
         for row in rows:
-            if key not in row.cells or row.status != "Submitted":
+            if key not in row.cells or row.status not in stages.ENTERABLE:
                 continue  # a draft, a cell that cannot be set, a withdrawn one's own
             # An outcome none of whose gates it entered is not reached,
             # unless its cell is open or a branch takes it on an earlier
@@ -384,7 +384,7 @@ def rows_of(
         for c in plan.columns:
             cell = row.cells.get(c.key, stages.Cell(""))
             gate = isinstance(c, stages.Gate)
-            if not cell.value and (gate or d.state != "Submitted"):
+            if not cell.value and (gate or not d.enterable):
                 continue
             value, hand = own.get(c.key, (cell.value, cell.by_hand))
             cells[c.key] = Cell(value, _results(cell) if gate else {}, hand)

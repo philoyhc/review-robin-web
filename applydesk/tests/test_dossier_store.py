@@ -74,13 +74,15 @@ def test_the_pages_read_a_dossier_id_from_the_table() -> None:
 
 def test_a_row_without_an_application_reads_as_no_application() -> None:
     """Rung 4: a row is a dossier; one with no application (a candidate's,
-    rung 5) has no state, is no application to rank, and reads its own ID."""
+    rung 5) is a *Candidate*, enterable, its own last, and reads its own
+    ID."""
     from applydesk import stages
 
     d = stages.Dossier("dd2dd2dd2d", "dd2dd2dd2d", "Ana Lim", "ana@example.edu")
     row = stages.Row(d, {})
-    assert row.application is None and d.state == "" and not d.submitted
-    assert stages.last_submitted((row,)) == frozenset()
+    assert row.application is None and d.state == "Candidate" and not d.submitted
+    assert d.enterable  # a gate may enter it, an outcome decide it (cold read)
+    assert stages.last_submitted((row,)) == {"dd2dd2dd2d"}  # its own last
     assert stages.submitted_rank((row,)) == {}
     app = sample_data.applications_of("wa9juxbc2t")[0]
     mine = stages.dossier_of(app)

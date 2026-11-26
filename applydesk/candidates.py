@@ -1,7 +1,8 @@
 """An exercise's Candidates (ruling 77, segment AD2C rung 9): people kept
 by hand, added through the people search (ruling 75) or a CSV upload,
 removed in the list. The form's roster on an *Invitation only* exercise;
-fed to gates as dossiers once AD2F stores them.
+fed to gates where the timeline holds no form: each candidate's dossier
+minted once the exercise is published (ruling 81, `dossiers`).
 
 A person is listed once per exercise (``uq_candidate_pair``). Removing
 someone sets ``removed_at``; adding them again clears it on the same row.
@@ -24,7 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from applydesk import audit, people
+from applydesk import audit, dossiers, people
 from applydesk.models import Candidate, Exercise, Person
 
 #: How a candidate came: picked in the search, or a CSV row.
@@ -89,8 +90,18 @@ def listing(session: Session, public_id: str) -> tuple[Listed, ...]:
     )
 
 
-def add(session: Session, public_id: str, person: Person, via: str, actor: Person | None) -> bool:
-    """List ``person``; False if they were listed already. Flushes."""
+def add(
+    session: Session,
+    public_id: str,
+    person: Person,
+    via: str,
+    actor: Person | None,
+    *,
+    mint: bool = True,
+) -> bool:
+    """List ``person``; False if they were listed already. Flushes. With
+    ``mint``, their dossier is given where Candidates feed gates (ruling
+    81); a CSV mints once, after its rows."""
     if via not in VIA:
         raise ValueError(via)
     exercise = _exercise(session, public_id)
@@ -127,6 +138,8 @@ def add(session: Session, public_id: str, person: Person, via: str, actor: Perso
         refs={"person_id": person.id},
         context={"via": via},
     )
+    if mint:
+        dossiers.sync_candidates(session, exercise, actor)  # ruling 81: on each add
     return True
 
 
@@ -151,6 +164,7 @@ def remove(session: Session, public_id: str, person_id: int, actor: Person | Non
         exercise=exercise,
         refs={"person_id": person_id},
     )
+    dossiers.retire_for(session, exercise, row, actor)
     return True
 
 
@@ -220,8 +234,10 @@ def import_csv(session: Session, public_id: str, text: str, actor: Person | None
         person = _on_record(session, address) or people.pending(session, address, actor)
         if name and not person.display_name and person.object_id is None:
             person.display_name = name[:200]  # a pending person's name, from the file
-        if add(session, public_id, person, "csv", actor):
+        if add(session, public_id, person, "csv", actor, mint=False):
             added += 1
         else:
             already += 1
+    if added:  # once for the file (ruling 81), not per row
+        dossiers.sync_candidates(session, _exercise(session, public_id), actor)
     return Imported(added, already, tuple(bad))
