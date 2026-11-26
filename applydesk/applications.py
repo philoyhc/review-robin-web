@@ -39,17 +39,17 @@ def record_samples(
     known = set(
         session.scalars(select(Application.public_id).where(Application.exercise_id == exercise.id))
     )
+    new = [sample for sample in samples if sample.public_id not in known]
+    applicants = people.pending_many(session, (sample.email for sample in new), actor)
     added = 0
-    for sample in samples:
-        if sample.public_id in known:
-            continue
+    for sample in new:
         state = _STATES[sample.state]
         when = sample_day(sample.submitted)
         session.add(
             Application(
                 public_id=sample.public_id,
                 exercise_id=exercise.id,
-                person_id=people.pending(session, sample.email, actor=actor).id,
+                person_id=applicants[people.email_key(sample.email) or ""].id,
                 name=sample.applicant,
                 title=sample.title,
                 state=state,

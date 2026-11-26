@@ -310,7 +310,7 @@ def test_chips_and_exercise_role_filter_workspace_users() -> None:
     super-admin's own row Admins, then operators, then anyone with a
     history No role, else Unused); the counts take the role and search
     but not the chips; no `show` is the default chips, a blank one none."""
-    from applydesk import seed
+    from applydesk import sample_data, seed
     from applydesk.models import Exercise
     from applydesk.operators import Actor
 
@@ -351,7 +351,10 @@ def test_chips_and_exercise_role_filter_workspace_users() -> None:
         )
 
     page = admin.get("/applydesk/admin/operators").text
-    for chip in ("Operators (2)", "Admins (1)", "No role (1)", "Unused (1)"):
+    # Unused: pat, and the samples' applicants (segment AD2J), pending by address.
+    applicants = len({a.email.casefold() for a in sample_data.APPLICATIONS})
+    unused = f"Unused ({1 + applicants})"
+    for chip in ("Operators (2)", "Admins (1)", "No role (1)", unused):
         assert chip in page, chip
     assert rows() == {"ana", "ben"}  # the defaults: Operators and Admins
     assert rows("?show=no_role&show=unused") == {"cat", "pat"}

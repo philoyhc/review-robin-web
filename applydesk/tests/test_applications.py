@@ -57,3 +57,18 @@ def test_an_applicant_is_a_pending_person_by_address() -> None:
 def test_a_sample_day_keeps_its_date_east_and_west() -> None:
     when = sample_day("3 Sep 2026")
     assert when == datetime(2026, 9, 3, 12, tzinfo=UTC)
+
+
+def test_pending_many_reuses_a_pending_person_and_makes_one_per_address() -> None:
+    from applydesk import people
+
+    session = db.new_session()
+    kept = people.pending(session, "Lee@Example.edu", None)
+    found = people.pending_many(
+        session, ["lee@example.edu ", "New@Example.edu", "new@example.edu"], None
+    )
+    assert found["lee@example.edu"].id == kept.id
+    assert set(found) == {"lee@example.edu", "new@example.edu"}
+    made = session.scalars(select(Person).where(Person.email_key == "new@example.edu")).all()
+    assert len(made) == 1 and made[0].email == "New@Example.edu"
+    session.close()
