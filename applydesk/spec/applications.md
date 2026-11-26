@@ -1061,6 +1061,25 @@ but the lobby's *Stage* column reads:
     page's script redraws it on every edit of the gate's name, description or
     dates, or the stage's. Once the gate's session has opened it is frozen as
     sent (`data-fixed`), though the dates may still change.
+  - **Removing a gate set up in Review Robin** whose rosters are not sent
+    asks first: the draft there is discarded once Process is saved, with any
+    instrument built in Review Robin. Review Robin's discard
+    (`spec/handoffs.md` §6b) refuses anything else, so a gate with rosters
+    sent or an opened session is never discarded. Simulated in the tab
+    until AD6 makes the call.
+  - **Create Review Robin session** (*Secondary*) ends the gate's card, after
+    *Remove the gate* and outside the gate's lock, so a published stage's
+    locked gate is the one to set up. It is off, its reason in its
+    title, until the exercise is published, the gate is saved and no field
+    is one Review Robin would refuse (`stages.field_problems`); it is also
+    off while the page holds unsaved changes, as the gate is set up as
+    saved. A click sets the gate up as Evaluations' *Set up in Review Robin*
+    does, with the gate's derived name and code (ruling 56), and opens
+    `…/reviewrobin/operator/sessions/by-code/<code>` in a new tab; the
+    button then gives way to *Open Review Robin session ↗*, as it does for
+    a gate already set up or sent. A replicated stage's gates start off until
+    saved. Simulated in the tab, sharing the store the Review Robin card
+    reads (`applydesk-rr-setup:<exercise>`), until AD6 makes real calls.
 - **The outcome.** *Name*, *Due* (a date-time, blank for the stage's end), *Values* (a row each, *+ Value*, *Remove*; the list's order is the order of its values), *Rule*, and, when
   more than one gate is in scope, the *Combined result*: a weight per gate's numeric result, as
   percentages; weights that all sit at 0 are no combined result, flagged only when a rule reads one. Scope is the gates since the previous outcome (ruling 13); the
@@ -1525,23 +1544,42 @@ keeps all of them.
   Open: at the
   top, two columns. On the left are the session's name and code, derived
   as *exercise name — gate label* and *public ID*`-g`*n* (ruling 56). On
-  the right are the link (*Not linked: nothing sent yet*, *Linked; sent,
+  the right are the link (*Not linked: nothing sent yet*, *Linked; set up, its rosters not
+  yet sent*, *Linked; sent,
   its session not yet open*, *Linked; its session is open*, *Linked; its
   session has closed, its results not yet pulled*, *Detached: unlinked in
   Review Robin, so neither re-sent nor pulled*, *Linked; its results are
   in*), the last send, *Invited* and *Reminded*. Then *What is sent*, four
   tiles 2 × 2, each a title, a line and *Download*. Then *Progress*, a
-  full-width panel: its line, then *Send to Review Robin*, *Re-send*,
+  full-width panel: its line, then *Set up in Review Robin* (*Secondary*),
+  *Send rosters* (*Primary*), *Re-send*,
   *Pull results*, *Invite evaluators* and *Remind those not done*, then
   a progress row per paired evaluator, in an *Evaluators* section shut
   until opened (author, 2026-11-20): the actions stay in view, and a pull
   opens it. All are simulated in the tab
   (`_rr_js.html`). At a phone's width each pair of columns stacks.
-- **Send and Re-send** (`_rr_js.html`), simulated in the tab (ruling 55):
+- **Set up in Review Robin** (`_rr_js.html`), a step before *Send rosters*
+  (segment 23J), makes the gate's session as an empty linked draft carrying
+  its settings and response fields, so a custom gate's instrument can be
+  built there before the rosters are known. It is offered once the exercise
+  is published, for either gate type, and is a manual step, never made by
+  a Save. It checks the session's name and code (against the exercise's
+  other gates' codes, set-up ones included) and any field Review Robin would
+  refuse; the pairs and the gate's readiness wait for *Send rosters*. The
+  gate is then *Set up*: a state between *Not set up* and *Sent*, read on the
+  link line, with the set-up kept under `applydesk-rr-setup:<exercise>`
+  beside its transfer; *Set up* is off from then on. *Open in Review Robin ↗*
+  (new tab) is live from set-up on, and goes to the session by its code
+  (`/operator/sessions/by-code/<code>`, `spec/session_home.md`): the code it
+  was sent or set up with, else the sample's. *Send rosters* after a
+  set-up sends to the set-up's transfer, as a re-send. Review Robin's
+  step is a linked create without rosters (`spec/handoffs.md` §5). **Set-up
+  is simulated in the browser tab until AD6 makes the real calls.**
+- **Send rosters and Re-send** (`_rr_js.html`), simulated in the tab (ruling 55):
   a send is kept in `sessionStorage` under `applydesk-rr:<exercise>`, by
   gate, with its name, code, time, transfer ID and the bundle's digest.
   The head's chip and Evaluations' row then read *Sent* (*Sent in this
-  tab*), and *Send* is off. *Re-send* is on while the name, the code or
+  tab*), and *Send rosters* is off. *Re-send* is on while the name, the code or
   the files differ from what was sent, marked *Changed since sent*.
   Refusals name Review Robin's code: `invalid_package` (a name of 1–255
   characters, a code of 1–64), `session_code_conflict` (another of the
@@ -1551,7 +1589,7 @@ keeps all of them.
   `session_opened` is not drawn: an opened gate's buttons are off with
   the reason instead; `session_has_responses` and `not_linked` cannot
   arise in the sample. A gate the sample has sent whose session has not
-  opened reads as sent: *Re-send*, not *Send*. A Suggested gate whose only lack is its
+  opened reads as sent: *Re-send*, not *Send rosters*. A Suggested gate whose only lack is its
   approvals is sent once this tab has approved every dossier, none
   short. A gate opened, closed or detached in Review Robin sends and
   re-sends nothing, its name and code fixed, the reason in each title.

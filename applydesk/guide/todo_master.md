@@ -761,7 +761,7 @@ the rulings it relied on but does not move them.
     the new session's home in a new tab; and *Open in Review Robin ↗*
     goes to the session by its code, through Review Robin's
     `/operator/sessions/by-code/<code>`. Its own segment:
-    `guide/segment_23J_linked_setup_first.md`. The link needs no stored
+    `guide/archive/segment_23J_linked_setup_first.md`. The link needs no stored
     `session_home_url` now; Apply Desk keeps the gate's transfer record
     (AD2F) and makes the real calls with AD6.
 

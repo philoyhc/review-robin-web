@@ -34,6 +34,7 @@ no mail (interop spec §3 invariant 4): the draft waits for its operator.
 | `GET /operator/handoffs/new` | the package gate `require_operator` | The holding page: says a draft is being set up and that nothing is sent, links the Sessions lobby, and offers nothing else to do. `no-store`. |
 | `POST /operator/handoffs/sessions` | the package gate `require_operator` | The create (§3–§6). Every answer is JSON and `no-store`. |
 | `POST /operator/handoffs/{transfer_id}/update` | the package gate `require_operator` | The re-send to the draft that transfer created (§6a). JSON, `no-store`, the §3 request checks. |
+| `POST /operator/handoffs/{transfer_id}/discard` | the package gate `require_operator` | The discard of the empty draft that transfer set up (§6b). JSON, `no-store`, the §3 request checks. |
 
 A non-operator gets the package gate's usual `303` to `/me`, as does an
 operator the owner-eligibility lock refuses (`OperatorAllowlistDenied`,
@@ -64,7 +65,7 @@ A JSON object:
 | `transfer_id` | a UUID, chosen by the sender per transfer |
 | `source_app` | the sender's name, 1–64 characters |
 | `session_suggestion` | `{name, code}`: the draft's name (1–255) and code (1–64), checked as New session checks them |
-| `files` | CSV text by kind: `reviewers` and `reviewees` required; `relationships`, `observers` and `settings` optional. Any other kind is refused, the key named ASCII-escaped. `settings` is a Settings CSV (`spec/csv_contracts.md` §3.3), so a sender sets up the draft's instruments too |
+| `files` | CSV text by kind: `reviewers` and `reviewees` required, except that a linked sender may omit both (§5); `relationships`, `observers` and `settings` optional. Any other kind is refused, the key named ASCII-escaped. `settings` is a Settings CSV (`spec/csv_contracts.md` §3.3), so a sender sets up the draft's instruments too |
 
 Every text must be valid Unicode with no NUL character (Postgres text
 refuses one). Any envelope fault is `422 invalid_package` with lines in
@@ -111,7 +112,7 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   refused roster is `422 invalid_setup` with `slot`, `reason` and the
   importer's own `details`; a lapsed directory sign-in is
   `409 directory_sign_in`; a roster with no rows is `422 invalid_setup`
-  with `reason` `empty_roster`. An unexpected error while the rosters save
+  with `reason` `empty_roster`, a header with no rows included. An unexpected error while the rosters save
   discards it too. A failure after the save, while recording completion,
   leaves the draft with its rosters, which a replay completes (§6).
   New session's own behavior is unchanged: it still keeps the draft when a
@@ -144,6 +145,15 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   release window never opens, observers stay off, and the visibility
   card's after-the-window cells name the application
   (`spec/visibility_policy.md` §3.4).
+- **A linked create may omit both rosters** (`handoffs.carries_rosters`),
+  setting the session up before its rosters are known. The draft is made
+  with its settings, tags and instrument set-up (a custom instrument
+  starts with its held fields) and no rosters, and cannot validate or open
+  until a re-send brings them (`spec/linked_sessions.md` `rosters`). Both
+  or neither: one roster without the other is `422 invalid_package`, as is
+  a `relationships` file without rosters. A native create (no profile in
+  `linked_apps`) still needs both. A roster file present with a header and
+  no rows is still `empty_roster`.
 - **Receipt:** `201` `{status: "created", session_ref, session_code, session_home_url}`.
   The URL is app-relative, emitted through `app/web/urls.py`.
 
@@ -164,8 +174,14 @@ transfer, so the proof of concept needs no table:
 | a session the sender may no longer operate (`permissions.user_can_view_session`, checked now, not at the first post) | `403 not_authorized` |
 | a completed transfer | `200` receipt, `status: "already_created"` |
 | no completion record, but both rosters saved (cut off between the save and the record) | the record is written; `200 already_created` |
+| a transfer discarded since (§6b) | `409 session_discarded`: no fresh draft is made for a dropped gate |
 | no completion record and no rosters, the draft under 5 minutes old (`handoffs.IN_PROGRESS`: the first try may still be checking the directory or saving) | `409 transfer_in_progress`; the sender keeps its transfer and tries again |
 | no completion record and no rosters, the draft older (cut off before the save) | `409 transfer_incomplete` with the draft's `session_home_url`. **Nothing is deleted on a replay**: the draft stays for its operator, and the sender's next try is a new transfer |
+
+A create sent **without rosters** has no saved rosters to tell a finished
+save, so its replay reads the completion record alone: completed is
+`already_created`; not completed and under `IN_PROGRESS` is
+`transfer_in_progress`; older is `transfer_incomplete`.
 
 Two concurrent first posts of one transfer can still make two sessions:
 accepted for a proof of concept, whose sender disables its button.
@@ -175,13 +191,20 @@ accepted for a proof of concept, whose sender disables its button.
 While a linked session is unopened, its rosters are the linked
 application's, which re-sends them rather than Review Robin editing them.
 
+- **The first roster send** to a draft set up without rosters (§5) is an
+  ordinary re-send, guarded as any is. Rosters are locked from creation
+  (`spec/linked_sessions.md` `rosters`), so this is the only way they
+  arrive.
 - **Naming the draft:** the path's `transfer_id` is the transfer that
   created it, as §10's reads name theirs; a sender never names a free
   session reference (interop spec §6.6). The body is §4's envelope with
   its own new `transfer_id`, `operation` `reviewrobin.update_draft_session`
   and no `session_suggestion`.
 - **Files:** `reviewers` and `reviewees` required, `relationships`
-  optional. The rosters are the application's whole picture: they replace
+  optional; a linked sender may instead send neither, a **settings-only
+  re-send** (§5's both-or-neither rule). It has no file to save, so it runs
+  its guard and record under the session lock: Process's edits after
+  set-up reach the draft, and rosters already held stay. The rosters are the application's whole picture: they replace
   the draft's, and the replace's own cascade drops the pairs, so an absent
   Relationships file leaves none. An `observers` file is refused as at the
   create (§5).
@@ -263,12 +286,46 @@ application's, which re-sends them rather than Review Robin editing them.
   and one the operator may no longer operate, checked now, `403`.
 - **Receipt:** `200 {status: "updated", session_ref, session_code, session_home_url}`.
 
+## 6b. The discard — an empty set-up draft removed
+
+A linked application whose gate is dropped before its rosters were sent
+removes the draft it set up. `POST /operator/handoffs/{transfer_id}/discard`
+names the creating transfer in the path; the body is §4's envelope with
+its own new `transfer_id`, `operation` `reviewrobin.discard_draft_session`
+and no `session_suggestion` or files (`handoffs.parse_discard`).
+
+- **Deletes** the session, with its audit events and any custom instrument
+  built in Review Robin, only when all hold: the caller is the sender of
+  that transfer and still an operator of it; the session is still linked
+  to that `source_app`; it is unopened; it holds no rosters and no
+  responses. Instrument work built in Review Robin goes with it: the
+  gate is the operator's to drop, and the sender says so before it calls.
+- **Refused, nothing deleted:** `404 not_linked` (unknown transfer,
+  another application's, or unlinked since); `403 not_authorized` (not the
+  operator who set it up, or no longer an operator); `409 transfer_in_progress`
+  (its create is still running, within `IN_PROGRESS`); `409 session_opened`;
+  `409 session_not_empty` (rosters or responses). Such a session is the
+  operator's to delete in Review Robin. A create cut off before its
+  completion record may be discarded: its draft is as empty. The checks run
+  again under the session lock.
+- **Replay:** a transfer already discarded answers
+  `200 {status: "already_discarded", session_code}`, read from the delete's
+  audit row, for the operator and application that discarded it; anyone
+  else's is refused as a fresh discard would be. A create of that transfer
+  replayed afterwards is `409 session_discarded` (§6).
+- **Receipt:** `200 {status: "discarded", session_code}`.
+- **Audit:** `session.deleted`, as an operator's delete writes it (no
+  session, its snapshot naming the session), with `context`
+  `{transfer_id, source_app, discard_transfer_id}`: the creating transfer,
+  the sender, and this discard's own.
+
 ## 7. Errors
 
 Every refusal is `{"error": <code>}`, with `details` (lines for the sender
 to show) and, where they apply, `slot`, `reason` and `session_home_url`.
 The codes are the interop spec's vocabulary (§7.3) plus `directory_sign_in`,
-`transfer_in_progress` and `transfer_incomplete`. A sender keeps its
+`transfer_in_progress`, `transfer_incomplete`, `session_discarded` and
+`session_not_empty`. A sender keeps its
 `transfer_id` on a `5xx`, a network error, an answer it cannot read or
 `transfer_in_progress`, so trying again finds a session already made;
 after any other refusal it starts a new transfer.
@@ -277,19 +334,21 @@ after any other refusal it starts a new transfer.
 
 | Event | Envelope | When |
 |---|---|---|
-| `session.handoff_created` | `counts(files=n)`, `context` `{transfer_id, source_app}` | with the draft, before its rosters |
+| `session.handoff_created` | `counts(files=n)`, `context` `{transfer_id, source_app, rosters}` | with the draft, before its rosters; `rosters` is whether the create carried them (§5) |
 | `session.handoff_completed` | `counts(reviewers, reviewees)`, same `context` | once the rosters have saved, or on the replay that finds them saved |
 | `session.handoff_updated` | `counts(reviewers, reviewees)`, `context` `{transfer_id, source_app}` | once a re-send's rosters have saved (§6a) |
 | `session.handoff_results_exported` | `counts(rows)`, `context` `{transfer_id, file, etag}` | a `results.csv` or `completion.csv` fetched (§10); a `304` writes nothing |
 
-All four are registered in `EVENT_SCHEMAS`. The draft's own
+A discard writes `session.deleted` (§6b). The events above are registered in `EVENT_SCHEMAS`, as is its `context`. The draft's own
 `session.created`, the roster saves' events and a settings file's
 `session.settings_imported` are written as for New session. A status read writes nothing: reads never audit.
 
 ## 9. Tests
 
 `tests/integration/test_handoffs.py` (the routes),
-`tests/integration/test_handoff_update.py` (the re-send), and
+`tests/integration/test_handoff_update.py` (the re-send),
+`tests/integration/test_handoff_set_up_first.py` (a create without rosters),
+`tests/integration/test_handoff_discard.py` (the discard), and
 `utilityapps/tests/test_interop_poc.py` (the sender's page and bundle).
 
 ## 10. Reading back: status and results
