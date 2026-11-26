@@ -124,7 +124,7 @@
   <fieldset class="pr-ed" data-pr-ed hidden{% if sent %} disabled title="Its session has opened: the gate keeps its results"{% endif %}>
     <legend class="visually-hidden">{{ r.name or "Untitled result" }}</legend>
     <div class="pc-row">
-      <label class="fc-l pc-wide">Name<input class="fc-in" data-r="name" value="{{ r.name }}" placeholder="e.g. Mean rating"></label>
+      <label class="fc-l pc-wide">Name<input class="fc-in" data-r="name" maxlength="200" value="{{ r.name }}" placeholder="e.g. Mean rating"></label>
       {# Ruling 28: a result collates one response field, chosen here. #}
       <label class="fc-l">From<select class="fc-in" data-r="source"><option value=""{% if not src %} selected{% endif %}>Choose a field</option>{% for rf in fields %}<option value="{{ rf.key }}"{% if src and rf.key == src.key %} selected{% endif %}>{{ rf.label or "Untitled field" }}</option>{% endfor %}</select></label>
     </div>
@@ -133,12 +133,12 @@
     <div data-r-g="field" hidden>
     <select data-r="type">{% for k, l in field_types %}<option value="{{ k }}"{% if k == f.type %} selected{% endif %}>{{ l }}</option>{% endfor %}</select>
     <div class="pc-row" data-r-g="number">
-      <label class="fc-l pc-narrow">Min<input class="fc-in" data-r="min" inputmode="decimal" value="{{ f.min if f.type in ('integer', 'decimal') }}"></label>
-      <label class="fc-l pc-narrow">Max<input class="fc-in" data-r="max" inputmode="decimal" value="{{ f.max if f.type in ('integer', 'decimal') }}"></label>
-      <label class="fc-l pc-narrow">Step<input class="fc-in" data-r="step" inputmode="decimal" value="{{ f.step if f.type in ('integer', 'decimal') }}"></label>
+      <label class="fc-l pc-narrow">Min<input class="fc-in" data-r="min" maxlength="32" inputmode="decimal" value="{{ f.min if f.type in ('integer', 'decimal') }}"></label>
+      <label class="fc-l pc-narrow">Max<input class="fc-in" data-r="max" maxlength="32" inputmode="decimal" value="{{ f.max if f.type in ('integer', 'decimal') }}"></label>
+      <label class="fc-l pc-narrow">Step<input class="fc-in" data-r="step" maxlength="32" inputmode="decimal" value="{{ f.step if f.type in ('integer', 'decimal') }}"></label>
     </div>
     <div class="pc-row" data-r-g="string">
-      <label class="fc-l pc-narrow">Max length<input class="fc-in" data-r="maxlen" inputmode="numeric" value="{{ f.max if f.type == 'string' }}"></label>
+      <label class="fc-l pc-narrow">Max length<input class="fc-in" data-r="maxlen" maxlength="32" inputmode="numeric" value="{{ f.max if f.type == 'string' }}"></label>
     </div>
     <div class="pc-row" data-r-g="list">
       <label class="fc-l pc-wide">Options (comma-separated)<input class="fc-in" data-r="options" value="{{ f.options }}"></label>
@@ -170,7 +170,7 @@
   <fieldset class="pr-ed" data-rf-ed hidden{% if sent %} disabled title="Its session has opened: the gate keeps its fields"{% endif %}>
     <legend class="visually-hidden">{{ f.label or "Untitled field" }}</legend>
     <div class="pc-row">
-      <label class="fc-l pc-wide">Label<input class="fc-in" data-q="label" value="{{ f.label }}" placeholder="e.g. Rating"></label>
+      <label class="fc-l pc-wide">Label<input class="fc-in" data-q="label" maxlength="200" value="{{ f.label }}" placeholder="e.g. Rating"></label>
       {# Prescribed, never edited: what Review Robin reports the answers
          under (AD1G amendment). #}
       <label class="fc-l pc-narrow">Key<input class="fc-in" data-rf-key value="{{ f.key }}" readonly title="What Review Robin reports this field's answers under"></label>
@@ -181,9 +181,9 @@
     </div>
     {# Only the type's own settings show, from the first draw (Codex). #}
     <div class="pc-row" data-q-g="number"{% if t.type not in ("integer", "decimal") %} hidden{% endif %}>
-      <label class="fc-l pc-narrow">Min<input class="fc-in" data-q="min" inputmode="decimal" value="{{ t.min if t.type in ('integer', 'decimal') }}"></label>
-      <label class="fc-l pc-narrow">Max<input class="fc-in" data-q="max" inputmode="decimal" value="{{ t.max if t.type in ('integer', 'decimal') }}"></label>
-      <label class="fc-l pc-narrow">Step<input class="fc-in" data-q="step" inputmode="decimal" value="{{ t.step if t.type in ('integer', 'decimal') }}"></label>
+      <label class="fc-l pc-narrow">Min<input class="fc-in" data-q="min" maxlength="32" inputmode="decimal" value="{{ t.min if t.type in ('integer', 'decimal') }}"></label>
+      <label class="fc-l pc-narrow">Max<input class="fc-in" data-q="max" maxlength="32" inputmode="decimal" value="{{ t.max if t.type in ('integer', 'decimal') }}"></label>
+      <label class="fc-l pc-narrow">Step<input class="fc-in" data-q="step" maxlength="32" inputmode="decimal" value="{{ t.step if t.type in ('integer', 'decimal') }}"></label>
     </div>
     {# A scale's Start / Middle / End labels, each optional, on a second
        line as Band 3's (segment AD2S). #}
@@ -194,7 +194,7 @@
       <label class="fc-l">End label<input class="fc-in" data-q="scale_end" maxlength="60" value="{{ sl[2] }}" placeholder="e.g. Strong"></label>
     </div>
     <div class="pc-row" data-q-g="string"{% if t.type != "string" %} hidden{% endif %}>
-      <label class="fc-l pc-narrow">Max length<input class="fc-in" data-q="maxlen" inputmode="numeric" value="{{ t.max if t.type == 'string' }}"></label>
+      <label class="fc-l pc-narrow">Max length<input class="fc-in" data-q="maxlen" maxlength="32" inputmode="numeric" value="{{ t.max if t.type == 'string' }}"></label>
     </div>
     <div class="pc-row" data-q-g="list"{% if t.type != "list" %} hidden{% endif %}>
       <label class="fc-l pc-wide">Options (comma-separated)<input class="fc-in" data-q="options" value="{{ t.options }}"></label>
@@ -266,7 +266,7 @@
     <summary><span class="gsec-t">Gate</span><span class="gsec-s" data-gsec-sum>{{ gate_summary(plan, g) }}</span></summary>
     <div class="gsec-b">
       <div class="pc-row">
-        <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ g.label }}" placeholder="Untitled gate"></label>
+        <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" maxlength="200" value="{{ g.label }}" placeholder="Untitled gate"></label>
         <label class="fc-l pc-type">Type<select class="fc-in" data-pc="type"{{ sent_attr(sent) }} title="Custom: Review Robin may reorder the fields, set required, add its own and branch between them; the gate's fields stay as set here">{% for k, label in gate_types %}<option value="{{ k }}"{% if k == (g.via or "RRW") %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
       </div>
       <label class="fc-l">Description<textarea class="fc-in" rows="1" data-fit-box data-pc="description" placeholder="What evaluators do at this gate, as Review Robin shows it"{{ sent_attr(sent) }}>{{ g.description }}</textarea></label>
@@ -368,14 +368,14 @@
   </div>
   {{ lock_open(item_lock(o)) }}
   <div class="pc-row">
-    <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ o.label }}" placeholder="Untitled outcome"></label>
+    <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" maxlength="200" value="{{ o.label }}" placeholder="Untitled outcome"></label>
   </div>
   {# Its values, one row each (AD-57): a row keeps its key when renamed,
      and the rules naming it follow on the page. #}
   <div class="fc-l pc-values" data-pc-values role="group" aria-label="Values">
     <span>Values</span>
     <ol class="pc-value-list" data-pc-value-list>
-      {% for v in o.values %}<li data-value-key="{{ o.value_keys[loop.index0] if o.value_keys | length > loop.index0 else '' }}"><input class="fc-in" data-pc="value" value="{{ v }}" data-was="{{ v }}" aria-label="Value {{ loop.index }}"><button type="button" class="btn btn-secondary btn-short" data-pc-act="remove-value" aria-label="Remove {{ v }}">Remove</button></li>{% endfor %}
+      {% for v in o.values %}<li data-value-key="{{ o.value_keys[loop.index0] if o.value_keys | length > loop.index0 else '' }}"><input class="fc-in" data-pc="value" maxlength="200" value="{{ v }}" data-was="{{ v }}" aria-label="Value {{ loop.index }}"><button type="button" class="btn btn-secondary btn-short" data-pc-act="remove-value" aria-label="Remove {{ v }}">Remove</button></li>{% endfor %}
     </ol>
     <button type="button" class="btn btn-secondary btn-short" data-pc-act="add-value">+ Value</button>
   </div>
@@ -468,7 +468,7 @@
   <div class="fc-body{% if not st.form and not st.columns %} pc-body-empty{% endif %}">
     {{ status_box(st, status) }}
     <div class="pc-row">
-      <label class="fc-l pc-wide">Stage name<input class="fc-in" data-pc="name" value="{{ st.name }}" placeholder="Stage {{ st.number }}"></label>
+      <label class="fc-l pc-wide">Stage name<input class="fc-in" data-pc="name" maxlength="200" value="{{ st.name }}" placeholder="Stage {{ st.number }}"></label>
       <label class="fc-l">Starts<input class="fc-in" type="datetime-local" data-pc="from" value="{{ local_value(st.when.start if st.when else none) }}"></label>
       <label class="fc-l">Ends<input class="fc-in" type="datetime-local" data-pc="to" value="{{ local_value(st.when.end if st.when else none) }}"></label>
       <label class="pc-check"><input type="checkbox" data-pc="shown"{% if st.shown %} checked{% endif %}> Shown to applicants</label>
