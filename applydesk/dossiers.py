@@ -13,13 +13,14 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from sqlalchemy import exists, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from applydesk import audit, db, ids, sample_data
 from applydesk.models import Application, Candidate, Dossier, Exercise, Person
 from applydesk.models import Stage as StageRow
 
-#: Tries for a fresh public ID before giving up (ruling 53: unique by index).
+#: Tries for a fresh public ID before giving up (AD-53: unique by index).
 _ATTEMPTS = 8
 
 
@@ -64,15 +65,16 @@ def record_samples(session: Session, exercise: Exercise, actor: Person | None) -
 
 def feeds_gates(session: Session, exercise: Exercise) -> bool:
     """Whether the exercise's Candidates feed gates (ruling 81, author
-    2026-11-26): its stored timeline holds no form. A timeline never saved
-    holds the form a new exercise starts with, so it is a roster."""
+    2026-11-26): its stored timeline holds the Candidates item and no form.
+    A timeline never saved holds the form a new exercise starts with, so
+    it is a roster."""
     if exercise.process_revision < 1:  # never saved: the starting stage holds the form
         return False
     live = select(StageRow).where(
         StageRow.exercise_id == exercise.id, StageRow.retired_at.is_(None)
     )
-    if session.scalar(select(exists(live))) is not True:
-        return False
+    if session.scalar(select(exists(live.where(StageRow.holds_candidates.is_(True))))) is not True:
+        return False  # no Candidates item on the timeline: nothing to feed
     return session.scalar(select(exists(live.where(StageRow.holds_form.is_(True))))) is not True
 
 
@@ -93,7 +95,7 @@ def published(session: Session, exercise: Exercise) -> bool:
 
 
 def _fresh_id(session: Session) -> str:
-    """A public ID no exercise, application or dossier holds (ruling 53)."""
+    """A public ID no exercise, application or dossier holds (AD-53)."""
     for _ in range(_ATTEMPTS):
         found = ids.generate_public_id()
         taken = session.scalar(
@@ -110,11 +112,11 @@ def _fresh_id(session: Session) -> str:
 
 def sync_candidates(session: Session, exercise: Exercise, actor: Person | None) -> int:
     """Give each current candidate a dossier where the exercise's Candidates
-    feed gates and it is published (ruling 81): minted once, a re-added
-    candidate's retired one revived. Returns how many were minted or
-    revived, audited as one event when any were. Flushes."""
-    if not (feeds_gates(session, exercise) and published(session, exercise)):
-        return 0
+    feed gates and it is published (ruling 81): minted once. A re-added
+    candidate's retired dossier is revived whatever the timeline holds now
+    (the dossier they had back, cold read). Returns how many were minted
+    or revived, audited as one event when any were. Flushes."""
+    mints = feeds_gates(session, exercise) and published(session, exercise)
     listed = session.scalars(
         select(Candidate)
         .where(Candidate.exercise_id == exercise.id, Candidate.removed_at.is_(None))
@@ -132,14 +134,19 @@ def sync_candidates(session: Session, exercise: Exercise, actor: Person | None) 
     for candidate in listed:
         dossier = held.get(candidate.id)
         if dossier is None:
-            session.add(
-                Dossier(
-                    public_id=_fresh_id(session),
-                    exercise_id=exercise.id,
-                    candidate_id=candidate.id,
-                )
-            )
-            session.flush()
+            if not mints:
+                continue
+            try:
+                with session.begin_nested():  # another request may mint it meanwhile
+                    session.add(
+                        Dossier(
+                            public_id=_fresh_id(session),
+                            exercise_id=exercise.id,
+                            candidate_id=candidate.id,
+                        )
+                    )
+            except IntegrityError:
+                continue
             made += 1
         elif dossier.retired_at is not None:
             dossier.retired_at = None

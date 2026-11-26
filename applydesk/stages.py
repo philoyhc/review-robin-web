@@ -384,6 +384,12 @@ class Cell:
     extra: tuple[tuple[str, str], ...] = ()
 
 
+#: A candidate's dossier's state (segment AD2F): no application, but live.
+CANDIDATE = "Candidate"
+#: The states a gate may enter and an outcome decide.
+ENTERABLE = frozenset({"Submitted", CANDIDATE})
+
+
 @dataclass(frozen=True)
 class Dossier:
     """A row's dossier as the pages read it (segment AD2F; rulings 25, 81):
@@ -400,12 +406,18 @@ class Dossier:
 
     @property
     def state(self) -> str:
-        """The application's state, "" for a candidate's dossier."""
-        return self.application.state if self.application is not None else ""
+        """The application's state; *Candidate* for a candidate's dossier."""
+        return self.application.state if self.application is not None else CANDIDATE
 
     @property
     def submitted(self) -> bool:
         return self.state == "Submitted"
+
+    @property
+    def enterable(self) -> bool:
+        """Whether a gate may enter it and an outcome decide it (AD2F's
+        cold read): a submitted application's dossier, or a candidate's."""
+        return self.state in ENTERABLE
 
 
 def dossier_of(app: Application) -> Dossier:
@@ -805,7 +817,9 @@ def plan_of(exercise_id: str) -> Plan:
             Row(Dossier(public_id, public_id, name, email), {})
             for public_id, name, email in dossiers.candidate_rows(exercise_id)
         )
-        return Plan(saved, rows, exercise_id)
+        # Every column blank until AD2H stores cells (cold read: the grid
+        # reads each row's cell for every column).
+        return Plan(saved, _blank_cells(rows, saved), exercise_id)
     if exercise_id not in _STAGES:
         e = sample_data.sample(exercise_id)  # an ordinary one: Draft, no dates
         when = _exercise_span(e) if e else None
@@ -917,15 +931,17 @@ def _newest(a: Application, at: datetime | None) -> tuple[datetime, str]:
 
 
 def last_submitted(rows: tuple[Row, ...]) -> frozenset[str]:
-    """Application IDs shown under *Last applications*: per applicant (by
-    email), the latest submitted, else the latest started of any status
-    (ruling 13), by time (segment AD2J)."""
+    """Row keys shown under *Last applications*: per applicant (by email),
+    the latest submitted, else the latest started of any status (ruling
+    13), by time (segment AD2J); and every candidate's dossier (AD2F)."""
     latest: dict[str, tuple[tuple[datetime, str], str]] = {}
     submitted: dict[str, tuple[tuple[datetime, str], str]] = {}
+    own: set[str] = set()
     for r in rows:
         a = r.application
-        if a is None:
-            continue  # a candidate's dossier is no application
+        if a is None:  # a candidate's dossier is its own last (AD2F)
+            own.add(r.dossier.key)
+            continue
         who = a.email.lower()
         started = (_newest(a, a.started_at), a.public_id)
         if who not in latest or started[0] > latest[who][0]:
@@ -934,7 +950,7 @@ def last_submitted(rows: tuple[Row, ...]) -> frozenset[str]:
             sent = (_newest(a, a.submitted_at), a.public_id)
             if who not in submitted or sent[0] > submitted[who][0]:
                 submitted[who] = sent
-    return frozenset(i for _, i in {**latest, **submitted}.values())
+    return frozenset(i for _, i in {**latest, **submitted}.values()) | own
 
 
 def scope(plan: Plan, outcome: Outcome) -> tuple[Gate, ...]:

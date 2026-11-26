@@ -212,7 +212,7 @@ def _shown(plan: stages.Plan, rows: str, drafts: bool = False) -> list[stages.Ro
         r
         for r in plan.rows
         if (last is None or r.dossier.key in last)
-        and (r.dossier.state == "Submitted" or (drafts and r.dossier.state == "Draft"))
+        and (r.dossier.enterable or (drafts and r.dossier.state == "Draft"))
     ]
 
 
@@ -449,11 +449,17 @@ def all_zip(
 
 
 def alias_key(e: Exercise) -> Table:
-    """Dossier ID to applicant, every application's, drafts included: the
-    one file joining what Review Robin sees to who it is."""
+    """Dossier ID to applicant, every application's, drafts included, and
+    every candidate's dossier (AD2F, no application ID): the one file
+    joining what Review Robin sees to who it is."""
     return ALIAS_KEYS, [
-        [a.dossier_id, a.public_id, a.applicant, a.email]
-        for a in sample_data.applications_of(e.public_id)
+        [
+            r.dossier.public_id,
+            r.dossier.key if r.application else "",
+            r.dossier.name,
+            r.dossier.email,
+        ]
+        for r in stages.plan_of(e.public_id).rows
     ]
 
 

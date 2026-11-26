@@ -5,6 +5,8 @@ with a form, Candidates is only the form's roster."""
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 from sqlalchemy import select
 
@@ -116,3 +118,67 @@ def test_the_dossiers_page_lists_a_candidate_s_dossier() -> None:
     assert f"<code>{dossier}</code>" in page.text
     assert '<span class="ap-app">Candidate</span>' in page.text
     assert "ann@example.edu" in page.text
+
+
+def test_a_publishing_process_save_mints_and_the_grid_draws_every_column() -> None:
+    """Cold read: through the real hook, `process_store.save`, and with an
+    outcome on the stage, so the grid reads each candidate row's cell."""
+    from fastapi.testclient import TestClient
+
+    from applydesk import process_store
+    from applydesk.tests._host import host_with
+
+    session = db.new_session()
+    owner = session.scalars(select(Person).where(Person.may_operate)).first()
+    assert owner is not None
+    ex = exercises.make(session, operators.Actor(owner), "Candidates, decided").public_id
+    session.commit()
+    session.close()
+    outcome = stages.Outcome("o1", 1, "Decision", ("Yes", "No"), None, "")
+    built = (stages.Stage(1, "Shortlist", None, (outcome,), status="Draft", candidates=True),)
+    session = db.new_session()
+    process_store.save(session, ex, built, 0, owner)
+    session.commit()
+    session.close()
+    _add(ex, "ann@example.edu")
+    assert _live(ex) == []  # a draft mints nothing
+    session = db.new_session()
+    published = tuple(dataclasses.replace(st, status="Published") for st in built)
+    process_store.save(session, ex, published, 1, owner)
+    session.commit()
+    session.close()
+    [dossier] = _live(ex)
+    page = TestClient(host_with(("applydesk",))[0]).get(
+        f"/applydesk/operator/exercises/{ex}/dossiers"
+    )
+    assert page.status_code == 200, page.text[-400:]
+    assert f"<code>{dossier}</code>" in page.text and 'data-status="Candidate"' in page.text
+    # An outcome is decidable for a candidate's dossier (it is enterable).
+    assert 'aria-label="Decision for ' + dossier in page.text
+
+
+def test_a_form_added_later_keeps_the_dossiers_and_revives_a_returner() -> None:
+    ex = _exercise(form=False, published=True)
+    _add(ex, "ann@example.edu")
+    [first] = _live(ex)
+    session = db.new_session()
+    exercise = session.scalars(select(Exercise).where(Exercise.public_id == ex)).one()
+    session.add(StageRow(exercise_id=exercise.id, key="s0", position=0, holds_form=True))
+    ann = people.pending(session, "ann@example.edu", None)
+    assert candidates.remove(session, ex, ann.id, None)
+    session.commit()
+    session.close()
+    _add(ex, "bob@example.edu")  # a roster now: Bob gets none
+    _add(ex, "ann@example.edu")  # Ann gets hers back
+    assert _live(ex) == [first]
+
+
+def test_a_csv_mints_once_for_the_file() -> None:
+    ex = _exercise(form=False, published=True)
+    session = db.new_session()
+    done = candidates.import_csv(session, ex, "Email\na@example.edu\nb@example.edu\n", None)
+    session.commit()
+    kinds = list(session.scalars(select(AuditEvent.event_type)))
+    session.close()
+    assert done.added == 2 and len(_live(ex)) == 2
+    assert kinds.count("dossier.minted") == 1

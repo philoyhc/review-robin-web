@@ -90,8 +90,18 @@ def listing(session: Session, public_id: str) -> tuple[Listed, ...]:
     )
 
 
-def add(session: Session, public_id: str, person: Person, via: str, actor: Person | None) -> bool:
-    """List ``person``; False if they were listed already. Flushes."""
+def add(
+    session: Session,
+    public_id: str,
+    person: Person,
+    via: str,
+    actor: Person | None,
+    *,
+    mint: bool = True,
+) -> bool:
+    """List ``person``; False if they were listed already. Flushes. With
+    ``mint``, their dossier is given where Candidates feed gates (ruling
+    81); a CSV mints once, after its rows."""
     if via not in VIA:
         raise ValueError(via)
     exercise = _exercise(session, public_id)
@@ -128,7 +138,8 @@ def add(session: Session, public_id: str, person: Person, via: str, actor: Perso
         refs={"person_id": person.id},
         context={"via": via},
     )
-    dossiers.sync_candidates(session, exercise, actor)  # ruling 81: on each add
+    if mint:
+        dossiers.sync_candidates(session, exercise, actor)  # ruling 81: on each add
     return True
 
 
@@ -223,8 +234,10 @@ def import_csv(session: Session, public_id: str, text: str, actor: Person | None
         person = _on_record(session, address) or people.pending(session, address, actor)
         if name and not person.display_name and person.object_id is None:
             person.display_name = name[:200]  # a pending person's name, from the file
-        if add(session, public_id, person, "csv", actor):
+        if add(session, public_id, person, "csv", actor, mint=False):
             added += 1
         else:
             already += 1
+    if added:  # once for the file (ruling 81), not per row
+        dossiers.sync_candidates(session, _exercise(session, public_id), actor)
     return Imported(added, already, tuple(bad))
