@@ -10,7 +10,7 @@ import re
 import pytest
 from fastapi.testclient import TestClient
 
-from applydesk import sample_data, stages
+from applydesk import applications, sample_data, stages
 from applydesk.tests._host import host_with
 
 EX = "wa9juxbc2t"
@@ -122,7 +122,19 @@ def test_a_mean_s_note_says_how_many_scored() -> None:
 
 
 def _app(i: str, email: str, state: str, day: int) -> sample_data.Application:
-    return sample_data.Application(i, EX, "X", email, "", state, f"{day} Sep 2026", "d" + i)
+    when = applications.sample_day(f"{day} Sep 2026")
+    return sample_data.Application(
+        i,
+        EX,
+        "X",
+        email,
+        "",
+        state,
+        f"{day} Sep 2026",
+        "d" + i,
+        started_at=when,
+        submitted_at=None if state == "Draft" else when,
+    )
 
 
 def test_last_applications_keep_each_applicant_s_last_submitted() -> None:

@@ -116,8 +116,11 @@ class Application:
     email: str
     title: str
     state: str  # Draft, Submitted, Withdrawn
-    submitted: str
+    submitted: str  # the day it was submitted, else started: "3 Sep 2026"
     dossier_id: str
+    #: Stored (segment AD2J): when it was started, and submitted (None for a draft).
+    started_at: datetime | None = None
+    submitted_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -454,6 +457,7 @@ def _generated() -> tuple[Application, ...]:
 
 
 APPLICATIONS: tuple[Application, ...] = _WRITTEN + _generated()
+_DOSSIER_IDS = {a.public_id: a.dossier_id for a in APPLICATIONS}
 
 
 def _current_ras() -> tuple[Member, ...]:
@@ -1128,18 +1132,40 @@ def exercises() -> tuple[Exercise, ...]:
 #: and a draft, until AD2 matches them by email (AD-27).
 MINE = ("m3qx8vkt2n", "f2ps7nyh4k")
 
+#: The dossiers the signed-in person reviews on /me (ruling 9), by their
+#: applications' IDs, until AD5 pairs them.
+MY_REVIEWS = tuple(a.public_id for a in APPLICATIONS[1:5:2])
+
 
 def my_applications(exercise_id: str | None = None) -> tuple[Application, ...]:
     """The sample applicant's applications, of one exercise or all (AD-27)."""
+    from applydesk import applications  # it builds on this module
+
     return tuple(
         a
-        for a in APPLICATIONS
-        if a.public_id in MINE and (exercise_id is None or a.exercise_id == exercise_id)
+        for a in applications.with_ids(MINE)
+        if exercise_id is None or a.exercise_id == exercise_id
     )
 
 
-def applications_of(exercise_id: str) -> tuple[Application, ...]:
+def sample_applications(exercise_id: str) -> tuple[Application, ...]:
+    """A sample exercise's applications as written here: what the seed
+    records (segment AD2J). Pages read `applications_of`."""
     return tuple(a for a in APPLICATIONS if a.exercise_id == exercise_id)
+
+
+def sample_dossier_id(public_id: str) -> str:
+    """The dossier ID a sample application carries, else "": until AD2F
+    stores dossiers (ruling 81), the one place it is kept."""
+    return _DOSSIER_IDS.get(public_id, "")
+
+
+def applications_of(exercise_id: str) -> tuple[Application, ...]:
+    """The exercise's applications as stored (segment AD2J), in the order
+    they came in."""
+    from applydesk import applications  # it builds on this module
+
+    return applications.of(exercise_id)
 
 
 def assessors_of(exercise_id: str) -> tuple[Assessor, ...]:
@@ -1162,6 +1188,8 @@ def application(exercise_id: str, public_id: str) -> Application | None:
 
 
 def by_dossier(exercise_id: str, dossier_id: str) -> Application | None:
+    if not dossier_id:
+        return None
     return next(
         (a for a in applications_of(exercise_id) if a.dossier_id == dossier_id),
         None,

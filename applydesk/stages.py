@@ -1125,8 +1125,8 @@ def submitted_rank(rows: tuple[Row, ...]) -> dict[str, int]:
     by_applicant: dict[str, list[tuple[date, int, str]]] = {}
     for n, r in enumerate(rows):
         a = r.application
-        if a.state == "Submitted":
-            when = datetime.strptime(a.submitted, "%d %b %Y").date()
+        if a.state == "Submitted" and a.submitted_at is not None:
+            when = a.submitted_at.date()
             by_applicant.setdefault(a.email.lower(), []).append((when, n, a.public_id))
     return {
         app_id: rank

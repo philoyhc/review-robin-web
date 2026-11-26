@@ -100,7 +100,7 @@ def seed(
             exercises.record_sample(session, exercise, sample, owner)
         # Its applications (segment AD2J), each once.
         applications_added += applications.record_samples(
-            session, exercise, sample_data.applications_of(sample.public_id), owner
+            session, exercise, sample_data.sample_applications(sample.public_id), owner
         )
     session.commit()
     return SeedResult(

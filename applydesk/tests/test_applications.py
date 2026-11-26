@@ -72,3 +72,40 @@ def test_pending_many_reuses_a_pending_person_and_makes_one_per_address() -> Non
     made = session.scalars(select(Person).where(Person.email_key == "new@example.edu")).all()
     assert len(made) == 1 and made[0].email == "New@Example.edu"
     session.close()
+
+
+def test_the_pages_read_what_is_stored() -> None:
+    """Rung 3: `applications_of` reads the rows, in the order they came in,
+    in the shape the samples had; a stored change shows."""
+    model = "wa9juxbc2t"
+    read = sample_data.applications_of(model)
+    written = sample_data.sample_applications(model)
+    assert [a.public_id for a in read] == [a.public_id for a in written]
+    for got, was in zip(read, written, strict=True):
+        assert (got.applicant, got.email, got.title, got.state, got.submitted, got.dossier_id) == (
+            was.applicant,
+            was.email,
+            was.title,
+            was.state,
+            was.submitted,
+            was.dossier_id,
+        )
+    session = db.new_session()
+    row = session.scalars(
+        select(Application).where(Application.public_id == read[0].public_id)
+    ).one()
+    row.state, row.withdrawn_at = "withdrawn", datetime(2026, 9, 20, 12, tzinfo=UTC)
+    session.commit()
+    session.close()
+    assert sample_data.applications_of(model)[0].state == "Withdrawn"
+
+
+def test_an_ordinary_exercise_has_none_and_a_blank_dossier_finds_none() -> None:
+    from applydesk.models import Exercise
+
+    session = db.new_session()
+    session.add(Exercise(public_id="zz2zz2zz2z"))
+    session.commit()
+    session.close()
+    assert sample_data.applications_of("zz2zz2zz2z") == ()
+    assert sample_data.by_dossier("wa9juxbc2t", "") is None
