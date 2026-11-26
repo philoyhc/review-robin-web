@@ -1265,7 +1265,7 @@
         var vlist = p.closest("[data-pc-values]").querySelector("[data-pc-value-list]");
         var li = document.createElement("li"), inp = document.createElement("input"), rm = document.createElement("button");
         li.dataset.valueKey = "";
-        inp.className = "fc-in"; inp.setAttribute("data-pc", "value"); inp.setAttribute("aria-label", "Value " + (vlist.children.length + 1));
+        inp.className = "fc-in"; inp.setAttribute("data-pc", "value"); inp.maxLength = 200; inp.setAttribute("aria-label", "Value " + (vlist.children.length + 1));
         rm.type = "button"; rm.className = "btn btn-secondary btn-short"; rm.setAttribute("data-pc-act", "remove-value"); rm.textContent = "Remove";
         li.appendChild(inp); li.appendChild(rm); vlist.appendChild(li);
         inp.focus();

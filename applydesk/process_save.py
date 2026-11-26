@@ -185,13 +185,21 @@ def _field_def(got: dict[str, Any], what: str) -> Field:
     labels = _text(got.get("scale_labels", ""), what, _TEXT) if scale else ""
     return Field(
         kind,
-        _text(got.get("min", ""), what, _BOUND),
-        _text(got.get("max", ""), what, _BOUND),
-        _text(got.get("step", ""), what, _BOUND),
-        _text(got.get("options", ""), what, _TEXT),
+        _text(got.get("min", ""), f"{what} Min", _BOUND),
+        _text(got.get("max", ""), f"{what} Max", _BOUND),
+        _text(got.get("step", ""), f"{what} Step", _BOUND),
+        _options(_text(got.get("options", ""), what, _TEXT), what),
         scale,
         stages.scale_labels(labels),
     )
+
+
+def _options(text: str, what: str) -> str:
+    """A list's options, each within ``_LABEL``: a result's value is one of
+    them (its Value menu), stored at that width (cold read on #4233)."""
+    if any(len(o.strip()) > _LABEL for o in text.split(",")):
+        raise Refused(f"{what}'s option is too long.")
+    return text
 
 
 def _gate(v: Any, number: int, panels: frozenset[str], renamed: dict[str, str]) -> Gate:
@@ -200,7 +208,7 @@ def _gate(v: Any, number: int, panels: frozenset[str], renamed: dict[str, str]) 
     fields = tuple(
         ResponseField(
             _key(f.get("key"), f"{what}'s field key"),
-            _text(f.get("label"), f"{what}'s field", _LABEL),
+            _text(f.get("label"), f"{what}'s field label", _LABEL),
             _field_def(f, f"{what}'s field"),
             _flag(f.get("required"), f"{what}'s field"),
             _text(f.get("help", ""), f"{what}'s field help", _TEXT),
@@ -227,10 +235,10 @@ def _gate(v: Any, number: int, panels: frozenset[str], renamed: dict[str, str]) 
         results.append(
             GateResult(
                 _key(r.get("key"), f"{what}'s result key"),
-                _text(r.get("name"), f"{what}'s result", _LABEL),
+                _text(r.get("name"), f"{what}'s result name", _LABEL),
                 by_key[source].field if source else Field(),
                 derive,
-                _text(r.get("value", ""), f"{what}'s result", _LABEL),
+                _text(r.get("value", ""), f"{what}'s result value", _LABEL),
                 max(1, _whole(r.get("at_least"), f"{what}'s result")),
                 source,
                 _flag(r.get("ignore_zero"), f"{what}'s result"),
@@ -269,7 +277,7 @@ def _gate(v: Any, number: int, panels: frozenset[str], renamed: dict[str, str]) 
     return Gate(
         _key(got.get("key"), f"{what}'s key"),
         number,
-        _text(got.get("label"), what, _LABEL),
+        _text(got.get("label"), f"{what}'s name", _LABEL),
         via,
         tuple(results),
         _rule(got.get("rule"), f"{what}'s rule"),
@@ -316,7 +324,7 @@ def _outcome(v: Any, number: int) -> Outcome:
     return Outcome(
         _key(got.get("key"), f"{what}'s key"),
         number,
-        _text(got.get("label"), what, _LABEL),
+        _text(got.get("label"), f"{what}'s name", _LABEL),
         tuple(v for v, _ in kept),
         _when(got.get("due", ""), f"{what}'s due"),
         "",

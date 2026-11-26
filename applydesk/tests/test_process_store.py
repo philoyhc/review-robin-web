@@ -512,3 +512,103 @@ def test_value_keys_are_read_from_the_snapshot() -> None:
         process_save._outcome({**raw, "value_keys": ["v1"]}, 1)  # pyright: ignore[reportPrivateUsage]
     with pytest.raises(SaveRefused):
         process_save._outcome({**raw, "value_keys": ["bad key", "", ""]}, 1)  # pyright: ignore[reportPrivateUsage]
+
+
+def _gate_post(
+    field: dict[str, object] | None = None,
+    result: dict[str, object] | None = None,
+    **over: object,
+) -> dict[str, object]:
+    """A gate as Process posts it: one Integer field, one result reading it."""
+    base_field: dict[str, object] = {
+        "key": "f1",
+        "label": "Rating",
+        "type": "integer",
+        "min": "1",
+        "max": "5",
+        "step": "",
+        "options": "",
+        "required": False,
+        "help": "",
+    }
+    base_result: dict[str, object] = {
+        "key": "r1",
+        "name": "Mean",
+        "source": "f1",
+        "derive": "mean",
+        "value": "",
+        "at_least": 1,
+        "ignore_zero": False,
+    }
+    gate: dict[str, object] = {
+        "key": "g9",
+        "label": "Read",
+        "mode": "automatic",
+        "fields": [{**base_field, **(field or {})}],
+        "results": [{**base_result, **(result or {})}],
+        "sources": [],
+        "total": {"min": 0, "max": 0},
+        "confidential": False,
+        "description": "",
+        "rule": None,
+        "from": "",
+        "to": "",
+    }
+    gate.update(over)
+    return gate
+
+
+_WIDE = "x" * 201
+
+
+@pytest.mark.parametrize(
+    ("post", "said"),
+    [
+        (_gate_post(label=_WIDE), "Gate 1's name is too long."),
+        (_gate_post(field={"label": _WIDE}), "Gate 1's field label is too long."),
+        (_gate_post(field={"min": "1" * 33}), "Gate 1's field Min is too long."),
+        (_gate_post(field={"max": "9" * 33}), "Gate 1's field Max is too long."),
+        (_gate_post(field={"step": "1" * 33}), "Gate 1's field Step is too long."),
+        (_gate_post(result={"name": _WIDE}), "Gate 1's result name is too long."),
+        (_gate_post(result={"value": _WIDE}), "Gate 1's result value is too long."),
+        (
+            _gate_post(field={"type": "list", "min": "", "max": "", "options": f"Yes, {_WIDE}"}),
+            "Gate 1's field's option is too long.",
+        ),
+        (
+            _gate_post(sources=[{"kind": "panel", "ref": _WIDE, "min": 1, "max": 1}]),
+            "Gate 1's source is too long.",
+        ),
+    ],
+)
+def test_gate_text_wider_than_its_column_is_refused(post: dict[str, object], said: str) -> None:
+    """Codex on cordware#230: text the parser took but its column could
+    not hold (``String(200)``, a field's bounds ``String(32)``) failed the
+    write on Postgres, a 500 for the whole Process save; SQLite does not
+    enforce the width. Each is refused at its column's width, by name."""
+    with pytest.raises(process_save.Refused) as refused:
+        process_save._gate(post, 1, frozenset(), {})  # pyright: ignore[reportPrivateUsage]
+    assert str(refused.value) == said
+
+
+def test_gate_text_at_its_column_width_is_kept() -> None:
+    post = _gate_post(
+        label="x" * 200,
+        field={"label": "x" * 200, "min": "1", "max": "9" * 32},
+        result={"name": "x" * 200},
+    )
+    gate = process_save._gate(post, 1, frozenset(), {})  # pyright: ignore[reportPrivateUsage]
+    assert len(gate.label) == 200 and len(gate.fields[0].field.max) == 32
+
+
+@pytest.mark.parametrize(
+    ("post", "said"),
+    [
+        ({"key": "o1", "label": _WIDE, "values": ["Yes"]}, "Outcome 1's name is too long."),
+        ({"key": "o1", "label": "Shortlist", "values": [_WIDE]}, "Outcome 1's values is too long."),
+    ],
+)
+def test_outcome_text_wider_than_its_column_is_refused(post: dict[str, object], said: str) -> None:
+    with pytest.raises(process_save.Refused) as refused:
+        process_save._outcome(post, 1)  # pyright: ignore[reportPrivateUsage]
+    assert str(refused.value) == said
