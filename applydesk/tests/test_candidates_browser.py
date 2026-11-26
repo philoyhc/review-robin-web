@@ -44,7 +44,7 @@ def test_the_list_is_kept_as_it_is_changed(page: Page) -> None:
     found.locator("button").click()
     row = item.locator("[data-cand-list] tr", has_text="zoe.candidate@example.edu")
     row.wait_for()
-    assert item.locator("[data-cand-count]").text_content() == "1 person"
+    assert item.locator("[data-cand-count]").text_content() == "1 dossier"
     row.locator("[data-cand-remove]").click()
     item.locator("[data-cand-none]").wait_for()
     item.locator("[data-cand-file]").set_input_files(
@@ -91,7 +91,7 @@ def test_candidates_moved_to_another_stage_shows_the_list_as_it_stands(page: Pag
     other.locator('[data-pc-act="candidates"]').click()
     moved = other.locator('.pc-item[data-item="candidates"]')
     assert "zoe.candidate@example.edu" in (moved.locator("[data-cand-list]").text_content() or "")
-    assert moved.locator("[data-cand-count]").text_content() == "1 person"
+    assert moved.locator("[data-cand-count]").text_content() == "1 dossier"
 
 
 def test_changes_are_sent_one_at_a_time(page: Page) -> None:
@@ -196,4 +196,4 @@ def test_an_answer_after_a_move_redraws_the_item_on_the_page(page: Page) -> None
     held.pop().fallback()
     moved = other.locator('.pc-item[data-item="candidates"]')
     moved.locator("[data-cand-list] tr", has_text="zoe.candidate@example.edu").wait_for()
-    assert moved.locator("[data-cand-count]").text_content() == "1 person"
+    assert moved.locator("[data-cand-count]").text_content() == "1 dossier"

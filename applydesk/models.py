@@ -175,6 +175,11 @@ class Exercise(Base):
     sends_saved: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=false()
     )
+    # How many dossiers one person may hold (segment AD2K, ruling 83), set
+    # on the item that populates them: 1 to ``candidates.MAX_PER_PERSON``.
+    dossiers_per_person: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
 
 
 class ExerciseTag(Base):
@@ -442,12 +447,14 @@ class OutcomeRelease(Base):
 
 
 class Candidate(Base):
-    """Someone on an exercise's Candidates list (ruling 77): added by hand,
-    through the people search or a CSV, once per exercise; removing them
-    sets ``removed_at``, adding them again clears it."""
+    """One entry on an exercise's Candidates list, shown as *Populate
+    Dossiers* (rulings 77, 83): someone added by hand, through the people
+    search or a CSV, one dossier each, so a person may hold several, up to
+    the exercise's ``dossiers_per_person`` (segment AD2K). Removing an entry
+    sets ``removed_at``; adding the person again is a new entry."""
 
     __tablename__ = "candidate"
-    __table_args__ = (UniqueConstraint("exercise_id", "person_id", name="uq_candidate_pair"),)
+    __table_args__ = (Index("ix_candidate_person", "exercise_id", "person_id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     exercise_id: Mapped[int] = _exercise_fk("candidate")
@@ -455,6 +462,8 @@ class Candidate(Base):
         ForeignKey("person.id", name="fk_candidate_person"), nullable=False
     )
     via: Mapped[str] = mapped_column(String(8), nullable=False)  # "search" or "csv"
+    # What tells one entry of a person's from another, as the CSV gave it.
+    title: Mapped[str] = mapped_column(String(300), nullable=False, default="", server_default="")
     added_by_id: Mapped[int | None] = mapped_column(
         ForeignKey("person.id", name="fk_candidate_added_by")
     )
@@ -496,9 +505,9 @@ class Application(Base):
 class Dossier(Base):
     """The record a panel opens about one candidate's one entry (segment
     AD2F; rulings 25, 26, 32, 81): its own public ID, never the
-    application's, and its source, an application or a Candidates row,
-    exactly one of the two, each at most once. Retiring sets
-    ``retired_at`` (ruling 74)."""
+    application's, and its source, a Candidates entry or an application, or
+    both once a later Form adds to a populated dossier (ruling 83, AD4),
+    each at most once. Retiring sets ``retired_at`` (ruling 74)."""
 
     __tablename__ = "dossier"
     __table_args__ = (
@@ -506,7 +515,7 @@ class Dossier(Base):
         UniqueConstraint("application_id", name="uq_dossier_application"),
         UniqueConstraint("candidate_id", name="uq_dossier_candidate"),
         CheckConstraint(
-            "(application_id IS NULL) <> (candidate_id IS NULL)", name="ck_dossier_one_source"
+            "application_id IS NOT NULL OR candidate_id IS NOT NULL", name="ck_dossier_a_source"
         ),
     )
 
