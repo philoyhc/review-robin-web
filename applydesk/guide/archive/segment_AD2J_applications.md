@@ -1,6 +1,6 @@
 # Segment AD2J — Applications
 
-**Opened:** 2026-11-26 · **Theme:** applications move from code into the database, before AD2F's dossiers point at them · **Related:** `applydesk/guide/ad2_series.md`, `applydesk/guide/ad2_deferred_findings.md` (AD-38), `applydesk/spec/applications.md`, rulings 45, 49, 70, 73, 74 and 81 (`applydesk/guide/todo_master.md`)
+**Opened:** 2026-11-26 · **Closed:** 2026-11-26 · **Theme:** applications move from code into the database, before AD2F's dossiers point at them · **Related:** `applydesk/guide/ad2_series.md`, `applydesk/guide/ad2_deferred_findings.md` (AD-38), `applydesk/spec/applications.md`, rulings 45, 49, 70, 73, 74 and 81 (`applydesk/guide/todo_master.md`)
 
 ## Opportunity
 
@@ -49,6 +49,24 @@ Taken 2026-11-26 at `9cb7d4967`.
 | Test files naming applications | 20 | `grep -rln "applications_of\|by_dossier\|APPLICATIONS\|\.submitted\b" applydesk/tests \| wc -l` |
 | Specs | 3 (`applications.md`, `architecture.md`, `permissions.md`) | `grep -rli application applydesk/spec/*.md` |
 
+## Status
+
+**Closed 2026-11-26.** Intended versus done:
+
+- **The ladder held:** #4238 the plan, #4239 rung 2 (the table and the seed), #4240 rung 3 (the readers), then the close.
+- **One cold read**, at rung 3, on the cumulative diff from `9ce697102`. Its findings, fixed in #4240:
+  - *Last applications* (`last_submitted`) took the last row in creation order and the rule's *last N* (`submitted_rank`) the day, so the two could name different applications. Both rank by time in UTC, ties by public ID; a draft by its started time.
+  - The model exercise's pages failed on a database migrated but not seeded; its rows are empty instead.
+  - A submitted sample now records the exercise's form revision.
+- **Diverged from the plan, decided at build:**
+  - The row keeps the applicant's name as given (`name`): a pending person has none, as Panels' roster entry keeps its own.
+  - `started_at` added: the day a draft was last touched, which *Last applications* falls back on.
+  - `/me` reads the store, with the samples' IDs (`MINE`, `MY_REVIEWS`) until AD4.
+  - `people.pending_many` makes the applicants in one query and one flush: per address, the seed cost 0.15 s on every test.
+  - The samples' applicants are pending people, so on localhost they sit under Workspace users' *Unused*, as candidates and panel members do.
+  - Review Robin's handoff test seeds Apply Desk's database, since the bundles it sends read stored applications.
+- **Left for later:** the immutable form version, answers and nominations (AD4); *Withdraw* and *Return to draft* as actions (AD4, AD2H); the allowance per applicant (AD4).
+
 ## PR ladder
 
 1. **Plan** (this file), the series row and the order. Prose only.
@@ -65,7 +83,7 @@ Taken 2026-11-26 at `9cb7d4967`.
 
 - `application` round-trips on SQLite and Postgres 16 (`ci-postgres.yml`).
 - `python -m applydesk.seed` writes 108 applications; a second run writes none.
-- No reader imports `sample_data.APPLICATIONS` (`grep -rn "APPLICATIONS" applydesk --include=*.py` names only `sample_data.py` and the seed).
+- No reader imports `sample_data.APPLICATIONS` (`grep -rn "APPLICATIONS" applydesk --include=*.py | grep -v /tests/` names only `sample_data.py`).
 - `stages.submitted_rank` no longer calls `strptime`.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py AD2J` exits 0; any warning adjudicated
@@ -75,7 +93,7 @@ Taken 2026-11-26 at `9cb7d4967`.
 
 ## Open questions
 
-- **Applicants' pending persons on a shared database:** the seed runs only locally (ruling 74), so none reach Azure. Decided by ruling 74; listed for the cold read.
+- ~~Applicants' pending persons on a shared database~~: none reach Azure; the seed runs only locally (ruling 74).
 
 ## Out of scope
 
