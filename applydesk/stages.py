@@ -800,10 +800,11 @@ def sample_keys(exercise_id: str) -> frozenset[str]:
 
 def plan_of(exercise_id: str) -> Plan:
     """The stages and every application's cells for one exercise. An
-    exercise not yet set up has one stage, holding the form, as a
-    new exercise starts (ruling 15). Once Process has saved it, its stored
-    stages; a sample's cells stay the sample's until AD2F stores them. A
-    rule's form condition names its question by key (``form_keyed``)."""
+    exercise not yet set up has one stage: a sample's holds the form, an
+    ordinary one's nothing, as a new exercise starts (ruling 83). Once
+    Process has saved it, its stored stages; a sample's cells stay the
+    sample's until AD2F stores them. A rule's form condition names its
+    question by key (``form_keyed``)."""
     apps = sample_data.applications_of(exercise_id)
     saved = _stored_stages(exercise_id)
     if saved is not None:

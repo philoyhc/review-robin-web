@@ -41,6 +41,7 @@ from applydesk import (
     stages,
     team,
     timeline,
+    timeline_checks,
     workflow,
 )
 from applydesk import exercises as exercise_store
@@ -573,8 +574,8 @@ def _save_process(request: Request, exercise_id: str, sent: object) -> Response:
         taken = process_store.taken_keys(session, exercise.public_id)
         built, ticks = process_save.build(sent, exercise.public_id, renamed, taken)
         process_store.save(session, exercise.public_id, built, opened, actor)
-        # How many dossiers one person may hold, from the populating item
-        # (segment AD2K): after the save, so its minting reads the old value.
+        # How many dossiers one person may hold, one setting for the
+        # exercise shown on each populating item (segment AD2K).
         most = process_save.per_person(sent)
         if most is not None:
             candidates.set_per_person(session, exercise.public_id, most, actor)
@@ -1769,6 +1770,8 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         # Segment AD2K: how many dossiers one person may hold, on the
         # populating item.
         per_person=_per_person_of(exercise.public_id) if section == "process" else 1,
+        # The timeline checked as a whole, as saved (segment AD2K).
+        checked=timeline_checks.of(exercise.public_id) if section == "process" else None,
         short=clock.short,
         rule_text=stages.rule_text,
         rule_json=stages.rule_json,

@@ -53,10 +53,12 @@ def test_new_exercise_makes_a_blank_draft_and_lands_on_its_home() -> None:
     assert "Scratch" not in row and "/discard" not in row
     # Newest first, before the sample.
     assert lobby.index(made) < lobby.index("wa9juxbc2t")
-    # Its form is blank (Codex on #4024), and Home says so.
+    # Its form is blank (Codex on #4024); its first stage holds nothing
+    # (segment AD2K), and Home says that blocks publishing.
     form = client.get(f"{LOBBY}/{made}/form").text
     assert "Project title" not in form
-    assert "Application form" in home
+    assert "Application form" not in home
+    assert "The first stage holds no Form and no Populate Dossiers" in home
     # Each Setup page renders it (the lookups read its row).
     for section in ("process", "form", "panels", "emails", "dossiers", "evaluations"):
         assert client.get(f"{LOBBY}/{made}/{section}").status_code == 200, section

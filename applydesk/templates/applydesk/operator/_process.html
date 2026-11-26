@@ -43,6 +43,13 @@
       </ol>
       <p class="muted fb-counts" data-pc-counts>{{ plan.stages | length }} {{ "stage" if plan.stages | length == 1 else "stages" }} · {{ gates | length }} {{ "gate" if gates | length == 1 else "gates" }} · {{ outs | length }} {{ "outcome" if outs | length == 1 else "outcomes" }}</p>
       {% if issues %}<ul class="pc-issues" data-pc-issues>{% for i in issues %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
+      {# The timeline as a whole, as saved (segment AD2K, ruling 83): errors
+         keep the first stage from publishing; warnings publish anyway. #}
+      {% if checked.errors or checked.warnings %}<div class="pc-checked" data-pc-checked>
+        <p class="muted pc-hint">As saved:</p>
+        {% if checked.errors %}<ul class="pc-issues" data-pc-errors>{% for i in checked.errors %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
+        {% if checked.warnings %}<ul class="pc-warnings muted" data-pc-warnings>{% for w in checked.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
+      </div>{% endif %}
       <p class="visually-hidden" data-pc-live aria-live="polite"></p>
       <div class="btnrow">
         <button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}" data-fb-snapshot="applydeskProcessSnapshot" data-revision="{{ process_revision }}" data-fb-saved="Saved.">Save</button>
@@ -1660,12 +1667,10 @@
       // The revision this page opened at: one opened before Process last
       // saved is refused, its keys perhaps another column's (Codex on #4028).
       revision: Number((root.querySelector("[data-fb-save]") || { dataset: {} }).dataset.revision || 0),
-      // Dossiers per person (segment AD2K): the first stage's populating
-      // item's, else null, unchanged.
+      // Dossiers per person (segment AD2K): one setting, every box kept
+      // the same (below); null, unchanged, where no item shows it.
       per_person: (function () {
-        var first = cards()[0];
-        var item = first && (items(first, "candidates")[0] || items(first, "form")[0]);
-        var box = item && item.querySelector('[data-rel="per-person"]');
+        var box = root.querySelector('#pc-cards [data-rel="per-person"]');
         return box ? Number(box.value) : null;
       })(),
       stages: cards().map(function (card) {
@@ -1809,6 +1814,19 @@
     var rm = e.target.closest("[data-cand-remove]");
     if (rm) { change(item, { action: "remove", entry_id: Number(rm.dataset.candRemove) }); return; }
     if (e.target.closest("[data-cand-csv]")) item.querySelector("[data-cand-file]").click();
+  });
+  // Dossiers per person is one setting for the exercise: an edit on any
+  // item's box is shown on every other, so none is left behind (cold read).
+  root.addEventListener("input", function (e) {
+    if (!e.target.matches('[data-rel="per-person"]')) return;
+    root.querySelectorAll('[data-rel="per-person"]').forEach(function (box) {
+      if (box !== e.target) box.value = e.target.value;
+    });
+    document.querySelectorAll('template[id^="pc-new-"]').forEach(function (tpl) {
+      tpl.content.querySelectorAll('[data-rel="per-person"]').forEach(function (box) {
+        box.setAttribute("value", e.target.value);
+      });
+    });
   });
   root.addEventListener("change", function (e) {
     if (!e.target.matches("[data-cand-file]")) return;

@@ -42,6 +42,8 @@
             {% if sr.setup or sr.blocking %}<span class="tl-op-h">Blocking publication</span>
             <ul class="tl-op-list" data-tl-blocking>{% for label, tab in sr.setup %}<li><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ ('/' ~ tab if tab else '')) }}{{ '' if tab else '#details' }}">{{ label }}</a> not set</li>{% endfor %}{% for p in sr.blocking %}<li>{{ p }}</li>{% endfor %}</ul>
             {% else %}<span>Ready to publish.</span>{% endif %}
+            {% if sr.warnings %}<span class="tl-op-h">Worth a look</span>
+            <ul class="tl-op-list" data-tl-warnings>{% for w in sr.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
           {% elif sr.waiting %}<span>Waiting on: {{ sr.waiting | join("; ") }}.</span>{% endif %}
           <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Set on Process →</a></div>{% endif %}
         {% for r in ops[loop.index0] %}<div class="tl-op-row"><b>{{ r.label }} <span class="chip chip-{{ r.tone }}">{{ r.state }}</span></b><span>{{ r.detail }}</span>{% if r.gate %}{% if r.target %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/' ~ r.target) }}">Open Gate {{ r.gate }} →</a>{% endif %}{% elif r.target == "dossiers" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers') }}">Open Dossiers →</a>{% endif %}</div>{% endfor %}
