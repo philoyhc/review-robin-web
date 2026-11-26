@@ -125,3 +125,31 @@ def test_the_custom_sample_says_who_was_not_asked() -> None:
     notes = [r.cells["g1"].note for r in stages.plan_of(RA).rows if r.cells["g1"].value]
     assert any(n.endswith(" not asked") for n in notes)
     assert any(" not asked" not in n for n in notes)
+
+
+def test_text_wider_than_its_column_is_refused() -> None:
+    """Codex on cordware#230: a label the parser took but its column
+    (``String(200)``) could not hold failed the write on Postgres, a 500
+    for the whole Process save. The parser now refuses it, by name."""
+    field = {
+        "key": "f1",
+        "label": "x" * 201,
+        "type": "integer",
+        "min": "1",
+        "max": "5",
+        "step": "",
+        "options": "",
+        "required": False,
+        "help": "",
+    }
+    _, reply = _save(_client(), _gate(fields=[field]))
+    assert reply.status_code in (400, 422), reply.text
+    assert "too long" in reply.text
+    _, reply = _save(_client(), _gate(label="x" * 201))
+    assert reply.status_code in (400, 422) and "too long" in reply.text
+    bound = {**field, "label": "Score", "max": "9" * 33}
+    _, reply = _save(_client(), _gate(fields=[bound]))
+    assert reply.status_code in (400, 422) and "too long" in reply.text
+    ok = {**field, "label": "x" * 200, "max": "9" * 32}
+    _, reply = _save(_client(), _gate(fields=[ok]))
+    assert reply.status_code == 200, reply.text

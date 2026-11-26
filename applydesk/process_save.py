@@ -50,6 +50,13 @@ MAX_ITEMS = 50  # fields, sources, conditions, values: per list
 _KEY = re.compile(r"[a-z][a-z0-9]{0,15}")
 _COND_KINDS = ("status", "last", "out", "res", "ent", "comb", "form", "top")
 _TEXT = 2000
+#: A label, a result's name and value, a source's panel or question, an
+#: outcome's value, as their columns hold them (``models``: ``String(200)``).
+#: Wider text would pass here and fail the write on Postgres (Codex on
+#: cordware#230); SQLite does not enforce the width.
+_LABEL = 200
+#: A field's Min, Max and Step (``GateField``: ``String(32)``).
+_BOUND = 32
 #: A key the page made for a column it added, replaced on save.
 _PAGE_KEY = re.compile(r"([go])new[0-9]+")
 
@@ -178,9 +185,9 @@ def _field_def(got: dict[str, Any], what: str) -> Field:
     labels = _text(got.get("scale_labels", ""), what, _TEXT) if scale else ""
     return Field(
         kind,
-        _text(got.get("min", ""), what, 40),
-        _text(got.get("max", ""), what, 40),
-        _text(got.get("step", ""), what, 40),
+        _text(got.get("min", ""), what, _BOUND),
+        _text(got.get("max", ""), what, _BOUND),
+        _text(got.get("step", ""), what, _BOUND),
         _text(got.get("options", ""), what, _TEXT),
         scale,
         stages.scale_labels(labels),
@@ -193,7 +200,7 @@ def _gate(v: Any, number: int, panels: frozenset[str], renamed: dict[str, str]) 
     fields = tuple(
         ResponseField(
             _key(f.get("key"), f"{what}'s field key"),
-            _text(f.get("label"), f"{what}'s field"),
+            _text(f.get("label"), f"{what}'s field", _LABEL),
             _field_def(f, f"{what}'s field"),
             _flag(f.get("required"), f"{what}'s field"),
             _text(f.get("help", ""), f"{what}'s field help", _TEXT),
@@ -220,10 +227,10 @@ def _gate(v: Any, number: int, panels: frozenset[str], renamed: dict[str, str]) 
         results.append(
             GateResult(
                 _key(r.get("key"), f"{what}'s result key"),
-                _text(r.get("name"), f"{what}'s result"),
+                _text(r.get("name"), f"{what}'s result", _LABEL),
                 by_key[source].field if source else Field(),
                 derive,
-                _text(r.get("value", ""), f"{what}'s result"),
+                _text(r.get("value", ""), f"{what}'s result", _LABEL),
                 max(1, _whole(r.get("at_least"), f"{what}'s result")),
                 source,
                 _flag(r.get("ignore_zero"), f"{what}'s result"),
@@ -235,7 +242,7 @@ def _gate(v: Any, number: int, panels: frozenset[str], renamed: dict[str, str]) 
         kind = _text(src.get("kind"), f"{what}'s source", 20)
         if kind not in dict(stages.SOURCE_KINDS):
             raise Refused(f"{what} has a source of no known kind.")
-        ref = _text(src.get("ref", ""), f"{what}'s source")
+        ref = _text(src.get("ref", ""), f"{what}'s source", _LABEL)
         if kind == "panel":
             ref = renamed.get(ref, ref)
             if ref and ref not in panels and ref not in renamed.values():
@@ -262,7 +269,7 @@ def _gate(v: Any, number: int, panels: frozenset[str], renamed: dict[str, str]) 
     return Gate(
         _key(got.get("key"), f"{what}'s key"),
         number,
-        _text(got.get("label"), what),
+        _text(got.get("label"), what, _LABEL),
         via,
         tuple(results),
         _rule(got.get("rule"), f"{what}'s rule"),
@@ -297,7 +304,7 @@ def _outcome(v: Any, number: int) -> Outcome:
         weights.append((k, share))
     if len(weights) > MAX_ITEMS:
         raise Refused(f"{what} has too many weights.")
-    values = tuple(_text(x, f"{what}'s values") for x in _list(got.get("values"), what))
+    values = tuple(_text(x, f"{what}'s values", _LABEL) for x in _list(got.get("values"), what))
     # Each value's key, beside it (AD-57): "" for one the page added.
     raw_keys = _list(got.get("value_keys", [""] * len(values)), f"{what}'s values")
     if len(raw_keys) != len(values):
@@ -309,7 +316,7 @@ def _outcome(v: Any, number: int) -> Outcome:
     return Outcome(
         _key(got.get("key"), f"{what}'s key"),
         number,
-        _text(got.get("label"), what),
+        _text(got.get("label"), what, _LABEL),
         tuple(v for v, _ in kept),
         _when(got.get("due", ""), f"{what}'s due"),
         "",
