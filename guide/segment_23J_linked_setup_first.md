@@ -171,7 +171,7 @@ Real sends, and storing `session_home_url` with the gate's transfer record, are 
 
 ## Open questions
 
-- **A gate dropped after set-up:** its empty draft is removed by Review Robin's discard call (author, 2026-11-25; Semantics).
+- **A gate dropped after set-up:** its empty draft is removed by Review Robin's discard call (author, 2026-11-25; Semantics). Discard also removes any custom instrument built there; that is accepted (author, 2026-11-26).
 - **Who else can open the link?** The session is created as the operator who sets it up. Whether Apply Desk's other exercise operators become its Review Robin operators is `guide/rrw_permissions_update.md`'s question, decided with AD6 (author, 2026-11-25). Until then the link may refuse them.
 - ***Set up* in a draft exercise:** no, only once the exercise is published (author, 2026-11-25).
 
