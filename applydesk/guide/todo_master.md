@@ -782,6 +782,9 @@ the rulings it relied on but does not move them.
     - **Candidates absorbs *Create dossiers* and *Add dossiers*** (ruling
       26): its people search and CSV are the one way in for a candidate
       with no application.
+    - **Candidates feed gates when the timeline holds no form** (author,
+      2026-11-26, ruling 24's exercise with no form); with a form, they are
+      its roster. The at-submit or at-close choice comes with AD4.
     - Built in segment AD2F (`applydesk/guide/ad2_series.md`).
 82. **A change recomputes only the pairs it touches** (author,
     2026-11-26; AD-47), amending ruling 48:
