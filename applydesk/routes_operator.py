@@ -574,8 +574,8 @@ def _save_process(request: Request, exercise_id: str, sent: object) -> Response:
         taken = process_store.taken_keys(session, exercise.public_id)
         built, ticks = process_save.build(sent, exercise.public_id, renamed, taken)
         process_store.save(session, exercise.public_id, built, opened, actor)
-        # How many dossiers one person may hold, from the populating item
-        # (segment AD2K): after the save, so its minting reads the old value.
+        # How many dossiers one person may hold, one setting for the
+        # exercise shown on each populating item (segment AD2K).
         most = process_save.per_person(sent)
         if most is not None:
             candidates.set_per_person(session, exercise.public_id, most, actor)

@@ -39,12 +39,13 @@
 
 {% macro emails_chip(n) %}<span class="chip chip-mute" data-pi-emails>{{ "No email" if n == 0 else (n ~ (" email" if n == 1 else " emails")) }}</span>{% endmacro %}
 
-{# Segment AD2K (ruling 83): how many dossiers one person may hold, set on
-   whichever item populates them, the first stage's; saved with Process. #}
+{# Segment AD2K (ruling 83): how many dossiers one person may hold, one
+   setting for the exercise, shown on each Form and Populate Dossiers item
+   and kept the same on all of them (cold read); saved with Process. #}
 {% macro per_person_field() %}
   <div class="pc-row pi-sec">
     <label class="fc-l">Dossiers per person<input class="fc-in" type="number" min="1" max="20" step="1" data-rel="per-person" value="{{ per_person }}"></label>
-    <p class="pc-line muted pc-hint">1 keeps one dossier per person; more lets someone hold several, each its own entry. Read from the first stage's item.</p>
+    <p class="pc-line muted pc-hint">1 keeps one dossier per person; more lets someone hold several, each its own entry. One setting for the exercise.</p>
   </div>
 {% endmacro %}
 

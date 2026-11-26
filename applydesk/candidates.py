@@ -24,7 +24,7 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from applydesk import audit, dossiers, people
@@ -75,9 +75,17 @@ class Imported:
 def _exercise(session: Session, public_id: str, *, lock: bool = False) -> Exercise:
     query = select(Exercise).where(Exercise.public_id == public_id, Exercise.deleted_at.is_(None))
     # Locked while an add counts a person's entries, so two adds at once
-    # cannot both pass the per-person limit (Postgres; SQLite writes one at
-    # a time anyway).
+    # cannot both pass the per-person limit: the row lock on Postgres, and a
+    # no-op write on SQLite, which has no row locks but serializes writers
+    # (as `panels_store.lock`, cold read).
     found = session.scalar(query.with_for_update() if lock else query)
+    if found is not None and lock:
+        session.execute(
+            update(Exercise)
+            .where(Exercise.id == found.id)
+            .values(dossiers_per_person=Exercise.dossiers_per_person)
+            .execution_options(synchronize_session=False)
+        )
     if found is None:
         raise Refused("That exercise is no longer on record.")
     if found.archived_at is not None:
