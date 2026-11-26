@@ -83,6 +83,14 @@ def exercise_status(e: Exercise, now: datetime | None = None) -> str:
     return "Completed" if all(s == "Completed" for s in states) else "Published"
 
 
+def is_draft(e: Exercise) -> bool:
+    """Not yet published by either reading: its own state (a sample's) nor
+    its stages (`exercise_status`). An exercise made with New exercise is
+    built a Draft and published by its stages, so its state alone stays
+    Draft after publishing (Codex on cordware#230)."""
+    return e.state == "Draft" and exercise_status(e) == "Draft"
+
+
 def publish_problems(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
     """What keeps a stage from being published (AD-20): its dates, the
     stage before it, Home's details for the first, its form, and its

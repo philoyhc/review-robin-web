@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from applydesk import sample_data, stages, tones, workflow
+from applydesk import locks, sample_data, stages, tones, workflow
 from applydesk.sample_data import Exercise
 
 
@@ -55,7 +55,7 @@ def _gate(e: Exercise, g: stages.Gate) -> Row:
         state,
         tones.tone(state, "warn"),
         " · ".join(p for p in parts if p),
-        "" if e.state == "Draft" else g.key,
+        "" if locks.is_draft(e) else g.key,
         g.number,
     )
 

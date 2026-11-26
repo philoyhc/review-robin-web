@@ -240,3 +240,50 @@ def test_the_form_keeps_its_state_when_removed_and_added_back_later() -> None:
         assert process_store.form_state(session, OPEN) == "closed"
     finally:
         session.close()
+
+
+def test_a_draft_published_by_its_stages_opens_its_gate_pages() -> None:
+    """Codex on cordware#230: an exercise made a draft and published by
+    publishing a stage kept 404ing its gate's Evaluations page and
+    bundle, read from its own state; Process's gate card and Evaluations
+    kept saying it waits for publishing. Its stages say it is published."""
+    plan = stages.plan_of(DRAFT)
+    (gate,) = (c for c in plan.columns if isinstance(c, stages.Gate))
+    client = _client()
+    assert client.get(f"{LOBBY}/{DRAFT}/evaluations/{gate.key}").status_code == 404
+    session = db.new_session()
+    try:
+        published = tuple(replace(st, status="Published") for st in plan.stages)
+        process_store.save(session, DRAFT, published, 0, None)
+        session.commit()
+    finally:
+        session.close()
+    assert exercise_or_404(DRAFT).state == "Draft"  # its own, as before
+    assert client.get(f"{LOBBY}/{DRAFT}/evaluations/{gate.key}").status_code == 200
+    process = client.get(f"{LOBBY}/{DRAFT}/process").text
+    assert f"/evaluations/{gate.key}" in process
+    assert "Once the exercise is published" not in process
+    evaluations = client.get(f"{LOBBY}/{DRAFT}/evaluations").text
+    assert "Nothing to send yet" not in evaluations
+
+
+def test_process_reads_its_revision_before_its_timeline(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex on cordware#230: read after the timeline, a save landing
+    between would pair the old timeline with the new revision, and the
+    page's next save would overwrite that save unrefused."""
+    reads: list[str] = []
+    plan_of, revision = stages.plan_of, workflow.process_revision
+
+    def watched_plan(exercise_id: str) -> stages.Plan:
+        reads.append("plan")
+        return plan_of(exercise_id)
+
+    def watched_revision(exercise_id: str) -> int:
+        reads.append("revision")
+        return revision(exercise_id)
+
+    monkeypatch.setattr(stages, "plan_of", watched_plan)
+    monkeypatch.setattr(workflow, "process_revision", watched_revision)
+    assert _client().get(f"{LOBBY}/{DONE}/process").status_code == 200
+    assert "revision" in reads and "plan" in reads
+    assert reads.index("revision") < reads.index("plan")
