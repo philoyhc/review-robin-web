@@ -457,7 +457,6 @@ def _generated() -> tuple[Application, ...]:
 
 
 APPLICATIONS: tuple[Application, ...] = _WRITTEN + _generated()
-_DOSSIER_IDS = {a.public_id: a.dossier_id for a in APPLICATIONS}
 
 
 def _current_ras() -> tuple[Member, ...]:
@@ -1152,12 +1151,6 @@ def sample_applications(exercise_id: str) -> tuple[Application, ...]:
     """A sample exercise's applications as written here: what the seed
     records (segment AD2J). Pages read `applications_of`."""
     return tuple(a for a in APPLICATIONS if a.exercise_id == exercise_id)
-
-
-def sample_dossier_id(public_id: str) -> str:
-    """The dossier ID a sample application carries, else "": until AD2F
-    stores dossiers (ruling 81), the one place it is kept."""
-    return _DOSSIER_IDS.get(public_id, "")
 
 
 def applications_of(exercise_id: str) -> tuple[Application, ...]:

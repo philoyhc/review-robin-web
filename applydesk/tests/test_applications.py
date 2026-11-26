@@ -89,7 +89,7 @@ def test_the_pages_read_what_is_stored() -> None:
             was.title,
             was.state,
             was.submitted,
-            was.dossier_id,
+            was.dossier_id if was.state != "Draft" else "",  # a draft has none (AD2F)
         )
     session = db.new_session()
     row = session.scalars(
