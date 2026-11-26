@@ -27,7 +27,7 @@ The rule between them:
 Every value is kept, whatever is shown of it.
 
 - **The dossier is its own record, with or without an application** (rulings 32, 81). It carries its own ID, and pairs, cells, results, parts and the alias key hang off it, not the application. From the form it is minted at submit or at the form's close, the operator's choice, so a draft has none; from a Candidates item feeding gates, at publish and on each later add.
-- **What writes a dossier** (rulings 26, 77, 81): an application submitted through the form, or the Candidates item, by people search or CSV, where no form comes first; it absorbs ruling 26's *Create dossiers* and *Add dossiers*. A candidate with two applications has two dossiers.
+- **What writes a dossier** (rulings 26, 77, 81): an application submitted through the form, or *Populate Dossiers* (Candidates renamed, ruling 83), an entry per dossier, when it is the exercise's first item; it absorbs ruling 26's *Create dossiers* and *Add dossiers*. A later Form adds to dossiers already populated, never mints one. A candidate with two applications has two dossiers.
 - **Form answers**, as submitted. There are no uploads in the MVP (ruling 3).
 - **Evaluators' responses**, pulled from Review Robin.
   - Review Robin keeps nothing visible after its window (ruling 26).
@@ -107,6 +107,7 @@ Files for offline work, for operators only.
 | 79 | Visibility set where people read: each gate × panel for its window, each outcome for candidates and past evaluators (continue, add or reset); a candidate sees their own form; new items start hidden; each field keeps its ceiling |
 | 81 | The dossier is its own record, with or without an application; minted at submit or form close, or at publish from Candidates, which absorbs *Create dossiers* |
 | 82 | A change recomputes only the pairs of dossiers it touches that are neither approved nor hand-edited; none once the session opens |
+| 83 | The first item populates dossiers: a Form (a dossier per submission) or *Populate Dossiers* (Candidates renamed; an entry per dossier, a person may hold several); a later Form adds to existing dossiers through an entry rule; dossiers per person set on the populating item |
 
 **Superseded and not to be built:**
 - Ruling 5's "the dossier shows only the *Shown to reviewers* section" became ruling 26's parts, then ruling 68's grants per item, then ruling 79's views where people read.
