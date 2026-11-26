@@ -41,6 +41,7 @@ from applydesk import (
     stages,
     team,
     timeline,
+    timeline_checks,
     workflow,
 )
 from applydesk import exercises as exercise_store
@@ -1769,6 +1770,8 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         # Segment AD2K: how many dossiers one person may hold, on the
         # populating item.
         per_person=_per_person_of(exercise.public_id) if section == "process" else 1,
+        # The timeline checked as a whole, as saved (segment AD2K).
+        checked=timeline_checks.of(exercise.public_id) if section == "process" else None,
         short=clock.short,
         rule_text=stages.rule_text,
         rule_json=stages.rule_json,

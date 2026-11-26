@@ -43,6 +43,13 @@
       </ol>
       <p class="muted fb-counts" data-pc-counts>{{ plan.stages | length }} {{ "stage" if plan.stages | length == 1 else "stages" }} · {{ gates | length }} {{ "gate" if gates | length == 1 else "gates" }} · {{ outs | length }} {{ "outcome" if outs | length == 1 else "outcomes" }}</p>
       {% if issues %}<ul class="pc-issues" data-pc-issues>{% for i in issues %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
+      {# The timeline as a whole, as saved (segment AD2K, ruling 83): errors
+         keep the first stage from publishing; warnings publish anyway. #}
+      {% if checked.errors or checked.warnings %}<div class="pc-checked" data-pc-checked>
+        <p class="muted pc-hint">As saved:</p>
+        {% if checked.errors %}<ul class="pc-issues" data-pc-errors>{% for i in checked.errors %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
+        {% if checked.warnings %}<ul class="pc-warnings muted" data-pc-warnings>{% for w in checked.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
+      </div>{% endif %}
       <p class="visually-hidden" data-pc-live aria-live="polite"></p>
       <div class="btnrow">
         <button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}" data-fb-snapshot="applydeskProcessSnapshot" data-revision="{{ process_revision }}" data-fb-saved="Saved.">Save</button>

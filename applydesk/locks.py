@@ -18,7 +18,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 
-from applydesk import clock, sample_data, stages, tones, workflow
+from applydesk import clock, sample_data, stages, timeline_checks, tones, workflow
 from applydesk.sample_data import Exercise
 
 
@@ -109,6 +109,8 @@ def publish_problems(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
         out += [
             f"{label} is not set." for label, page in sample_data.setup_missing(e) if page == ""
         ]
+        # The timeline as a whole (segment AD2K, ruling 83).
+        out += timeline_checks.check(plan, timeline_checks.entries_of(e.public_id)).errors
     if st.form and sample_data.form_is_empty(e.public_id):
         out.append("The application form has no questions.")
     forms = sample_data.list_questions(e.public_id)
@@ -242,6 +244,8 @@ class StageRow:
     blocking: tuple[str, ...]
     setup: tuple[tuple[str, str], ...]
     waiting: tuple[str, ...]
+    # The timeline's warnings, on the first stage's draft row (segment AD2K).
+    warnings: tuple[str, ...] = ()
 
 
 def stage_rows(exercise: Exercise) -> list[StageRow]:
@@ -261,11 +265,13 @@ def stage_rows(exercise: Exercise) -> list[StageRow]:
         draft = status == "Draft"
         blocking = publish_problems(exercise, st) if draft else ()
         setup: tuple[tuple[str, str], ...] = ()
+        warnings: tuple[str, ...] = ()
         if i == 0 and draft:
             blocking = tuple(p for p in blocking if p not in linked)
             setup = tuple(missing)
+            warnings = timeline_checks.of(exercise.public_id).warnings
         waiting = outstanding(exercise, st) if status == "Overdue" else ()
-        rows.append(StageRow(st, status, blocking, setup, waiting))
+        rows.append(StageRow(st, status, blocking, setup, waiting, warnings))
     return rows
 
 
