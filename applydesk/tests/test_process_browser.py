@@ -860,7 +860,7 @@ def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
     box = gate.locator("[data-newpanel]")
     box.locator('[data-np="name"]').fill("Interview panel")
     box.locator('[data-np="members"]').fill("Daniel Koh, priya.raman@example.edu")
-    box.get_by_role("button", name="+ Panel").click()
+    box.get_by_role("button", name="+Panel").click()
     assert gate.locator("[data-pi-panel]").text_content() == "Interview panel 1 · Total 1"
     # Its members are on Panels, not listed here (author, 2026-11-17).
     assert gate.locator("[data-pc-members]").count() == 0
@@ -1007,7 +1007,7 @@ def test_a_source_takes_its_kind_and_its_bounds(page: Page) -> None:
 
 def test_a_row_s_plus_adds_the_next_source_under_it(page: Page) -> None:
     """The author, 2026-11-17: + before × adds a source, no separate
-    + Source while there are rows."""
+    +Source while there are rows."""
     gate = _peer_copy(page)
     assert gate.locator("[data-ps-headrow]").is_visible()  # over the rows
     gate.locator("[data-ps-row]").first.locator('[data-ps-act="insert"]').click()
@@ -1084,7 +1084,7 @@ def test_all_takes_the_whole_panel(page: Page) -> None:
 
 
 def test_a_nominated_source_shuts_the_new_panel_box(page: Page) -> None:
-    """The cold read on rungs 2-4: the + New panel box is the panel
+    """The cold read on rungs 2-4: the +New panel box is the panel
     menu's, so turning the source Nominated shuts it."""
     gate = _peer_copy(page)
     row = gate.locator("[data-ps-row]").nth(1)

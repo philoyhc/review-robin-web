@@ -389,7 +389,7 @@ def _items(v: Any, key: str) -> list[Any]:
 
 def made_panels(sent: Any, exercise_id: str) -> set[str]:
     """The panels the snapshot's gates name that the page made with
-    *+ New panel…* (``new-1``), not yet the exercise's."""
+    *+New panel…* (``new-1``), not yet the exercise's."""
     known = sample_data.panel_pools(exercise_id)
     found: set[str] = set()
     for st in _items(sent, "stages"):

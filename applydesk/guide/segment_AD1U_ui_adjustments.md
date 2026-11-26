@@ -228,3 +228,45 @@ None.
 ### Doc impact
 
 - `applydesk/spec/applications.md` — "The Archive": a row's name opens the exercise's Home.
+
+## Item 5 — Add buttons read `+Noun`, as Review Robin's
+
+### Opportunity
+
+Apply Desk's add buttons read `+ Stage`, `+ Gate`, `+ Candidates` and the rest,
+with a space; Review Robin's read `+Shape` and `+Instrument`, without one. The
+open decision *Back to Review Robin (AD1P)* asked which way to go.
+
+### Decision
+
+Apply Desk follows Review Robin: `+Noun`, no space (the author, 2026-11-26).
+Settles the open decision's `+ Noun` half. Rejected: changing Review Robin's,
+the older and larger set.
+
+### Status
+
+- **2026-11-26, the change:** every `+ Noun` label in Apply Desk's templates,
+  their scripts, its spec and the tests that name them, 27 files; the full
+  Apply Desk and unit suites pass.
+
+### PR ladder
+
+1. **The change:** the labels, the spec's wording and the tests.
+
+### Definition of done
+
+- No Apply Desk template carries `+ ` before a capitalized noun
+  (`grep -rnE "\+ [A-Z]" applydesk/templates` finds only arithmetic).
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py AD1U.5` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+None.
+
+### Doc impact
+
+- `applydesk/spec/applications.md` — every add button's label as `+Noun`.

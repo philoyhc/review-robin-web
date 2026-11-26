@@ -603,9 +603,9 @@ def test_a_card_s_buttons_sit_flush_right_in_order(page: Page) -> None:
     buttons = foot.locator("button")
     assert buttons.all_inner_texts() == [
         "Replicate",
-        "+ Question",
-        "+ Section",
-        "+ Page break",
+        "+Question",
+        "+Section",
+        "+Page break",
         "Delete",
     ]
     lefts = [b.evaluate("e => e.getBoundingClientRect().left") for b in buttons.all()]
@@ -618,7 +618,7 @@ def test_a_card_s_buttons_sit_flush_right_in_order(page: Page) -> None:
     assert max(gaps) < 200
 
 
-# --- Segment AD1F rung 2: + New panel on a Select people card (ruling 19) ---
+# --- Segment AD1F rung 2: +New panel on a Select people card (ruling 19) ---
 def _new_panel(page: Page) -> tuple[Locator, Locator]:
     page.goto(FORM)
     card = _card(page, "Preferred evaluator")
@@ -644,13 +644,13 @@ def test_new_panel_opens_its_box_and_keeps_the_choice(page: Page) -> None:
 def test_new_panel_refuses_what_it_cannot_make(page: Page) -> None:
     _, box = _new_panel(page)
     err = box.locator("[data-np-err]")
-    box.get_by_role("button", name="+ Panel").click()
+    box.get_by_role("button", name="+Panel").click()
     assert err.text_content() == "Name the panel. Add at least one member."
     box.locator('[data-np="name"]').fill("panel a")
     # Ruling 22: entries are looked up in the directory; one not found, or
     # a name two people share, stays in the box, said why.
     box.locator('[data-np="members"]').fill("kim@example.edu, DANIEL.KOH@example.edu")
-    box.get_by_role("button", name="+ Panel").click()
+    box.get_by_role("button", name="+Panel").click()
     assert err.text_content() == (
         "A panel is already called panel a. Not found in the directory: kim@example.edu."
     )
@@ -681,7 +681,7 @@ def test_new_panel_is_made_chosen_and_offered_everywhere(page: Page) -> None:
     members.press_sequentially("mei.chen@example.edu,")
     tokens.nth(2).locator(".token-x").click()  # × takes a pill out
     assert tokens.count() == 2
-    box.get_by_role("button", name="+ Panel").click()
+    box.get_by_role("button", name="+Panel").click()
     assert not box.is_visible()
     menu = card.locator('[data-f="pool"]')
     assert menu.evaluate("s => s.options[s.selectedIndex].textContent") == "Panel C"
@@ -690,12 +690,12 @@ def test_new_panel_is_made_chosen_and_offered_everywhere(page: Page) -> None:
     )
     live = page.locator("[data-np-live]").text_content() or ""
     assert "Panel C made, 2 people, and chosen." in live
-    # A card added after offers it too, before + New panel….
+    # A card added after offers it too, before +New panel….
     card.locator('[data-fc-act="new"]').click()
     added = page.locator("#fb-cards .fc[data-open]").nth(1)
     added.locator('[data-f="type"]').select_option("people")
     options = added.locator('[data-f="pool"] option').all_text_contents()
-    assert options[-2:] == ["Panel C", "+ New panel…"]
+    assert options[-2:] == ["Panel C", "+New panel…"]
     # Preview looks people up in it.
     page.locator("[data-fb-preview]").click()
     preview = page.locator("#fb-preview")
@@ -717,7 +717,7 @@ def test_new_panel_is_made_chosen_and_offered_everywhere(page: Page) -> None:
 
 
 def test_new_panel_goes_back_to_what_the_menu_shows(page: Page) -> None:
-    """Codex on #3876: a type change resets the menu in code; + New panel
+    """Codex on #3876: a type change resets the menu in code; +New panel
     and Cancel must leave Institution-wide, not the panel picked before."""
     card, box = _new_panel(page)
     box.get_by_role("button", name="Cancel").click()

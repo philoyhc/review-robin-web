@@ -26,7 +26,7 @@
         {% else %}{{ fc.field(c, summary, kept_size, card_types, people, url('/operator/exercises/' ~ exercise.public_id ~ '/panels'), open=single) }}{% endif %}
       {% endfor %}
     </div>
-    {# What + Question, + Section and + Page break add: the same macros as the
+    {# What +Question, +Section and +Page break add: the same macros as the
        server's own cards. #}
     <template id="fb-new-field">{{ fc.field(blank, summary, kept_size, card_types, people, url('/operator/exercises/' ~ exercise.public_id ~ '/panels'), open=True) }}</template>
     <template id="fb-new-section">{{ fc.section(blank_section, open=True) }}</template>

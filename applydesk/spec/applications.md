@@ -315,8 +315,8 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
 - **A gate** is named `Gate N · label` wherever it is listed or chosen (Home's
   timeline rows too), an outcome `Outcome N · label`.
 - **Controls.** *Required* and *Released* are checkboxes, not pills. An add
-  button reads `+ Noun` in a builder (*+ Panel*, *+ Gate*, *+ Question*),
-  *Add new* in a table's toolbar. Creating a panel is *+ Panel*, Secondary,
+  button reads `+ Noun` in a builder (*+Panel*, *+Gate*, *+Question*),
+  *Add new* in a table's toolbar. Creating a panel is *+Panel*, Secondary,
   wherever it is made. CSV files are *Upload CSV* and *Download CSV*, both
   Secondary. A cross-page link reads `Verb on Page →` (*Open Gate 2 →*,
   *Review Robin card →*, *Pairs (n) →*); `↓` jumps within a page.
@@ -530,7 +530,7 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     card's number. A new form is empty (one blank question), not the
     sample's. `sample_data.form_cards` and `form_heading` read it back.
   - **Process**, **Panels** and **Emails** save to the database for every
-    exercise, a panel made with *+ New panel…* on Form or Process with the
+    exercise, a panel made with *+New panel…* on Form or Process with the
     save that names it; their checks are in "The Process page", "The Panels
     page" and "The Emails page".
   - **Reload.** A save that keys something anew (a panel) reloads the page
@@ -592,11 +592,11 @@ blank exercise shows the form's own card and one empty String card, open.
   A photo is kept as a JPEG 600 px on its longer side, the other side by
   the ratio, rounded half up (4:5 is 480 × 600; 1:1 is 600 × 600). *Chosen
   from* is a menu of *Institution-wide*, then the exercise's panels by name
-  (`sample_data.Panel`), then *+ New panel…*. That choice opens a box under
+  (`sample_data.Panel`), then *+New panel…*. That choice opens a box under
   the row: *Panel name* and *Members*, a token box as Residential's people
   boxes are (names or emails, comma-separated, each found in the directory
   a pill with ×; one not found stays in the box with the reason), then
-  *+ Panel* (Secondary, as on Panels) and *Cancel*. A panel created joins every *Chosen from*
+  *+Panel* (Secondary, as on Panels) and *Cancel*. A panel created joins every *Chosen from*
   menu on the page and Preview's lookup, and is selected; it is stored, as a
   panel of the exercise, with the page's *Save* ("The Panels page"), under
   the exercise's lock, or not at all. *Edit on Panels →* beside the menu links to the chosen panel
@@ -625,8 +625,8 @@ blank exercise shows the form's own card and one empty String card, open.
   No card shows a number. A card with no question reads *Untitled
   question* (*Untitled text*, *Untitled section*).
 - **Buttons** along each card's foot, flush right, in this order:
-  *Replicate* (a field card only), *+ Question* (an empty String card),
-  *+ Section*, *+ Page break*, *Delete*. Each insert lands right after the
+  *Replicate* (a field card only), *+Question* (an empty String card),
+  *+Section*, *+Page break*, *Delete*. Each insert lands right after the
   card, and a new card opens. *Delete* has no confirmation and is disabled,
   with a reason in its title, on the form's last question or text card.
   Sections and page breaks never count toward the last card. A page break
@@ -903,16 +903,16 @@ but the lobby's *Stage* column reads:
 - **Ruling 15, enforced as it is edited.** One stage holds the form, anywhere;
   never the form and a gate together; one outcome at most per stage; an empty
   stage is allowed. A button that would break it is disabled with the reason in
-  its title: *+ Gate* on the form's stage, *+ Form* on a stage with gates or
-  when another holds it, *+ Outcome* on a stage with one. `stages.problems`
+  its title: *+Gate* on the form's stage, *+Form* on a stage with gates or
+  when another holds it, *+Outcome* on a stage with one. `stages.problems`
   words the same rules and the Outline names any breach.
-- **Buttons.** Along a card's foot, flush right: *Replicate*, *+ Stage*,
+- **Buttons.** Along a card's foot, flush right: *Replicate*, *+Stage*,
   *Delete*. Each insert lands after the card and opens. *Delete* has no
   confirmation and is disabled on the last stage. A replica leaves the form
   behind; its gates and outcome take keys of their own, and its rules and
   weights read them. Its gates' lines say their pages wait for the save (ruling 61), and its
-  ticked emails have no *Template →* until saved. Inside the card: *+ Gate* (after the last gate, before the
-  outcome), *+ Outcome*, *+ Form*; each item has *Remove the form* / *the gate*
+  ticked emails have no *Template →* until saved. Inside the card: *+Gate* (after the last gate, before the
+  outcome), *+Outcome*, *+Form*; each item has *Remove the form* / *the gate*
   / *the outcome*.
 - **Links in** (ruling 65). A hash names a card: `#form`, `#gate-<key>` or
   `#outcome-<key>`. Process opens and scrolls to it, on load and on a hash
@@ -971,12 +971,12 @@ but the lobby's *Stage* column reads:
     contact* and *Timezone* show read-only, linking to Home, where they are
     set: they are Review Robin's for every gate.
   - **Evaluators** (ruling 27): a row per ranked **source**, in order
-    (▲ ▼; a row's **+** adds the next, × removes; *+ Source* shows only
+    (▲ ▼; a row's **+** adds the next, × removes; *+Source* shows only
     when there is none), each a *Kind*, its *Min* and *Max* per dossier:
     - *Nominated*, the people a applicant named in a *Select people*
       question of Form, picked by its label and kept by its key, offered only
       when the form has one; or
-    - *Panel*, by the shared menu and *+ New panel…* box Form uses (above)
+    - *Panel*, by the shared menu and *+New panel…* box Form uses (above)
       with *Edit on Panels →*; a panel's members are on Panels, not listed.
       After its *Min* and *Max*, **All** (a Toggle, ruling 62) gives each
       dossier the whole panel: *Min* and *Max* show the panel's size and are
@@ -1009,7 +1009,7 @@ but the lobby's *Stage* column reads:
     each, edited in place: *Label*, *Type* (Integer, Integer (scale), Decimal,
     Decimal (scale), List or String, with Min/Max/Step, Max length or
     Options; `stages.FIELD_CHOICES`), *Required*, and *Help* (shown under the
-    field in Review Robin); *+ Field*, *Remove the field*.
+    field in Review Robin); *+Field*, *Remove the field*.
     A **scale** is stored as its number type plus a flag, as Review Robin
     keeps it; its Min/Max/Step line stays and a second line takes the
     optional *Start*, *Middle* and *End* labels (60 characters each; a typed
@@ -1026,7 +1026,7 @@ but the lobby's *Stage* column reads:
     Each shows its **Key**, read-only: what Review Robin reports the field's
     answers under. A new field takes `f<n>`, the first not in use on the gate.
     A gate with none lists one per result.
-  - **Results**: up to three (*+ Result* disabled at three), rows that read
+  - **Results**: up to three (*+Result* disabled at three), rows that read
     as Form's card summaries and edit in place. Each has a *Name*, the
     response field it collates (*From*), *Derived as*, and *From at least*
     responses (default 1; fewer and the result is none yet). A result whose
@@ -1082,7 +1082,7 @@ but the lobby's *Stage* column reads:
     a gate already set up or sent. A replicated stage's gates start off until
     saved. Simulated in the tab, sharing the store the Review Robin card
     reads (`applydesk-rr-setup:<exercise>`), until AD6 makes real calls.
-- **The outcome.** *Name*, *Due* (a date-time, blank for the stage's end), *Values* (a row each, *+ Value*, *Remove*; the list's order is the order of its values), *Rule*, and, when
+- **The outcome.** *Name*, *Due* (a date-time, blank for the stage's end), *Values* (a row each, *+Value*, *Remove*; the list's order is the order of its values), *Rule*, and, when
   more than one gate is in scope, the *Combined result*: a weight per gate's numeric result, as
   percentages; weights that all sit at 0 are no combined result, flagged only when a rule reads one. Scope is the gates since the previous outcome (ruling 13); the
   weights follow as gates are added, removed or moved, a new gate takes what is
@@ -1237,7 +1237,7 @@ but the lobby's *Stage* column reads:
     gates and outcomes saved and retired, and the new revision.
   - **The emails it ticks** are recorded with the save, in its transaction,
     for every exercise (`email_store.save_sends`; "The Emails page"). A
-    panel made with *+ New panel…* is
+    panel made with *+New panel…* is
     stored with the save, on a sample too ("The Panels page").
 - **The outcome values editor.** An outcome's values are rows, each carrying
   its key; a renamed value keeps its key and the page rewrites the rules
@@ -1250,7 +1250,7 @@ but the lobby's *Stage* column reads:
   and a list (name, email, when added, *Remove*). It is the form's roster
   when Who may apply is *Invitation only*; feeding gates as dossiers is not
   built. At most one stage holds it, with the form, with gates or alone
-  (`stages.problems`): *+ Candidates* is disabled with its reason once an
+  (`stages.problems`): *+Candidates* is disabled with its reason once an
   exercise has one, and *Take Candidates off this stage* removes the item,
   not the list. A person is listed once, and each add and removal is made at
   once, audited, not waiting for *Save*.
@@ -1309,8 +1309,8 @@ A panel made on Form or Process appears here once that page is saved.
     gate uses says that gate keeps it.
   - *Add new panel*: *Name*, then *People* (*None: a blank panel* or *Copy
     from* a panel). A blank panel takes *Members* in the token box Form's
-    *+ New panel…* has; a row is added for anyone not yet in the table.
-    *+ Panel* is Secondary.
+    *+New panel…* has; a row is added for anyone not yet in the table.
+    *+Panel* is Secondary.
   - *Upload*: *Upload CSV* and *Download CSV*. The CSV has `Name`, `Email` and
     `Note` and a column per panel by name, marked for each member; people not
     found in the directory are left out and named.
@@ -1381,7 +1381,7 @@ A panel made on Form or Process appears here once that page is saved.
   - **Sample exercises.** The sample's panels stand until the first save,
     which records them with the page's changes and keeps their keys.
   - **After a save** the page reloads to hold the keys kept.
-- **A panel made on Form or Process** (*+ New panel…*) is stored with that
+- **A panel made on Form or Process** (*+New panel…*) is stored with that
   page's own save, for every exercise (a sample's included), in the same
   transaction and under the
   exercise's lock, so a refusal of either keeps neither. It is minted a key,
@@ -1664,9 +1664,9 @@ the browser (`_gate_ops_js.html`):
 
 | Mode | Starts as | Operations |
 |---|---|---|
-| Automatic | every dossier filled as its sources give | *+ Pair*, *Remove* (then *Undo*): never re-run, only edited by hand (ruling 48) |
-| Suggested, then approved | the fill, each pair *Suggested* | *Approve* on any of a dossier's pairs approves them all, as ruling 34 has it (*Approved*, clicked again, takes them back; a pair added later waits for its own), *Approve all* (asking first while a dossier is short), *Remove* (then *Undo*), *+ Pair* |
-| Assigned by the operator | empty, every dossier *Not assigned* | *+ Pair*, *Remove* |
+| Automatic | every dossier filled as its sources give | *+Pair*, *Remove* (then *Undo*): never re-run, only edited by hand (ruling 48) |
+| Suggested, then approved | the fill, each pair *Suggested* | *Approve* on any of a dossier's pairs approves them all, as ruling 34 has it (*Approved*, clicked again, takes them back; a pair added later waits for its own), *Approve all* (asking first while a dossier is short), *Remove* (then *Undo*), *+Pair* |
+| Assigned by the operator | empty, every dossier *Not assigned* | *+Pair*, *Remove* |
 
 - **Ticks** (ruling 51). Each pair's row has a tick, in its first cell,
   and the header's ticks every pair on the page. With rows ticked,
@@ -1687,7 +1687,7 @@ the browser (`_gate_ops_js.html`):
   not. On load they are reconciled against the
   sample, the mode and the limits: a stale pair, an approval the mode lacks or
   an addition past a limit is dropped.
-- **+ Pair** opens a panel to choose a dossier and an evaluator. The
+- **+Pair** opens a panel to choose a dossier and an evaluator. The
   evaluators offered are the gate's panel members less the applicant and
   those already on the dossier; it refuses a pair that would pass the
   Total's max or the source's max, saying why. **Undo is held to the same
@@ -1697,7 +1697,7 @@ the browser (`_gate_ops_js.html`):
 - **Off** once the gate's session has opened (`workflow.gate_opened`: its
   pairs are Review Robin's to change), with the reason in each button's title;
   and off until the page's script has run.
-- **A blind or confidential gate's + Pair** still never offers an applicant
+- **A blind or confidential gate's +Pair** still never offers an applicant
   as their own evaluator: the page's data names no applicant, but gives each
   dossier the one panel member it may not take, its applicant when they sit
   on the gate's panels (author, 2026-11-18). AD2's server checks it again.

@@ -1830,7 +1830,7 @@ def page_data(
     only the page's), and each panel source's members, so a change shows
     in the states, the counts and the load line whatever page is open. A
     blind exercise or a confidential gate sends no applicant's name or
-    email; each dossier's fourth field is the one evaluator + Pair must
+    email; each dossier's fourth field is the one evaluator +Pair must
     leave out, the applicant when they sit on its panels, else "" (author,
     2026-11-18), so no one is paired with themself.
     ``query`` and ``first`` are the page's search and whether it is the

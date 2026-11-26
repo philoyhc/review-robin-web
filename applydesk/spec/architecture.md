@@ -225,7 +225,7 @@ save drops is retired.
   the revision, in the caller's transaction with the audit event. It returns
   the new revision. `in_use` is read under the lock, so a Process save adding
   a gate on a panel cannot land between the check and the save.
-- **`adopt`** stores the panels Form and Process make with *+ New panel…*,
+- **`adopt`** stores the panels Form and Process make with *+New panel…*,
   with that page's own save, under the same lock; a panel held by that name
   is that panel, and an adoption that adds nothing writes no save.
 - **`lock`** takes the exercise's row lock (`SELECT … FOR UPDATE`) and a

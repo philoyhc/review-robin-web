@@ -26,7 +26,7 @@ def client() -> TestClient:
 
 def _form(client: TestClient, path: str = FORM) -> str:
     """The card list alone: the page also carries the blank cards that
-    + New, + Section and + Page break clone (`<template>`)."""
+    + New, +Section and +Page break clone (`<template>`)."""
     text = client.get(path).text
     return text[text.index('id="fb-cards"') : text.index('<template id="fb-new-field">')]
 

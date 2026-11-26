@@ -955,8 +955,8 @@ Segments in order; each gets a plan in this folder when it starts.
 ## Open decisions
 
 - **Back to Review Robin (AD1P):** should RRW adopt anything Apply Desk
-  settled in its UI sweep, such as U10's link rules or `+ Noun` labels?
-  The author.
+  settled in its UI sweep, such as U10's link rules? The author. (Add
+  buttons: Apply Desk follows Review Robin's `+Noun`, AD1U Item 5.)
 - **Scratch exercises (AD1N): test applications**, so Dossiers and
   Evaluations can be walked on one too (*Add sample applicants*?), and
   the applicant's side with them; and **a sample exercise copied into

@@ -1,6 +1,6 @@
 {# Wires every panel menu on the page (`_panel_pick.html`, ruling 19):
-   choosing *+ New panel…* opens the box under it, the menu keeping what
-   it had; *+ Panel* checks the name and members, then adds the panel
+   choosing *+New panel…* opens the box under it, the menu keeping what
+   it had; *+Panel* checks the name and members, then adds the panel
    to every menu on the page (and to those its templates add) and to
    window.applydeskPools, and picks it. Text goes in by textContent only.
    A panel made here is kept on this page only. #}
@@ -41,7 +41,7 @@
     return d ? d.value : sel.options[0].value;
   }
   // The box opens under the menu; focus moves into it only after a
-  // pointer pick, so arrowing through a focused menu past "+ New panel…"
+  // pointer pick, so arrowing through a focused menu past "+New panel…"
   // does not pull the keyboard away (the live line says it opened).
   var pointer = false;
   function open(box, on) {
@@ -177,7 +177,7 @@
     if (e.target.closest && e.target.closest("select[data-panel-pick]")) pointer = false;
   }, true);
   // Capture: runs before the page's own input listeners, so a menu never
-  // shows "+ New panel…" as its choice to them.
+  // shows "+New panel…" as its choice to them.
   document.addEventListener("input", function (e) {
     var sel = e.target.closest && e.target.closest("select[data-panel-pick]");
     if (!sel) return;
