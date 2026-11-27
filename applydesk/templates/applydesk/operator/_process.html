@@ -1773,27 +1773,52 @@
         });
     });
   }
+  // The typeahead's offers (author, 2026-11-27): each match a datalist
+  // option, "Name (email)"; Add takes the one the box names, by its label
+  // or by its address typed whole.
   function found(item, got) {
-    var ul = item.querySelector("[data-cand-found]");
-    ul.textContent = "";
+    var list = item.querySelector("[data-cand-options]"), offers = {};
+    list.textContent = "";
+    function offer(label, email, body) {
+      var o = document.createElement("option");
+      o.value = label; list.appendChild(o);
+      offers[label.toLowerCase()] = body; offers[email.toLowerCase()] = body;
+    }
     got.on_record.forEach(function (p) {
-      var li = el("li"), b = el("button", "btn btn-secondary btn-short", "Add");
-      b.type = "button"; b.dataset.candAdd = JSON.stringify({ action: "add", person_id: p.id });
-      li.appendChild(el("span", "", (p.name || p.email) + (p.name ? " · " + p.email : ""))); li.appendChild(b); ul.appendChild(li);
+      offer(p.name ? p.name + " (" + p.email + ")" : p.email, p.email, { action: "add", person_id: p.id });
     });
     got.directory.forEach(function (u) {
-      var li = el("li"), b = el("button", "btn btn-secondary btn-short", "Add");
-      b.type = "button"; b.dataset.candAdd = JSON.stringify({ action: "add", object_id: u.object_id, address: u.address });
-      li.appendChild(el("span", "", u.name + " · " + u.address + " (directory)")); li.appendChild(b); ul.appendChild(li);
+      offer(u.name + " (" + u.address + ") · directory", u.address, { action: "add", object_id: u.object_id, address: u.address });
     });
-    if (!got.on_record.length && !got.directory.length) ul.appendChild(el("li", "muted", got.directory_failed ? "No one on record; the directory could not be searched." : "No one found."));
-    ul.hidden = false;
+    item._candOffers = offers;
+    if (!got.on_record.length && !got.directory.length) item.querySelector("[data-cand-said]").textContent = got.directory_failed ? "No one on record; the directory could not be searched." : "No one found.";
+    pickable(item);
+  }
+  function picked(item) {
+    var box = item.querySelector("[data-cand-search]");
+    return (item._candOffers || {})[box.value.trim().toLowerCase()] || null;
+  }
+  function pickable(item) {
+    var b = item.querySelector("[data-cand-add]"), ok = !!picked(item);
+    b.disabled = !ok;
+    if (ok) b.removeAttribute("title"); else b.title = "Pick someone from the list first";
+  }
+  function addPicked(item) {
+    var body = picked(item);
+    if (!body) return;
+    change(item, body);
+    item.querySelector("[data-cand-search]").value = "";
+    item.querySelector("[data-cand-options]").textContent = "";
+    item._candOffers = {};
+    pickable(item);
   }
   root.addEventListener("input", function (e) {
     if (!e.target.matches("[data-cand-search]")) return;
     var item = e.target.closest('.pc-item[data-item="candidates"]'), q = e.target.value.trim();
+    pickable(item);
+    if (picked(item)) return;  // an offer chosen from the list: nothing more to ask
     window.clearTimeout(timer);
-    if (q.length < 2) { item.querySelector("[data-cand-found]").hidden = true; return; }
+    if (q.length < 2) return;
     timer = window.setTimeout(function () {
       fetch(base + "/search?q=" + encodeURIComponent(q), { credentials: "same-origin" })
         .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -1801,16 +1826,15 @@
               function () { if (e.target.value.trim() === q) item.querySelector("[data-cand-said]").textContent = "The search failed: try again."; });
     }, 250);
   });
+  root.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" || !e.target.matches("[data-cand-search]")) return;
+    var item = e.target.closest('.pc-item[data-item="candidates"]');
+    if (picked(item)) { e.preventDefault(); addPicked(item); }
+  });
   root.addEventListener("click", function (e) {
     var item = e.target.closest('.pc-item[data-item="candidates"]');
     if (!item) return;
-    var add = e.target.closest("[data-cand-add]");
-    if (add) {
-      change(item, JSON.parse(add.dataset.candAdd));
-      item.querySelector("[data-cand-found]").hidden = true;
-      item.querySelector("[data-cand-search]").value = "";
-      return;
-    }
+    if (e.target.closest("[data-cand-add]")) { addPicked(item); return; }
     var rm = e.target.closest("[data-cand-remove]");
     if (rm) { change(item, { action: "remove", entry_id: Number(rm.dataset.candRemove) }); return; }
     if (e.target.closest("[data-cand-csv]")) item.querySelector("[data-cand-file]").click();

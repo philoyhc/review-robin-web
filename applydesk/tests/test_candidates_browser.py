@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from playwright.sync_api import Page, Route
+from playwright.sync_api import Locator, Page, Route
 
 from applydesk import candidates, db, people, process_store, stages
 from applydesk.tests.test_process_browser import ORIGIN
@@ -28,6 +28,19 @@ def _with_candidates() -> None:
         session.close()
 
 
+def _pick(item: Locator, typed: str, email: str) -> None:
+    """The typeahead (author, 2026-11-27): type, wait for the offer naming
+    ``email``, then choose it as the browser's list does, putting its label
+    in the box; Add is enabled only then."""
+    box = item.locator("[data-cand-search]")
+    box.fill(typed)
+    offer = item.locator(f'[data-cand-options] option[value*="{email}"]')
+    offer.wait_for(state="attached")
+    assert item.locator("[data-cand-add]").is_disabled()
+    box.fill(offer.get_attribute("value") or "")
+    assert item.locator("[data-cand-add]").is_enabled()
+
+
 def test_the_list_is_kept_as_it_is_changed(page: Page) -> None:
     _with_candidates()
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
@@ -39,9 +52,8 @@ def test_the_list_is_kept_as_it_is_changed(page: Page) -> None:
         stage.locator("[data-fc-toggle]").first.click()
     if not item.locator("[data-cand-search]").is_visible():
         item.locator("[data-pi-toggle]").click()
-    item.locator("[data-cand-search]").fill("zoe.cand")
-    found = item.locator("[data-cand-found] li", has_text="zoe.candidate@example.edu")
-    found.locator("button").click()
+    _pick(item, "zoe.cand", "zoe.candidate@example.edu")
+    item.locator("[data-cand-add]").click()
     row = item.locator("[data-cand-list] tr", has_text="zoe.candidate@example.edu")
     row.wait_for()
     assert item.locator("[data-cand-count]").text_content() == "1 dossier"
@@ -83,9 +95,8 @@ def test_candidates_moved_to_another_stage_shows_the_list_as_it_stands(page: Pag
             card.locator("[data-fc-toggle]").first.click()
     if not item.locator("[data-cand-search]").is_visible():
         item.locator("[data-pi-toggle]").click()
-    item.locator("[data-cand-search]").fill("zoe.cand")
-    found = item.locator("[data-cand-found] li", has_text="zoe.candidate@example.edu")
-    found.locator("button").click()
+    _pick(item, "zoe.cand", "zoe.candidate@example.edu")
+    item.locator("[data-cand-add]").click()
     item.locator("[data-cand-list] tr", has_text="zoe.candidate@example.edu").wait_for()
     first.locator('[data-pc-act="remove-candidates"]').click()
     other.locator('[data-pc-act="candidates"]').click()
@@ -185,11 +196,9 @@ def test_an_answer_after_a_move_redraws_the_item_on_the_page(page: Page) -> None
             card.locator("[data-fc-toggle]").first.click()
     if not item.locator("[data-cand-search]").is_visible():
         item.locator("[data-pi-toggle]").click()
-    item.locator("[data-cand-search]").fill("zoe.cand")
-    found = item.locator("[data-cand-found] li", has_text="zoe.candidate@example.edu")
-    found.wait_for()
+    _pick(item, "zoe.cand", "zoe.candidate@example.edu")
     page.route("**/candidates", hold)
-    found.locator("button").click()
+    item.locator("[data-cand-add]").click()
     page.wait_for_timeout(200)
     first.locator('[data-pc-act="remove-candidates"]').click()
     other.locator('[data-pc-act="candidates"]').click()
