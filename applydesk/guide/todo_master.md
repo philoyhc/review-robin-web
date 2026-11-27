@@ -833,6 +833,30 @@ the rulings it relied on but does not move them.
       made; the Form follows its dossiers per person. A Form after it is
       no longer an error: its entry rule defaults to every dossier (AD4).
 
+84. **The Form chooses who may apply; Create dossiers only creates**
+    (author, 2026-11-27), amending ruling 83's amendment:
+    - **Three ways in.** (1) *Create dossiers*, then a Form that writes to
+      the dossiers made and invites from them. (2) A Form open to anyone
+      signed in, creating dossiers as it receives submissions. (3) A Form
+      with an invite list, creating dossiers only for invitees who submit.
+      In (2) and (3), *+Create dossiers* is not offered.
+    - **The Form's *Who may apply*** is a dropdown: *Anyone signed in*,
+      *Invitees*, *Dossiers*. *Dossiers* is greyed out without a Create
+      dossiers earlier; with one, the box shows *Dossiers* and cannot be
+      changed. *Invitees* shows the invite list (search and CSV, one row
+      per person). Dossiers per person bounds each invitee's submissions,
+      so no one's dossiers are made in advance.
+    - **Details' *Who may apply* retires now**: the Form's dropdown is the
+      one place it is set.
+    - **Until a Form or Create dossiers exists**, a stage offers only those
+      two: *+Gate* and *+Outcome* wait.
+    - **Grip handles reorder a stage's items, within the stage**, refused
+      with the reason when a move breaks the rules above (the first stage
+      begins with a Form or Create dossiers; Create dossiers never after a
+      Form).
+    - **Built** in segment AD2I (`applydesk/guide/ad2_series.md`); a Form's
+      submissions joining dossiers stay AD4's.
+
 ## What a linked Review Robin gate needs (2026-11-16)
 
 Review Robin's side is built and closed (RRW segment 23F): a gate sent
