@@ -400,6 +400,43 @@ def test_an_invite_that_fails_keeps_its_pill(page: Page) -> None:
     assert lst.locator("[data-cand-list] tbody tr").count() == 1
 
 
+def test_a_name_waits_when_the_directory_is_down(page: Page) -> None:
+    """Codex on #4264: with the directory unreachable, a name matching one
+    person on record is not taken as them; it stays as typed and the line
+    says to try again. An exact address still resolves."""
+    import json
+
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Directory Down Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    page.goto(page.url + "/process")
+    stage = page.locator("#pc-cards > .fc").first
+    stage.locator('[data-pc-act="form"]').click()
+    stage.locator('[data-rel="who-may-apply"]').select_option("invitation")
+
+    def down(route: Route) -> None:
+        found = {
+            "on_record": [{"id": 1, "name": "Ada Lim", "email": "ada.lim@example.edu"}],
+            "directory": [],
+            "directory_failed": True,
+        }
+        route.fulfill(
+            status=200, body=json.dumps(found), headers={"content-type": "application/json"}
+        )
+
+    page.route("**/invitees/search?*", down)
+    lst = stage.locator('[data-cand-live][data-cand-kind="invitees"]')
+    entry = lst.locator("[data-cand-entry]")
+    entry.fill("Ada,")
+    lst.locator("[data-cand-said]").filter(has_text="could not be searched").wait_for()
+    assert lst.locator("[data-cand-tokens] .token").count() == 0
+    assert "Ada" in entry.input_value()
+    entry.fill("ada.lim@example.edu,")
+    lst.locator("[data-cand-tokens] .token").first.wait_for()
+
+
 def test_a_stages_items_reorder_within_the_rules(page: Page) -> None:
     """Ruling 84: a stage's gates swap by their grips and save in that
     order; a move putting a gate before Create dossiers, or the outcome

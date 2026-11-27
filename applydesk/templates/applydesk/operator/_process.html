@@ -2062,6 +2062,9 @@
         // hits are two accounts (an address reassigned, say), and the
         // entry stays to be told apart (Codex on #4264).
         if (exact.length) return exact.length === 1 ? exact[0] : null;
+        // A name matching one person on record is only that when the
+        // directory was searched too (Codex on #4264).
+        if (got.directory_failed) { item._dirDown = true; return null; }
         return hits.length === 1 ? hits[0] : null;
       });
   }
@@ -2103,7 +2106,8 @@
       res.forEach(function (r) { if (r[1]) pill(item, r[1]); else left.push(r[0]); });
       var rest = input.value;
       input.value = left.length ? left.join(", ") + (all && !rest ? "" : ", ") + rest : rest;
-      said.textContent = left.length ? "Not found, already invited, or more than one match: " + left.join(", ") + "." : "";
+      said.textContent = left.length ? "Not found, already invited, or more than one match: " + left.join(", ") + "." + (item._dirDown ? " The directory could not be searched: try again." : "") : "";
+      item._dirDown = false;
       addable(item);
     });
     item._settling = Promise.all([before, batch]);
