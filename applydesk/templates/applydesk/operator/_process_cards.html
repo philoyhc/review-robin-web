@@ -88,11 +88,18 @@
   <p class="pc-line">People added by hand, one dossier each. As the first item, each dossier goes to the gates that follow; on an <em>Invitation only</em> exercise, they are who may apply.</p>
   {{ per_person_field() }}
   <div data-cand-live>
-  <div class="pc-row pi-sec">
-    <label class="fc-l pc-wide">Add someone<input class="fc-in" type="search" data-cand-search placeholder="Search by name or email" autocomplete="off"></label>
-    <label class="fc-l">Or a file<button type="button" class="btn btn-secondary" data-cand-csv>Upload CSV…</button><input type="file" accept=".csv,text/csv" data-cand-file hidden></label>
+  {# A typeahead (author, 2026-11-27): every match the search returns is
+     listed under the box as the name is typed, whatever field it matched
+     (not the browser's own list, which hides those not holding what was
+     typed: Codex on #4255); Add takes the one picked, beside Upload CSV. #}
+  <div class="pc-cand-add pi-sec">
+    <div class="pc-cand-box">
+      <label class="fc-l">Add someone<input class="fc-in" type="search" data-cand-search role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pc-cand-options" placeholder="Search by name or email" autocomplete="off"></label>
+      <ul class="pc-cand-options" id="pc-cand-options" role="listbox" aria-label="Matches" data-cand-options hidden></ul>
+    </div>
+    <button type="button" class="btn btn-secondary" data-cand-add disabled title="Pick someone from the list first">Add</button>
+    <button type="button" class="btn btn-secondary" data-cand-csv>Upload CSV…</button><input type="file" accept=".csv,text/csv" data-cand-file hidden aria-label="CSV of people to add">
   </div>
-  <ul class="pc-cand-found" data-cand-found hidden></ul>
   <p class="pc-line muted pc-hint">A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier. Rows that do not read are listed back, not saved.</p>
   <p class="muted fb-said" data-cand-said role="status"></p>
   <ul class="pc-issues" data-cand-bad hidden></ul>

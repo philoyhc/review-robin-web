@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from playwright.sync_api import Page, Route
+from playwright.sync_api import Locator, Page, Route
 
 from applydesk import candidates, db, people, process_store, stages
 from applydesk.tests.test_process_browser import ORIGIN
@@ -28,6 +28,20 @@ def _with_candidates() -> None:
         session.close()
 
 
+def _pick(item: Locator, typed: str, email: str) -> None:
+    """The typeahead (author, 2026-11-27): type, wait for the match naming
+    ``email`` in the list under the box, then click it, putting its label
+    in the box; Add is enabled only then."""
+    box = item.locator("[data-cand-search]")
+    box.fill(typed)
+    offer = item.locator("[data-cand-options] li", has_text=email)
+    offer.wait_for()
+    assert item.locator("[data-cand-add]").is_disabled()
+    offer.click()
+    assert item.locator("[data-cand-options]").is_hidden()
+    assert item.locator("[data-cand-add]").is_enabled()
+
+
 def test_the_list_is_kept_as_it_is_changed(page: Page) -> None:
     _with_candidates()
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
@@ -39,9 +53,8 @@ def test_the_list_is_kept_as_it_is_changed(page: Page) -> None:
         stage.locator("[data-fc-toggle]").first.click()
     if not item.locator("[data-cand-search]").is_visible():
         item.locator("[data-pi-toggle]").click()
-    item.locator("[data-cand-search]").fill("zoe.cand")
-    found = item.locator("[data-cand-found] li", has_text="zoe.candidate@example.edu")
-    found.locator("button").click()
+    _pick(item, "zoe.cand", "zoe.candidate@example.edu")
+    item.locator("[data-cand-add]").click()
     row = item.locator("[data-cand-list] tr", has_text="zoe.candidate@example.edu")
     row.wait_for()
     assert item.locator("[data-cand-count]").text_content() == "1 dossier"
@@ -83,9 +96,8 @@ def test_candidates_moved_to_another_stage_shows_the_list_as_it_stands(page: Pag
             card.locator("[data-fc-toggle]").first.click()
     if not item.locator("[data-cand-search]").is_visible():
         item.locator("[data-pi-toggle]").click()
-    item.locator("[data-cand-search]").fill("zoe.cand")
-    found = item.locator("[data-cand-found] li", has_text="zoe.candidate@example.edu")
-    found.locator("button").click()
+    _pick(item, "zoe.cand", "zoe.candidate@example.edu")
+    item.locator("[data-cand-add]").click()
     item.locator("[data-cand-list] tr", has_text="zoe.candidate@example.edu").wait_for()
     first.locator('[data-pc-act="remove-candidates"]').click()
     other.locator('[data-pc-act="candidates"]').click()
@@ -185,11 +197,9 @@ def test_an_answer_after_a_move_redraws_the_item_on_the_page(page: Page) -> None
             card.locator("[data-fc-toggle]").first.click()
     if not item.locator("[data-cand-search]").is_visible():
         item.locator("[data-pi-toggle]").click()
-    item.locator("[data-cand-search]").fill("zoe.cand")
-    found = item.locator("[data-cand-found] li", has_text="zoe.candidate@example.edu")
-    found.wait_for()
+    _pick(item, "zoe.cand", "zoe.candidate@example.edu")
     page.route("**/candidates", hold)
-    found.locator("button").click()
+    item.locator("[data-cand-add]").click()
     page.wait_for_timeout(200)
     first.locator('[data-pc-act="remove-candidates"]').click()
     other.locator('[data-pc-act="candidates"]').click()
@@ -197,3 +207,170 @@ def test_an_answer_after_a_move_redraws_the_item_on_the_page(page: Page) -> None
     moved = other.locator('.pc-item[data-item="candidates"]')
     moved.locator("[data-cand-list] tr", has_text="zoe.candidate@example.edu").wait_for()
     assert moved.locator("[data-cand-count]").text_content() == "1 dossier"
+
+
+def test_a_directory_match_by_sign_in_name_is_offered(page: Page) -> None:
+    """Codex on #4255: typed by its sign-in name, a directory match whose
+    address differs is still offered, and Add takes it."""
+    _with_candidates()
+    page.route(
+        "**/candidates/search*",
+        lambda route: route.fulfill(
+            json={
+                "on_record": [],
+                "directory": [
+                    {
+                        "object_id": "o-9",
+                        "name": "Jane Tan",
+                        "address": "jane.tan@example.edu",
+                        "upn": "e0123456@u.edu",
+                    }
+                ],
+                "directory_failed": False,
+            }
+        ),
+    )
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
+    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
+    stage = page.locator("#pc-cards .pc").filter(
+        has=page.locator('.pc-item[data-item="candidates"]')
+    )
+    if not stage.locator(".fc-body").first.is_visible():
+        stage.locator("[data-fc-toggle]").first.click()
+    if not item.locator("[data-cand-search]").is_visible():
+        item.locator("[data-pi-toggle]").click()
+    _pick(item, "e0123", "e0123456@u.edu")
+    label = item.locator("[data-cand-search]").input_value()
+    assert label == "Jane Tan (jane.tan@example.edu) · e0123456@u.edu · directory"
+    item.locator("[data-cand-search]").fill("e0123456@u.edu")  # the sign-in name typed whole
+    assert item.locator("[data-cand-add]").is_enabled()
+
+
+def test_a_shown_label_adds_its_own_account_not_an_address_twin(page: Page) -> None:
+    """Codex on #4255: a person on record with no name is offered by their
+    address alone; a directory account sharing it must not take over that
+    pick. The address typed whole names two accounts, so it adds neither."""
+    _with_candidates()
+    page.route(
+        "**/candidates/search*",
+        lambda route: route.fulfill(
+            json={
+                "on_record": [{"id": 4242, "name": "", "email": "sam@example.edu"}],
+                "directory": [
+                    {
+                        "object_id": "o-7",
+                        "name": "Sam Ng",
+                        "address": "sam@example.edu",
+                        "upn": "sam@example.edu",
+                    }
+                ],
+                "directory_failed": False,
+            }
+        ),
+    )
+    sent: list[str] = []
+
+    def hold(route: Route) -> None:
+        sent.append(route.request.post_data or "")
+        route.fulfill(json={"said": "Added.", "bad": [], "candidates": []})
+
+    page.route("**/candidates", hold)
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
+    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
+    stage = page.locator("#pc-cards .pc").filter(
+        has=page.locator('.pc-item[data-item="candidates"]')
+    )
+    if not stage.locator(".fc-body").first.is_visible():
+        stage.locator("[data-fc-toggle]").first.click()
+    if not item.locator("[data-cand-search]").is_visible():
+        item.locator("[data-pi-toggle]").click()
+    box = item.locator("[data-cand-search]")
+    box.fill("sam@")
+    item.locator("[data-cand-options] li", has_text="directory").wait_for()
+    box.fill("sam@example.edu")  # the on-record label, and an address two accounts share
+    assert item.locator("[data-cand-add]").is_enabled()
+    item.locator("[data-cand-add]").click()
+    item.locator("[data-cand-said]").filter(has_text="Added.").wait_for()
+    assert '"person_id":4242' in sent[0] and "object_id" not in sent[0]
+
+
+def test_every_match_is_listed_whatever_field_it_matched(page: Page) -> None:
+    """Codex on #4255: a directory match found by a field the label does
+    not show (a surname) is still listed and can be added; the keyboard
+    picks too."""
+    _with_candidates()
+    page.route(
+        "**/candidates/search*",
+        lambda route: route.fulfill(
+            json={
+                "on_record": [],
+                "directory": [
+                    {
+                        "object_id": "o-8",
+                        "name": "Jane",
+                        "address": "e0123456@example.edu",
+                        "upn": "e0123456@example.edu",
+                    }
+                ],
+                "directory_failed": False,
+            }
+        ),
+    )
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
+    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
+    stage = page.locator("#pc-cards .pc").filter(
+        has=page.locator('.pc-item[data-item="candidates"]')
+    )
+    if not stage.locator(".fc-body").first.is_visible():
+        stage.locator("[data-fc-toggle]").first.click()
+    if not item.locator("[data-cand-search]").is_visible():
+        item.locator("[data-pi-toggle]").click()
+    box = item.locator("[data-cand-search]")
+    box.fill("Tan")
+    item.locator("[data-cand-options] li", has_text="e0123456@example.edu").wait_for()
+    box.press("ArrowDown")
+    box.press("Enter")
+    assert box.input_value() == "Jane (e0123456@example.edu) · directory"
+    assert item.locator("[data-cand-add]").is_enabled()
+
+
+def test_a_changed_search_drops_the_last_highlight(page: Page) -> None:
+    """Codex on #4255: a match highlighted, then the search changed and its
+    answer still pending (or failed), Enter picks nothing."""
+    _with_candidates()
+    answered: list[int] = []
+
+    def search(route: Route) -> None:
+        answered.append(1)
+        if len(answered) > 1:
+            route.abort()  # the second search fails
+            return
+        route.fulfill(
+            json={
+                "on_record": [{"id": 4243, "name": "Old Match", "email": "old@example.edu"}],
+                "directory": [],
+                "directory_failed": False,
+            }
+        )
+
+    page.route("**/candidates/search*", search)
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
+    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
+    stage = page.locator("#pc-cards .pc").filter(
+        has=page.locator('.pc-item[data-item="candidates"]')
+    )
+    if not stage.locator(".fc-body").first.is_visible():
+        stage.locator("[data-fc-toggle]").first.click()
+    if not item.locator("[data-cand-search]").is_visible():
+        item.locator("[data-pi-toggle]").click()
+    box = item.locator("[data-cand-search]")
+    box.fill("old")
+    item.locator("[data-cand-options] li", has_text="old@example.edu").wait_for()
+    box.press("ArrowDown")
+    box.fill("newer")
+    box.press("Enter")
+    assert box.input_value() == "newer"
+    assert item.locator("[data-cand-add]").is_disabled()
+    item.locator("[data-cand-said]").filter(has_text="The search failed").wait_for()
+    box.press("Enter")
+    assert box.input_value() == "newer"

@@ -652,6 +652,9 @@ def candidates_search(request: Request, exercise_id: str, q: str = "") -> Respon
                     "object_id": u.id,
                     "name": u.display_name,
                     "address": u.mail or u.user_principal_name,
+                    # The sign-in name the search may have matched, so the
+                    # typeahead can offer it (Codex on #4255).
+                    "upn": u.user_principal_name or "",
                 }
                 for u in found.in_directory
             ],

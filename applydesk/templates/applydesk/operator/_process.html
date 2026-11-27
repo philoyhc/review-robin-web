@@ -1773,27 +1773,103 @@
         });
     });
   }
+  // The typeahead's offers (author, 2026-11-27): every match the search
+  // returns, listed under the box (Codex on #4255: the browser's own list
+  // hid matches not holding what was typed). A label picked names its own
+  // account; an address typed whole is a shortcut only while one account
+  // holds it, else the operator picks from the list.
   function found(item, got) {
-    var ul = item.querySelector("[data-cand-found]");
-    ul.textContent = "";
+    var list = item.querySelector("[data-cand-options]"), labels = {}, aliases = {}, rows = [];
+    list.textContent = "";
+    function offer(label, keys, body) {
+      // Two accounts with one name and address keep two picks (as the
+      // Operators box does, Codex on #4122).
+      for (var n = 2, base = label; labels[label.toLowerCase()]; n++) label = base + " (" + n + ")";
+      var li = el("li", "", label);
+      li.setAttribute("role", "option");
+      li.id = "pc-cand-opt-" + rows.length;
+      li.dataset.candOpt = String(rows.length);
+      list.appendChild(li);
+      rows.push({ label: label, body: body });
+      labels[label.toLowerCase()] = body;
+      keys.forEach(function (k) {
+        if (!k) return;
+        k = k.toLowerCase();
+        aliases[k] = k in aliases && aliases[k] !== body ? null : body;
+      });
+    }
     got.on_record.forEach(function (p) {
-      var li = el("li"), b = el("button", "btn btn-secondary btn-short", "Add");
-      b.type = "button"; b.dataset.candAdd = JSON.stringify({ action: "add", person_id: p.id });
-      li.appendChild(el("span", "", (p.name || p.email) + (p.name ? " · " + p.email : ""))); li.appendChild(b); ul.appendChild(li);
+      offer(p.name ? p.name + " (" + p.email + ")" : p.email, [p.email], { action: "add", person_id: p.id });
     });
     got.directory.forEach(function (u) {
-      var li = el("li"), b = el("button", "btn btn-secondary btn-short", "Add");
-      b.type = "button"; b.dataset.candAdd = JSON.stringify({ action: "add", object_id: u.object_id, address: u.address });
-      li.appendChild(el("span", "", u.name + " · " + u.address + " (directory)")); li.appendChild(b); ul.appendChild(li);
+      var upn = u.upn && u.upn.toLowerCase() !== u.address.toLowerCase() ? u.upn : "";
+      offer(u.name + " (" + u.address + ")" + (upn ? " · " + upn : "") + " · directory", [u.address, upn], { action: "add", object_id: u.object_id, address: u.address });
     });
-    if (!got.on_record.length && !got.directory.length) ul.appendChild(el("li", "muted", got.directory_failed ? "No one on record; the directory could not be searched." : "No one found."));
-    ul.hidden = false;
+    item._candOffers = { labels: labels, aliases: aliases, rows: rows, on: -1 };
+    showList(item, rows.length > 0);
+    if (!rows.length) item.querySelector("[data-cand-said]").textContent = got.directory_failed ? "No one on record; the directory could not be searched." : "No one found.";
+    pickable(item);
+  }
+  function showList(item, open) {
+    var list = item.querySelector("[data-cand-options]"), box = item.querySelector("[data-cand-search]");
+    list.hidden = !open;
+    box.setAttribute("aria-expanded", open ? "true" : "false");
+    if (!open) box.removeAttribute("aria-activedescendant");
+  }
+  function highlight(item, i) {
+    var offers = item._candOffers, list = item.querySelector("[data-cand-options]");
+    if (!offers || !offers.rows.length) return;
+    offers.on = (i + offers.rows.length) % offers.rows.length;
+    list.querySelectorAll("li").forEach(function (li, j) {
+      li.classList.toggle("on", j === offers.on);
+      li.setAttribute("aria-selected", j === offers.on ? "true" : "false");
+    });
+    var on = list.querySelectorAll("li")[offers.on];
+    item.querySelector("[data-cand-search]").setAttribute("aria-activedescendant", on.id);
+    on.scrollIntoView({ block: "nearest" });
+  }
+  function choose(item, i) {
+    var row = item._candOffers && item._candOffers.rows[i];
+    if (!row) return;
+    var box = item.querySelector("[data-cand-search]");
+    box.value = row.label;
+    showList(item, false);
+    pickable(item);
+    box.focus();
+  }
+  function picked(item) {
+    var offers = item._candOffers;
+    if (!offers) return null;
+    var typed = item.querySelector("[data-cand-search]").value.trim().toLowerCase();
+    return offers.labels[typed] || offers.aliases[typed] || null;
+  }
+  function pickable(item) {
+    var b = item.querySelector("[data-cand-add]"), ok = !!picked(item);
+    b.disabled = !ok;
+    if (ok) b.removeAttribute("title"); else b.title = "Pick someone from the list first";
+  }
+  function addPicked(item) {
+    var body = picked(item);
+    if (!body) return;
+    change(item, body);
+    item.querySelector("[data-cand-search]").value = "";
+    item.querySelector("[data-cand-options]").textContent = "";
+    item._candOffers = null;
+    showList(item, false);
+    pickable(item);
   }
   root.addEventListener("input", function (e) {
     if (!e.target.matches("[data-cand-search]")) return;
     var item = e.target.closest('.pc-item[data-item="candidates"]'), q = e.target.value.trim();
+    pickable(item);
+    if (picked(item)) return;  // an offer chosen, or an address typed whole: nothing more to ask
+    // The search changed: the last one's list and highlight go, so Enter
+    // cannot pick a match the new search has not returned (Codex on #4255).
+    if (item._candOffers) item._candOffers.on = -1;
+    item.querySelector("[data-cand-options]").textContent = "";
+    showList(item, false);
     window.clearTimeout(timer);
-    if (q.length < 2) { item.querySelector("[data-cand-found]").hidden = true; return; }
+    if (q.length < 2) { showList(item, false); return; }
     timer = window.setTimeout(function () {
       fetch(base + "/search?q=" + encodeURIComponent(q), { credentials: "same-origin" })
         .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -1801,16 +1877,36 @@
               function () { if (e.target.value.trim() === q) item.querySelector("[data-cand-said]").textContent = "The search failed: try again."; });
     }, 250);
   });
+  root.addEventListener("keydown", function (e) {
+    if (!e.target.matches("[data-cand-search]")) return;
+    var item = e.target.closest('.pc-item[data-item="candidates"]'), offers = item._candOffers;
+    var open = !item.querySelector("[data-cand-options]").hidden;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (!offers || !offers.rows.length) return;
+      e.preventDefault();
+      if (!open) showList(item, true);
+      highlight(item, offers.on + (e.key === "ArrowDown" ? 1 : -1));
+    } else if (e.key === "Escape" && open) {
+      e.preventDefault();
+      showList(item, false);
+    } else if (e.key === "Enter") {
+      if (open && offers && offers.on >= 0) { e.preventDefault(); choose(item, offers.on); }
+      else if (picked(item)) { e.preventDefault(); addPicked(item); }
+    }
+  });
+  // A click elsewhere closes the list; a pick is a mousedown, before the
+  // box loses its focus.
+  root.addEventListener("mousedown", function (e) {
+    var li = e.target.closest("[data-cand-opt]");
+    if (li) { e.preventDefault(); choose(li.closest('.pc-item[data-item="candidates"]'), Number(li.dataset.candOpt)); return; }
+    root.querySelectorAll('.pc-item[data-item="candidates"]').forEach(function (item) {
+      if (!item.querySelector(".pc-cand-box").contains(e.target)) showList(item, false);
+    });
+  });
   root.addEventListener("click", function (e) {
     var item = e.target.closest('.pc-item[data-item="candidates"]');
     if (!item) return;
-    var add = e.target.closest("[data-cand-add]");
-    if (add) {
-      change(item, JSON.parse(add.dataset.candAdd));
-      item.querySelector("[data-cand-found]").hidden = true;
-      item.querySelector("[data-cand-search]").value = "";
-      return;
-    }
+    if (e.target.closest("[data-cand-add]")) { addPicked(item); return; }
     var rm = e.target.closest("[data-cand-remove]");
     if (rm) { change(item, { action: "remove", entry_id: Number(rm.dataset.candRemove) }); return; }
     if (e.target.closest("[data-cand-csv]")) item.querySelector("[data-cand-file]").click();
