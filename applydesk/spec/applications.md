@@ -1510,7 +1510,8 @@ and a *By hand* chip; one with no dossier yet (before publishing) is drawn
 as a draft application is, *No dossier yet*, every cell *—*, left out of
 the CSV download. While Create dossiers is in the process (as saved), Add
 people's row (as Process's) sits above the table, the page drawn again
-after an add; *Remove ticked* removes the ticked rows created by hand, each
+after an add or a CSV, what the box still held (pills not added, entries not
+found, a CSV's unread rows) kept across it (Codex on #4267); *Remove ticked* removes the ticked rows created by hand, each
 kept at once (a minted dossier retired, ruling 83), not under the lock. The
 Status filter's *By hand* shows them alone. The placeholder line says the
 cells are not saved and adding and removing these rows is. Process's

@@ -66,6 +66,7 @@ Closed 2026-11-27. Rungs 1–6 shipped together in #4265. The author's browser c
 - **Codex:**
   - #4265: the Form's maximum no longer counts hand-made entries; a non-integer count adds nothing.
   - #4266: a pill being saved is not sent again.
+  - #4267: after an add or a CSV on the Dossiers page, the page redraws, and what the box still held comes back across the redraw.
 - **Close:** `spec-writer` checked `applications.md` and `architecture.md` against the code.
 
 ## PR ladder
