@@ -437,6 +437,38 @@ def test_a_name_waits_when_the_directory_is_down(page: Page) -> None:
     lst.locator("[data-cand-tokens] .token").first.wait_for()
 
 
+def test_an_address_is_that_address_or_nothing(page: Page) -> None:
+    """Codex on #4264: an address typed whole resolves only to that address;
+    the search's one match on part of it (joann@ for ann@) stays unresolved."""
+    import json
+
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Address Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    page.goto(page.url + "/process")
+    stage = page.locator("#pc-cards > .fc").first
+    stage.locator('[data-pc-act="form"]').click()
+    stage.locator('[data-rel="who-may-apply"]').select_option("invitation")
+
+    def partial(route: Route) -> None:
+        found = {
+            "on_record": [{"id": 7, "name": "Jo Ann", "email": "joann@example.edu"}],
+            "directory": [],
+            "directory_failed": False,
+        }
+        route.fulfill(
+            status=200, body=json.dumps(found), headers={"content-type": "application/json"}
+        )
+
+    page.route("**/invitees/search?*", partial)
+    lst = stage.locator('[data-cand-live][data-cand-kind="invitees"]')
+    lst.locator("[data-cand-entry]").fill("ann@example.edu,")
+    lst.locator("[data-cand-said]").filter(has_text="Not found").wait_for()
+    assert lst.locator("[data-cand-tokens] .token").count() == 0
+
+
 def test_a_stages_items_reorder_within_the_rules(page: Page) -> None:
     """Ruling 84: a stage's gates swap by their grips and save in that
     order; a move putting a gate before Create dossiers, or the outcome

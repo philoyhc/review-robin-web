@@ -2062,6 +2062,10 @@
         // hits are two accounts (an address reassigned, say), and the
         // entry stays to be told apart (Codex on #4264).
         if (exact.length) return exact.length === 1 ? exact[0] : null;
+        // An address typed whole is that address or nothing: the search
+        // matches part of one, and leaves out whoever is already invited
+        // (Codex on #4264).
+        if (entry.indexOf("@") >= 0) return null;
         // A name matching one person on record is only that when the
         // directory was searched too (Codex on #4264).
         if (got.directory_failed) { item._dirDown = true; return null; }
@@ -2077,11 +2081,14 @@
     if (!b.disabled) b.removeAttribute("title"); else b.title = "Type a name or email first";
   }
   function pill(item, hit) {
-    var box = item.querySelector("[data-cand-tokens]"), key = hit.email.toLowerCase();
-    if (pillsOf(item).some(function (t) { return t.dataset.email === key; })) return;
+    // One pill per account, not per address: two accounts may share one
+    // (Codex on #4264).
+    var box = item.querySelector("[data-cand-tokens]");
+    var key = hit.body.person_id ? "p" + hit.body.person_id : "d" + hit.body.object_id;
+    if (pillsOf(item).some(function (t) { return t.dataset.key === key; })) return;
     var t = el("span", "token", hit.name), x = el("button", "token-x", "×");
     t.title = hit.email;
-    t.dataset.email = key;
+    t.dataset.key = key;
     t.dataset.body = JSON.stringify(hit.body);
     x.type = "button";
     x.setAttribute("aria-label", "Take " + hit.name + " out");
