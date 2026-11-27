@@ -785,7 +785,7 @@ the rulings it relied on but does not move them.
     - **Candidates feed gates when the timeline holds no form** (author,
       2026-11-26, ruling 24's exercise with no form); with a form, they are
       its roster. The at-submit or at-close choice comes with AD4.
-    - Built in segment AD2F (`applydesk/guide/ad2_series.md`).
+    - Built in segment AD2F (`applydesk/guide/archive/segment_AD2F_dossiers.md`).
 82. **A change recomputes only the pairs it touches** (author,
     2026-11-26; AD-47), amending ruling 48:
     - **What recomputes:** a dossier the change touches (an evaluator
@@ -824,7 +824,7 @@ the rulings it relied on but does not move them.
       has no entries, and when no outcome follows the last gate.
     - **Built**: the rename, the per-person setting, a dossier populated
       and later linked to an application, and validation in segment AD2K
-      (`applydesk/guide/ad2_series.md`); a later Form's entry rule and its
+      (`applydesk/guide/archive/segment_AD2K_populate_dossiers.md`); a later Form's entry rule and its
       submissions joining dossiers with AD4.
     - **Amended** (author, 2026-11-27): the item is *Create dossiers*.
       Once a Form exists, *+Create dossiers* is not offered: the Form
@@ -952,7 +952,7 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| AD2 — Database (a series) | The `applydesk` database, checkable on localhost, area by area: AD2A foundations (people, operators, audit; closed 2026-11-21, `applydesk/guide/archive/segment_AD2A_foundations.md`); AD2W, Accounts Management's table as Review Robin's Workspace users (closed 2026-11-21, `applydesk/guide/archive/segment_AD2W_workspace_users.md`); then exercises, Process (AD2C closed 2026-11-23, `applydesk/guide/archive/segment_AD2C_process.md`); next, in order (author, 2026-11-23): AD2E panels (closed 2026-11-23, `applydesk/guide/archive/segment_AD2E_panels.md`), AD2D version 1, the form's questions (closed 2026-11-23, `applydesk/guide/archive/segment_AD2D_form.md`), AD2L email templates (closed 2026-11-23, `applydesk/guide/archive/segment_AD2L_emails.md`), AD2G Item 1, the browser store removed and test exercises seeded (closed 2026-11-23; plan `applydesk/guide/segment_AD2G_retire_simulation.md`, whose Item 2 follows); then applications (AD2J, closed 2026-11-26, `applydesk/guide/archive/segment_AD2J_applications.md`), and, split four ways (author, 2026-11-26), dossiers (AD2F), gate entries and outcomes (AD2H), pairs (AD2P) and the gate lifecycle (AD2T), visibility (AD2V) and the rest of the simulation's retirement (`applydesk/guide/ad2_series.md`) | Cordware: the database and its runtime principal (private), before AD2's first release |
+| AD2 — Database (a series) | The `applydesk` database, checkable on localhost, area by area: AD2A foundations (people, operators, audit; closed 2026-11-21, `applydesk/guide/archive/segment_AD2A_foundations.md`); AD2W, Accounts Management's table as Review Robin's Workspace users (closed 2026-11-21, `applydesk/guide/archive/segment_AD2W_workspace_users.md`); then exercises, Process (AD2C closed 2026-11-23, `applydesk/guide/archive/segment_AD2C_process.md`); next, in order (author, 2026-11-23): AD2E panels (closed 2026-11-23, `applydesk/guide/archive/segment_AD2E_panels.md`), AD2D version 1, the form's questions (closed 2026-11-23, `applydesk/guide/archive/segment_AD2D_form.md`), AD2L email templates (closed 2026-11-23, `applydesk/guide/archive/segment_AD2L_emails.md`), AD2G Item 1, the browser store removed and test exercises seeded (closed 2026-11-23; plan `applydesk/guide/segment_AD2G_retire_simulation.md`, whose Item 2 follows); then applications (AD2J, closed 2026-11-26, `applydesk/guide/archive/segment_AD2J_applications.md`), and, split four ways (author, 2026-11-26), dossiers (AD2F, closed 2026-11-27, with AD2K's *Create dossiers* and AD2N's lists off Process, `applydesk/guide/archive/`), gate entries and outcomes (AD2H), pairs (AD2P) and the gate lifecycle (AD2T), visibility (AD2V) and the rest of the simulation's retirement (`applydesk/guide/ad2_series.md`) | Cordware: the database and its runtime principal (private), before AD2's first release |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form, versioned, each section carrying its visibility grants (ruling 68); drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
 | AD5 — Panels and dossiers | The rosters on Panels (rulings 19, 22), each gate's evaluators from its ranked sources (ruling 27); dossiers made from the form or by *Create dossiers* (rulings 25, 26), the dossier with its access check, audit and blind redaction | — |

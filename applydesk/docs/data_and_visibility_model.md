@@ -26,8 +26,14 @@ The rule between them:
 
 Every value is kept, whatever is shown of it.
 
-- **The dossier is its own record, with or without an application** (rulings 32, 81). It carries its own ID, and pairs, cells, results, parts and the alias key hang off it, not the application. From the form it is minted at submit or at the form's close, the operator's choice, so a draft has none; from a Candidates item feeding gates, at publish and on each later add.
-- **What writes a dossier** (rulings 26, 77, 81): an application submitted through the form, or *Populate Dossiers* (Candidates renamed, ruling 83), an entry per dossier, when it is the exercise's first item; it absorbs ruling 26's *Create dossiers* and *Add dossiers*. A later Form adds to dossiers already populated, never mints one. A candidate with two applications has two dossiers.
+- **The dossier is its own record, with or without an application** (rulings 32, 81). As built, the `dossier` table holds it: its own ID (never the application's), its exercise and its source, a *Create dossiers* entry or an application, or both. Pairs, cells, results, parts and the alias key will hang off it, not the application. Retiring sets `retired_at`; nothing is deleted. From the form it is to be minted at submit or at the form's close, the operator's choice, so a draft has none (AD4; until then the only form dossiers are the samples', recorded by the seed). From *Create dossiers* it is minted when the exercise is published and on each later add.
+- **What writes a dossier** (rulings 26, 77, 81, 83): an application submitted through the form, or the *Create dossiers* item, an entry per dossier (the `candidate` table; *Candidates* in code), when it is the first item of the first stage. A Form may follow it and writes to the dossiers already made (AD4's entry rule; until then nothing joins them); a Form first creates its own, so *Create dossiers* is not offered after one. A candidate with two applications has two dossiers.
+- **How entries are made** (ruling 83, author 2026-11-27):
+  - *Add people* takes pills of names or addresses, as the Form's *Add invitees* does, and *Add* makes *Dossiers per person* entries (1 to 20) for each, titled *Dossier 1*, *Dossier 2* and on; a CSV gives one entry a row, with an optional title.
+  - There is **no per-person maximum** on *Create dossiers*: *Max dossiers per person* is the Form's alone (`exercise.dossiers_per_person`, saved with Process).
+  - Removing an entry retires its dossier; adding the person again makes a new entry, never a revival.
+  - A new exercise starts with a blank first stage, so the operator chooses between a Form and *Create dossiers*. Publishing the first stage needs one of them first (`timeline_checks`).
+- **Where the entries are seen:** on the Dossiers page, which is one table. A minted entry is its dossier's row, marked *Created by hand* with its title and a *By hand* chip; one not yet minted (before publishing) is a *No dossier yet* row. A dossier made this way has no page of its own yet (AD2V). The Form's invitees are the Invitees tab's.
 - **Form answers**, as submitted. There are no uploads in the MVP (ruling 3).
 - **Evaluators' responses**, pulled from Review Robin.
   - Review Robin keeps nothing visible after its window (ruling 26).
@@ -42,7 +48,7 @@ Every value is kept, whatever is shown of it.
 
 The page a candidate's readers open. It is displayable; what each reader sees of it is set where they read (ruling 79).
 
-- **Whose it is** (ruling 70): a dossier belongs to a **candidate**, the person or people it is about. An **applicant** is a candidate who submitted through a Form. A candidate from the Candidates item is not an applicant.
+- **Whose it is** (ruling 70): a dossier belongs to a **candidate**, the person or people it is about. An **applicant** is a candidate who submitted through a Form. A candidate from *Create dossiers* is not an applicant.
 - **What it holds** (ruling 68): every section of the submitted form (when there is one), every gate's results and every outcome, plus any operator entry marked as a dossier item (ruling 70).
 - **A photo is an item like any other** (rulings 70, 71): shown as the views say, even in a blind exercise. Blind review's redaction (ruling 6) covers the name and identifiers, not a photo, because a blind exercise may ask for a photo or screenshot that does not identify anyone. An operator who wants a face hidden from evaluators leaves it out of their views, or sets its ceiling to *never to evaluators*.
 - **Who sees an item, and when, is set where people read** (ruling 79, superseding the per-item grants of rulings 26, 33, 68 and 71):
@@ -91,7 +97,7 @@ Files for offline work, for operators only.
 | 9 | An evaluator opens only the dossiers they are paired with; operators open all |
 | 21 | A gate yields up to three results, each derived from a response field |
 | 25 | The dossier is the record a panel opens; sending a gate freezes what its panel sees |
-| 26 | A dossier per candidate entry, written in parts by the form, gates and outcomes, each with an audience and a from-stage; *Create dossiers* where no form comes first |
+| 26 | A dossier per candidate entry, written in parts by the form, gates and outcomes, each with an audience and a from-stage; *Create dossiers* (`candidate`) where no form comes first |
 | 32 | The dossier is its own table at AD2 |
 | 33 | One vocabulary for what a reader sees, per dossier part (refined by 68) |
 | 37 | A gate's stable key names its URL and its files |
@@ -105,9 +111,9 @@ Files for offline work, for operators only.
 | 70 | Extraction's two modes; operator entries of both kinds; *candidate* and *applicant*; a photo subject to grants |
 | 71 | The first grant is *Candidate*; a photo follows its grants in a blind exercise too; in-dossier or not is set on each field, and an in-dossier field needs grants (grants superseded by 79) |
 | 79 | Visibility set where people read: each gate × panel for its window, each outcome for candidates and past evaluators (continue, add or reset); a candidate sees their own form; new items start hidden; each field keeps its ceiling |
-| 81 | The dossier is its own record, with or without an application; minted at submit or form close, or at publish from Candidates, which absorbs *Create dossiers* |
+| 81 | The dossier is its own record, with or without an application; minted at submit or form close, or at publish from *Create dossiers* |
 | 82 | A change recomputes only the pairs of dossiers it touches that are neither approved nor hand-edited; none once the session opens |
-| 83 | The first item populates dossiers: a Form (a dossier per submission) or *Populate Dossiers* (Candidates renamed; an entry per dossier, a person may hold several); a later Form adds to existing dossiers through an entry rule; dossiers per person set on the populating item |
+| 83 | The first item populates dossiers: a Form (a dossier per submission) or *Create dossiers* (an entry per dossier, a person may hold several, as many as are added); a later Form adds to existing dossiers through an entry rule (AD4); the Form's *Max dossiers per person* is the Form's alone |
 
 **Superseded and not to be built:**
 - Ruling 5's "the dossier shows only the *Shown to reviewers* section" became ruling 26's parts, then ruling 68's grants per item, then ruling 79's views where people read.

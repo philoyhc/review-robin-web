@@ -52,6 +52,15 @@ Taken 2026-11-26 at `dcd9bec6f`.
 | Test files naming dossiers | 61 | `grep -rln dossier applydesk/tests \| wc -l` |
 | Specs | 3 (`applications.md`, `architecture.md`, `permissions.md`) | `grep -rli dossier applydesk/spec/*.md` |
 
+## Status
+
+Closed 2026-11-27. Rungs 2–5 shipped as planned (#4242–#4246); the close came after AD2K and AD2N (author's browser check, 2026-11-27).
+
+- **Diverged, after AD2K and AD2N:** the item is *Create dossiers* (*Candidates* in code), not *Populate Dossiers*. It mints where the first stage holds it (`dossiers.feeds_gates`), at publish and on each add, once per CSV. A Form may follow it on that stage and write to its dossiers. "Mint only when the timeline holds no form" (Decision) gave way to ruling 83 as amended.
+- **Not built, as the open question deferred:** a dossier created by hand has no page yet. Its ID is not a link, and the operator and `/me` dossier pages answer 404 (`lookups.dossier_or_404` reads applications). It is AD2V's; the spec says so.
+- **Reads:** one cumulative `diff-reviewer` read at rung 5; its findings were fixed in that PR (#4246).
+- **Close:** `spec-writer` brought `applications.md`, `architecture.md`, `permissions.md` and the data model (§2, §5) in line with the code; AD-44 struck.
+
 ## PR ladder
 
 1. **Plan** (this file), the series row. Prose only.
@@ -75,7 +84,7 @@ Taken 2026-11-26 at `dcd9bec6f`.
 
 ## Open questions
 
-- **A candidate dossier's page** (`/me/.../dossiers/<id>`, the operator's dossier): shows the candidate's name and nothing from a form. What else it shows is AD2V's views; decided there.
+- ~~A candidate dossier's page~~: no page yet; AD2V's (Status).
 
 ## Out of scope
 

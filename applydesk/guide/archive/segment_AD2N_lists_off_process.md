@@ -44,6 +44,30 @@ Taken 2026-11-27 at `4cf492fb0`.
 | Specs naming the lists | 3 | `grep -rln "Invitees\|invite list\|Create dossiers" applydesk/spec` |
 | Nav callers | 9 | `grep -n "SETUP_PAGES\|exercise_nav(" applydesk/*.py` |
 
+## Status
+
+Closed 2026-11-27. Rungs 1–6 shipped together in #4265. The author's browser checks then added #4266 and #4267.
+
+- **Reads:** one cumulative `diff-reviewer` read at rung 6, from `ff09f1b86`. It found 8 items; 7 were fixed in `f2883920c`:
+  - the save-first link;
+  - the unused note under Create dossiers;
+  - the Dossiers placeholder line;
+  - two stale spec passages;
+  - server-render tests;
+  - comments.
+
+  The eighth, the table inside the Invitees card, went to the author, who answered it in #4266.
+- **Diverged** (author, 2026-11-27):
+  - **Rejected decision reversed:** the Dossiers page is **one table** (#4267), so the rejected "grid listing unpublished entries as rows" was taken after all. Entries are grid rows: a minted one is its dossier's row, *Created by hand · <title>*; an unminted one is a *No dossier yet* row. *Add people* sits above the table and *Remove ticked* removes rows. The *Created by hand* card of rung 5 is gone.
+  - **Out of scope, then built:** Create dossiers' box became the *Add invitees* pill box (#4266), though it was listed as out of scope.
+  - **Invitees layout:** the card puts its count left of the add row, and a directory-bound address is a pill (#4266).
+  - **Names from the directory:** a nameless pending record is offered as its directory account (#4266), and the local directory holds the samples' people with names.
+  - **Suggestions:** they skip pills already chosen (#4267).
+- **Codex:**
+  - #4265: the Form's maximum no longer counts hand-made entries; a non-integer count adds nothing.
+  - #4266: a pill being saved is not sent again.
+- **Close:** `spec-writer` checked `applications.md` and `architecture.md` against the code.
+
 ## PR ladder
 
 1. **Plan** (this file), the series row. Prose only.
