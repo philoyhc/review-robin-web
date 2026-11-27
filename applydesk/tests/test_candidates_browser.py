@@ -132,18 +132,20 @@ def test_changes_are_sent_one_at_a_time(page: Page) -> None:
         held.append(route)
 
     page.route("**/candidates", hold)
-    # Removing is the Dossiers page's (segment AD2N), through the same script.
+    # Removing is the Dossiers page's one table's (author, 2026-11-27).
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/dossiers")
-    item = page.locator('.cd-card [data-cand-live][data-cand-kind="candidates"]')
-    item.locator("[data-cand-remove]").first.click()
-    item.locator("[data-cand-remove]").last.click()
+    for row in page.locator("tr[data-entry]").all():
+        row.locator("[data-ap-tick]").check()
+    page.once("dialog", lambda d: d.accept())
+    page.locator("[data-ap-remove]").click()
     page.wait_for_timeout(300)
     assert len(seen) == 1  # the second waits for the first's answer
     held.pop().fallback()
     page.wait_for_timeout(300)
     assert len(seen) == 2
-    held.pop().fallback()
-    item.locator("[data-cand-none]").wait_for()
+    with page.expect_navigation():
+        held.pop().fallback()
+    assert page.locator("tr[data-entry]").count() == 0
 
 
 def _drafts_holding_candidates() -> None:

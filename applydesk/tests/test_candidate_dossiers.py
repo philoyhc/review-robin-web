@@ -135,7 +135,7 @@ def test_the_dossiers_page_lists_a_candidate_s_dossier() -> None:
     page = client.get(f"/applydesk/operator/exercises/{ex}/dossiers")
     assert page.status_code == 200
     assert f"<code>{dossier}</code>" in page.text
-    assert '<span class="ap-app">Candidate</span>' in page.text
+    assert '<span class="ap-app">Created by hand · Dossier 1</span>' in page.text
     assert "ann@example.edu" in page.text
 
 
@@ -234,3 +234,27 @@ def test_a_sample_s_saved_timeline_lists_its_candidates_dossiers() -> None:
     rows = stages.plan_of(sample).rows
     assert [r.dossier.key for r in rows] == [r.dossier.key for r in before] + [dossier]
     assert rows[-1].application is None
+
+
+def test_the_dossiers_page_draws_an_entry_with_no_dossier_yet_as_a_row() -> None:
+    """Author, 2026-11-27: one table. Before publishing, an entry has no
+    dossier, so it is a row as a draft application is: no dossier yet,
+    created by hand, every cell blank, removable by tick."""
+    from fastapi.testclient import TestClient
+
+    from applydesk.tests._host import host_with
+
+    ex = _exercise(form=False, published=False)
+    _add(ex, "ann@example.edu")
+    assert _live(ex) == []
+    page = (
+        TestClient(host_with(("applydesk",))[0])
+        .get(f"/applydesk/operator/exercises/{ex}/dossiers")
+        .text
+    )
+    row = page[page.index('data-status="Entry"') :]
+    row = row[: row.index("</tr>")]
+    assert "No dossier yet" in row and "Created by hand · Dossier 1" in row
+    assert "ann@example.edu" in row and "By hand" in row
+    assert "data-ap-remove=" in page and "ap-hand-add" in page
+    assert "No applications yet" not in page

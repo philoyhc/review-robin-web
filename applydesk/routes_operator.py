@@ -22,6 +22,7 @@ from applydesk import (
     clock,
     db,
     directory,
+    dossiers,
     email_store,
     extract,
     form_store,
@@ -819,6 +820,17 @@ def _per_person_of(public_id: str) -> int:
         return candidates.per_person(session, public_id)
     finally:
         session.close()
+
+
+def _hand_rows(public_id: str, section: str) -> dict[str, Any]:
+    """Create dossiers' entries for the Dossiers page's one table (author,
+    2026-11-27): ``hand_minted``, by their dossier's ID, label its rows;
+    ``hand_pending``, those with no dossier yet, are rows of their own."""
+    rows = dossiers.hand_rows(public_id) if section == "dossiers" else ()
+    return {
+        "hand_minted": {h.dossier_id: h for h in rows if h.dossier_id},
+        "hand_pending": tuple(h for h in rows if not h.dossier_id),
+    }
 
 
 def _invitees_of(public_id: str) -> tuple[candidates.Listed, ...]:
@@ -1822,11 +1834,12 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
             key: {"label": q.label, "options": list(q.options)}
             for key, q in sample_data.list_questions(exercise.public_id).items()
         },
-        # Ruling 77: the Candidates list, read where Process or Dossiers
-        # draws it (segment AD2N).
-        cand_list=(
-            _candidates_of(exercise.public_id) if section in ("process", "dossiers") else ()
-        ),
+        # Ruling 77: the Candidates list, read where Process draws it.
+        cand_list=(_candidates_of(exercise.public_id) if section == "process" else ()),
+        # The Dossiers page's one table (author, 2026-11-27): Create
+        # dossiers' entries, by their dossier once minted, else as rows of
+        # their own until publishing mints them.
+        **_hand_rows(exercise.public_id, section),
         # Ruling 84: the Form's invite list, read where Process or Invitees
         # draws it (segment AD2N).
         invitee_list=(

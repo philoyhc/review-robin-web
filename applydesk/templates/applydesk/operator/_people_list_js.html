@@ -135,6 +135,7 @@
         return hits.length === 1 ? hits[0] : null;
       });
   }
+  function reloadIfStrip(item) { if (item.hasAttribute("data-cand-reload")) window.location.reload(); }
   function pillsOf(item) { return Array.prototype.slice.call(item.querySelectorAll("[data-cand-tokens] .token")); }
   // The pills not yet sent: one being saved is never sent again, since a
   // dossier added twice is two dossiers (Codex on #4266).
@@ -329,6 +330,9 @@
           var now = current(item);
           if (failed.length) now.querySelector("[data-cand-said]").textContent = (item.dataset.candKind === "invitees" ? "Not invited: " : "Not added: ") + failed.join("; ");
           addable(item);
+          // On the Dossiers page the rows are the table's own: it is drawn
+          // again once anything was added (author, 2026-11-27).
+          if (failed.length < pills.length) reloadIfStrip(item);
         });
       });
       return;
@@ -360,7 +364,14 @@
     if (!e.target.matches("[data-cand-file]")) return;
     var item = e.target.closest("[data-cand-live]"), file = e.target.files[0];
     if (!file) return;
-    file.text().then(function (text) { change(item, { action: "csv", text: text }); e.target.value = ""; });
+    file.text().then(function (text) {
+      change(item, { action: "csv", text: text }).then(function (why) {
+        // Rows that did not read are listed back first; a reload would
+        // lose them, so the page is drawn again only when every row read.
+        if (!why && !item.querySelector("[data-cand-bad]").children.length) reloadIfStrip(item);
+      });
+      e.target.value = "";
+    });
   });
 })();
 </script>

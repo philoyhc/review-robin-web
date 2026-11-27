@@ -10,13 +10,18 @@
 {% set last = last_submitted(plan.rows) %}
 {% set rank = submitted_rank(plan.rows) %}
 {% set cols = plan.columns %}
-<p class="muted pc-intro">A row per dossier: its application, then each stage's gates and outcomes in timeline order. <em>Unlock</em> to set cells, apply rules, upload a CSV or release an outcome; stages, gates, outcomes, dates and rules come from <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</p>
+{# Create dossiers in the process (author, 2026-11-27): its entries are
+   rows of this one table, by their dossier once minted, else as rows of
+   their own with no dossier yet; added above the table, removed by tick. #}
+{% set by_hand = plan.stages | selectattr("candidates") | list %}
+{% set any_rows = plan.rows or hand_pending %}
+<p class="muted pc-intro">A row per dossier: its application{% if by_hand or hand_minted or hand_pending %}, or who it was created for by hand{% endif %}, then each stage's gates and outcomes in timeline order. <em>Unlock</em> to set cells, apply rules, upload a CSV or release an outcome; stages, gates, outcomes, dates and rules come from <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</p>
 <div class="ap" data-applications data-ap-ex="{{ exercise.public_id }}" data-ap-csv-name="{{ dossiers_csv }}">
   <div class="ap-tool">
     {# Filters together, each labelled, as Review Robin's (ruling 64, U17). #}
     <label class="ap-f">Search<input type="search" class="ap-search" data-ap-search placeholder="ID, name or email"></label>
     <label class="ap-f">Status<select class="ap-sel" data-ap-status>
-      <option value="">All statuses</option><option>Submitted</option><option>Draft</option><option>Withdrawn</option>
+      <option value="">All statuses</option><option>Submitted</option><option>Draft</option><option>Withdrawn</option>{% if by_hand or hand_minted or hand_pending %}<option value="hand">By hand</option>{% endif %}
     </select></label>
     <label class="ap-f">Rows<select class="ap-sel" data-ap-which>
       <option value="all">All dossiers</option><option value="last">Last applications</option>
@@ -32,7 +37,7 @@
     <button class="btn btn-secondary" type="button" data-ap-undo hidden>Discard changes</button>
     {# Nothing to change with no applications: Unlock is off, saying why,
        in its place (AD-79, U16). #}
-    <button class="btn btn-secondary" type="button" data-ap-lock{% if plan.rows %} title="Unlock the table to change it"{% else %} disabled title="No applications to change yet"{% endif %}>Unlock</button>
+    <button class="btn btn-secondary" type="button" data-ap-lock{% if any_rows %} title="Unlock the table to change it"{% else %} disabled title="No applications to change yet"{% endif %}>Unlock</button>
   </div>
   {# The ticked rows' actions and the file, above the table (U17). #}
   <div class="ap-bulk">
@@ -48,8 +53,16 @@
     {# Ruling 49: Return to draft per row, and for the ticked rows, until a
        gate holding the dossier completes; with or without gates yet. #}
     <button class="btn btn-alert" type="button" disabled title="Returning to draft is not built yet">Return ticked to draft</button>
+    {# Dossiers created by hand are removed here, kept at once; a minted
+       one is retired (ruling 83). Not under the table's lock. #}
+    {% if by_hand or hand_minted or hand_pending %}<button class="btn btn-destructive" type="button" data-ap-remove="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/candidates') }}">Remove ticked</button>{% endif %}
     {% if cols %}<button class="btn btn-secondary" type="button" data-ap-csv-down>Download CSV</button>{% endif %}
   </div>
+  {% if by_hand %}{% from "applydesk/operator/_process_cards.html" import people_list with context %}
+  <div class="ap-hand-add" data-people-root>
+    {{ people_list("candidates", (), url('/operator/exercises/' ~ exercise.public_id ~ '/candidates'), "dossier", "dossiers", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier.", true, count=true, label="Add people", strip=true) }}
+  </div>
+  {% endif %}
   <p class="ap-said" data-ap-said aria-live="polite"></p>
   {% if cols %}
   {# A rule: one column set from an earlier gate's result. It proposes;
@@ -75,13 +88,13 @@
     <div class="btnrow"><button class="btn btn-primary" type="button" data-ap-prop-apply>Apply</button><button class="btn btn-secondary" type="button" data-ap-prop-cancel>Cancel</button></div>
   </section>
   {% endif %}
-  {% if not plan.rows %}{% from "applydesk/_empty.html" import empty %}
+  {% if not any_rows %}{% from "applydesk/_empty.html" import empty %}
   {% if not exercise_published %}{% call empty("No applications yet", url('/operator/exercises/' ~ exercise.public_id), "Home") %}A row per dossier comes once the exercise is published and applicants start their applications.{% endcall %}
   {% else %}{% call empty("No applications yet", url('/operator/exercises/' ~ exercise.public_id ~ '/form'), "Form") %}A row per dossier comes as applicants start their applications on the exercise's form.{% endcall %}{% endif %}
   {% endif %}
   {# With no rows the table is kept for the page's script, out of view
      (AD-79: no header-only table). #}
-  <div class="ap-wrap"{% if not plan.rows %} hidden{% endif %}>
+  <div class="ap-wrap"{% if not any_rows %} hidden{% endif %}>
   <table class="ap-table">
     <thead>
       <tr class="ap-groups">
@@ -125,15 +138,15 @@
       {# A draft has no dossier yet (ruling 32: minted at submit): it is
          named by its Application ID. A candidate's dossier (AD2F) has no
          application, so no state, date or answers. #}
-      {% set rid = d.key if d.state == "Draft" else d.public_id %}
-      <tr data-row data-ap-i="{{ loop.index0 }}" data-ap-app="{{ d.key }}" data-ap-name="{{ rid }}" data-status="{{ d.state }}" data-search="{{ (('' if d.state == 'Draft' else d.public_id ~ ' ') ~ (d.key ~ ' ' if a else '') ~ d.name ~ ' ' ~ d.email) | lower }}"{% if d.key in last %} data-last{% endif %}{% if d.key in rank %} data-rank="{{ rank[d.key] }}"{% endif %} data-answers="{{ (answers(a) if a else {}) | tojson | forceescape }}">
+      {% set rid = d.key if d.state == "Draft" else d.public_id %}{% set h = hand_minted.get(d.public_id) if not a else none %}
+      <tr{% if h %} data-entry="{{ h.entry_id }}"{% endif %} data-row data-ap-i="{{ loop.index0 }}" data-ap-app="{{ d.key }}" data-ap-name="{{ rid }}" data-status="{{ d.state }}" data-search="{{ (('' if d.state == 'Draft' else d.public_id ~ ' ') ~ (d.key ~ ' ' if a else '') ~ d.name ~ ' ' ~ d.email) | lower }}"{% if d.key in last %} data-last{% endif %}{% if d.key in rank %} data-rank="{{ rank[d.key] }}"{% endif %} data-answers="{{ (answers(a) if a else {}) | tojson | forceescape }}">
         {# A row per dossier, named by its Dossier ID, its application's ID
            under it (ruling 25; AD-89): the CSV still keys rows by
            Application ID. #}
         <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ rid }}">
-          {% if d.state == "Submitted" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ d.public_id) }}"><code>{{ d.public_id }}</code></a>{% elif d.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ d.public_id }}</code>{% endif %}{% if a %}<span class="ap-app">Application <code>{{ d.key }}</code></span>{% else %}<span class="ap-app">Candidate</span>{% endif %}</td>
+          {% if d.state == "Submitted" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ d.public_id) }}"><code>{{ d.public_id }}</code></a>{% elif d.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ d.public_id }}</code>{% endif %}{% if a %}<span class="ap-app">Application <code>{{ d.key }}</code></span>{% else %}<span class="ap-app">Created by hand{% if h and h.title %} · {{ h.title }}{% endif %}</span>{% endif %}</td>
         <td class="ap-who"><strong>{{ d.name }}</strong><span class="ap-mail">{{ d.email }}</span></td>
-        <td class="ap-stat">{% if a %}{% with value = d.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}{% endif %}<span class="ap-note">{{ a.submitted if a else "" }}</span>{% if d.state == "Submitted" and d.key not in redraft_closed %}<button class="btn btn-alert btn-short ap-redraft" type="button" disabled title="Returning to draft is not built yet" aria-label="Return {{ rid }} to draft">Return to draft</button>{% endif %}</td>
+        <td class="ap-stat">{% if a %}{% with value = d.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}{% else %}<span class="chip chip-info">By hand</span>{% endif %}<span class="ap-note">{{ a.submitted if a else "" }}</span>{% if d.state == "Submitted" and d.key not in redraft_closed %}<button class="btn btn-alert btn-short ap-redraft" type="button" disabled title="Returning to draft is not built yet" aria-label="Return {{ rid }} to draft">Return to draft</button>{% endif %}</td>
         {% for r in plan.stages %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
           <td class="{{ 'ap-out' if c.via is not defined }} {{ 'ap-r' if loop.first }}" data-cell="{{ c.key }}"{% if cell.by_hand %} data-hand{% endif %}>
           {# A submitted application's outcomes are always settable, "—"
@@ -149,26 +162,22 @@
         {% endfor %}{% endfor %}
       </tr>
     {% endfor %}
+    {# Entries with no dossier yet: minted at publish (ruling 83), drawn as
+       a draft application is, every cell "—". #}
+    {% for h in hand_pending %}
+      <tr data-entry="{{ h.entry_id }}" data-row data-ap-i="{{ plan.rows | length + loop.index0 }}" data-ap-app="" data-ap-name="" data-status="Entry" data-search="{{ (h.name ~ ' ' ~ h.email ~ ' ' ~ h.title) | lower }}" data-answers="{}">
+        <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ h.name }}{% if h.title %} ({{ h.title }}){% endif %}"><span class="muted">No dossier yet</span><span class="ap-app">Created by hand{% if h.title %} · {{ h.title }}{% endif %}</span></td>
+        <td class="ap-who"><strong>{{ h.name }}</strong><span class="ap-mail">{{ h.email }}</span></td>
+        <td class="ap-stat"><span class="chip chip-info">By hand</span><span class="ap-note"></span></td>
+        {% for r in plan.stages %}{% for c in r.columns %}<td class="{{ 'ap-out' if c.via is not defined }} {{ 'ap-r' if loop.first }}" data-cell="{{ c.key }}"><span class="muted">—</span></td>{% endfor %}{% endfor %}
+      </tr>
+    {% endfor %}
     </tbody>
   </table>
   </div>
-  {% if not cols and plan.rows %}<div class="ap-foot"><span class="muted">No gates or outcomes yet: stages, their gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span></div>{% endif %}
+  {% if not cols and any_rows %}<div class="ap-foot"><span class="muted">No gates or outcomes yet: stages, their gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span></div>{% endif %}
   <p class="muted ap-help"><em>Rows</em>: <em>Last applications</em> keeps each applicant's last submitted application. A gate's chip says whether the dossier is sent through it, cycling <em>—</em> (no status yet), <em>Entered</em>, <em>Not entered</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> checkbox does what Process sets.</p>
 </div>
-{# Create dossiers' entries (segment AD2N, author 2026-11-27): the list
-   kept off Process, on the page for dossiers, while Create dossiers is in
-   the process, before and after publishing. Added and removed as each
-   change is made (`applydesk/candidates.py`); a removed entry's dossier,
-   once minted, is retired with it (ruling 83). #}
-{% if plan.stages | selectattr("candidates") | list %}
-{% from "applydesk/operator/_process_cards.html" import people_list with context %}
-<section class="card cd-card" data-people-root aria-labelledby="cd-h">
-  <h2 id="cd-h">Created by hand</h2>
-  <p class="pc-line muted">The dossiers <em>Create dossiers</em> makes, a row each, kept as each change is made. Removing one retires its dossier once the exercise is published.</p>
-  {{ people_list("candidates", cand_list, url('/operator/exercises/' ~ exercise.public_id ~ '/candidates'), "dossier", "dossiers", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier.", true, count=true, label="Add people") }}
-</section>
-{% include "applydesk/operator/_people_list_js.html" %}
-{% endif %}
 <script>
 // Segment AD1C: the Dossiers page's moves, on screen only; a reload
 // restores the sample. Chips cycle, outcomes are picked and dated, the
@@ -211,10 +220,11 @@
       if (tally[open]) parts.push(tally[open] + (gate ? " to decide" : " pending"));
       h.querySelector("[data-ap-count]").textContent = parts.join(" · ") || "none yet";
     });
-    var s = {};
-    rows.forEach(function (r) { s[r.dataset.status] = (s[r.dataset.status] || 0) + 1; });
+    var s = {}, hand = 0;
+    rows.forEach(function (r) { s[r.dataset.status] = (s[r.dataset.status] || 0) + 1; if (r.hasAttribute("data-entry")) hand += 1; });
     root.querySelector('[data-ap-count="status"]').textContent = ["Submitted", "Draft", "Withdrawn"]
-      .filter(function (k) { return s[k]; }).map(function (k) { return s[k] + " " + k.toLowerCase() + (k === "Draft" && s[k] !== 1 ? "s" : ""); }).join(" · ");  // "3 drafts" (AD-41)
+      .filter(function (k) { return s[k]; }).map(function (k) { return s[k] + " " + k.toLowerCase() + (k === "Draft" && s[k] !== 1 ? "s" : ""); })
+      .concat(hand ? [hand + " by hand"] : []).join(" · ");  // "3 drafts" (AD-41)
   }
   function setAdm(btn, v) {
     btn.dataset.v = v;
@@ -393,7 +403,9 @@
   function filter() {
     var q = search.value.trim().toLowerCase(), st = status.value, lastOnly = which.value === "last", n = 0;
     rows.forEach(function (r) {
-      var on = (!q || r.dataset.search.indexOf(q) >= 0) && (!st || r.dataset.status === st) && (!lastOnly || r.hasAttribute("data-last"));
+      // By hand: Create dossiers' rows, minted or not (author, 2026-11-27).
+      var stOk = !st || (st === "hand" ? r.hasAttribute("data-entry") : r.dataset.status === st);
+      var on = (!q || r.dataset.search.indexOf(q) >= 0) && stOk && (!lastOnly || r.hasAttribute("data-last"));
       r.hidden = !on;
       if (on) n += 1;
     });
@@ -412,9 +424,9 @@
     var m = /(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(?: (\d{4}))?/.exec(t || "");
     return m ? (+(m[3] || 0)) * 10000 + MONTHS.indexOf(m[2]) * 100 + +m[1] : Infinity;
   }
-  var STATES = { Submitted: 0, Candidate: 0, Draft: 1, Withdrawn: 2 }, ADMIT = { "Entered": 0, "Not entered": 1 };
+  var STATES = { Submitted: 0, Candidate: 0, Draft: 1, Entry: 1, Withdrawn: 2 }, ADMIT = { "Entered": 0, "Not entered": 1 };
   function keyOf(r, col) {
-    if (col === "dossier") return [r.dataset.status === "Draft" ? 1 : 0, r.dataset.apName];
+    if (col === "dossier") return [r.dataset.status === "Draft" || r.dataset.status === "Entry" ? 1 : 0, r.dataset.apName];
     if (col === "applicant") return [r.querySelector(".ap-who strong").textContent.toLowerCase()];
     if (col === "status") return [STATES[r.dataset.status], when(r.querySelector(".ap-stat .ap-note").textContent)];
     var el = cellOf(r, col), h = head[col];
@@ -470,6 +482,29 @@
     drawTickAll();
   });
   root.addEventListener("change", function (e) { if (e.target.matches("[data-ap-tick]")) drawTickAll(); });
+  // Remove ticked (author, 2026-11-27): the ticked dossiers created by
+  // hand, each kept at once through Create dossiers' route (a minted one
+  // retired, ruling 83), then the page drawn again. Not under the lock.
+  var removeBtn = root.querySelector("[data-ap-remove]");
+  if (removeBtn) removeBtn.addEventListener("click", function () {
+    var picked = ticked().filter(function (r) { return r.hasAttribute("data-entry"); });
+    if (!picked.length) { said.textContent = "No dossiers created by hand ticked: tick them to remove first."; return; }
+    var n = picked.length;
+    if (!window.confirm("Remove " + n + (n === 1 ? " dossier" : " dossiers") + " created by hand? A dossier already made is retired.")) return;
+    removeBtn.disabled = true;
+    said.textContent = "Removing…";
+    var chain = Promise.resolve(0);
+    picked.forEach(function (r) {
+      chain = chain.then(function (failed) {
+        return fetch(removeBtn.dataset.apRemove, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ action: "remove", entry_id: Number(r.dataset.entry) }) })
+          .then(function (resp) { return failed + (resp.ok ? 0 : 1); }, function () { return failed + 1; });
+      });
+    });
+    chain.then(function (failed) {
+      if (failed) { said.textContent = (n - failed) + " removed; " + failed + " not: reload and try again."; removeBtn.disabled = false; return; }
+      window.location.reload();
+    });
+  });
   var setCol = root.querySelector("[data-ap-set-col]"), setVal = root.querySelector("[data-ap-set-val]");
   function values() {
     if (!setCol) return;
@@ -772,7 +807,7 @@
       }
       var lines = [["Application ID", "Applicant", "Email", "Status"].concat(heads.map(function (h) { return h.dataset.label; })).map(q).join(",")];
       rows.forEach(function (r) {
-        if (r.hidden) return;
+        if (r.hidden || r.dataset.status === "Entry") return;  // no dossier yet: nothing to key
         var cells = [idOf(r), whoOf(r), r.querySelector(".ap-mail").textContent, r.dataset.status].concat(heads.map(function (h) {
           // "-" for no status: plain ASCII survives a spreadsheet's round trip.
           var el = cellOf(r, h.dataset.col); return el ? (el.dataset.v === "—" ? "-" : el.dataset.v) : "";
@@ -791,3 +826,4 @@
   loaded = state();
 })();
 </script>
+{% if by_hand %}{% include "applydesk/operator/_people_list_js.html" %}{% endif %}

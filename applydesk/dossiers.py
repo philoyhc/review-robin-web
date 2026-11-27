@@ -11,6 +11,7 @@ exercise is published and on each later add (rulings 81, 83,
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy import exists, select
@@ -199,3 +200,42 @@ def candidate_rows(exercise_id: str) -> tuple[tuple[str, str, str], ...]:
     finally:
         session.close()
     return tuple((d, name or email or "", email or "") for d, name, email in rows)
+
+
+@dataclass(frozen=True)
+class HandRow:
+    """One Create dossiers entry as the Dossiers page's one table draws it
+    (author, 2026-11-27): ``dossier_id`` its live dossier's ID, "" until
+    one is minted (before publishing)."""
+
+    entry_id: int
+    dossier_id: str
+    name: str
+    email: str
+    title: str
+
+
+def hand_rows(exercise_id: str) -> tuple[HandRow, ...]:
+    """The exercise's live Create dossiers entries with their dossiers, if
+    minted, in the order they were added, read in a session of their own."""
+    session = db.new_session()
+    try:
+        rows = session.execute(
+            select(
+                Candidate.id, Dossier.public_id, Person.display_name, Person.email, Candidate.title
+            )
+            .join(Person, Person.id == Candidate.person_id)
+            .join(Exercise, Exercise.id == Candidate.exercise_id)
+            .outerjoin(
+                Dossier,
+                (Dossier.candidate_id == Candidate.id) & Dossier.retired_at.is_(None),
+            )
+            .where(Exercise.public_id == exercise_id, Candidate.removed_at.is_(None))
+            .order_by(Candidate.added_at, Candidate.id)
+        ).all()
+    finally:
+        session.close()
+    return tuple(
+        HandRow(entry, dossier or "", name or email or "", email or "", title or "")
+        for entry, dossier, name, email, title in rows
+    )

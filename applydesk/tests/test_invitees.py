@@ -212,7 +212,7 @@ def test_the_invitees_page_says_when_create_dossiers_leaves_it_unused() -> None:
     assert _post_process(client, made, {**led, "who_may_apply": "invitation"}).status_code == 200
     assert "data-iv-unused" in client.get(f"{base}/invitees").text
     dossiers = client.get(f"{base}/dossiers").text
-    assert "<em>Created by hand</em> keeps each change" in dossiers
+    assert "Adding and removing dossiers created by hand is kept" in dossiers
 
 
 def test_a_local_run_finds_the_sample_panels_members() -> None:

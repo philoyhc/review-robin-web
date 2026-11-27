@@ -1304,10 +1304,8 @@ but the lobby's *Stage* column reads:
   kept by hand, each holding the dossiers added for them, shown as a stage
   item with a count, one row of *Add people*, *Dossiers per person*, *Add*
   and *Upload CSV…*, and a count line, *34 dossiers for 12 people · Manage
-  on Dossiers →*. The list (name, email, title, when added, *Remove*),
-  folding under *Dossiers (n)*, open up to ten, is the Dossiers page's
-  *Created by hand* card, while Create dossiers is in the process, before
-  and after publishing (segment AD2N). A Form after it invites
+  on Dossiers →*. The entries are rows of the Dossiers page's one table
+  (author, 2026-11-27), before and after publishing. A Form after it invites
   from its dossiers (the Form's *Who may apply*); feeding gates as dossiers
   is not built. At most one stage holds it, with the form, with gates or
   alone (`stages.problems`): *+Create dossiers* is disabled with its reason
@@ -1498,10 +1496,16 @@ rows ticked*. *Download CSV* writes the rows in view in the shape *Upload
 CSV* reads, a cell a spreadsheet would run as a formula guarded with `'` (a
 lone `-`, no status, is not), named `<code>_dossiers_<date>.csv`; *Upload
 CSV* undoes the guard. The grid has no *Save*; nothing in it is kept until AD2.
-While Create dossiers is in the process (as saved), a *Created by hand* card
-below the grid lists its entries (Name, Email, Title, Added, *Remove*) with
-its add row, each change kept as made (segment AD2N); the page's placeholder
-line says the grid's changes are not saved and the card's are. Process's
+**One table** (author, 2026-11-27): Create dossiers' entries are its rows too.
+A minted one is its dossier's row, *Created by hand · <title>* under its ID
+and a *By hand* chip; one with no dossier yet (before publishing) is drawn
+as a draft application is, *No dossier yet*, every cell *—*, left out of
+the CSV download. While Create dossiers is in the process (as saved), Add
+people's row (as Process's) sits above the table, the page drawn again
+after an add; *Remove ticked* removes the ticked rows created by hand, each
+kept at once (a minted dossier retired, ruling 83), not under the lock. The
+Status filter's *By hand* shows them alone. The placeholder line says the
+cells are not saved and adding and removing these rows is. Process's
 link to it reads *Save, then manage on Dossiers* on an item not yet saved, as
 the Form's link to Invitees does while the tab is not shown.
 
