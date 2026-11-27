@@ -165,7 +165,7 @@
 <section class="card cd-card" data-people-root aria-labelledby="cd-h">
   <h2 id="cd-h">Created by hand</h2>
   <p class="pc-line muted">The dossiers <em>Create dossiers</em> makes, a row each, kept as each change is made. Removing one retires its dossier once the exercise is published.</p>
-  {{ people_list("candidates", cand_list, url('/operator/exercises/' ~ exercise.public_id ~ '/candidates'), "dossier", "dossiers", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier.", true, count=true) }}
+  {{ people_list("candidates", cand_list, url('/operator/exercises/' ~ exercise.public_id ~ '/candidates'), "dossier", "dossiers", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier.", true, count=true, label="Add people") }}
 </section>
 {% include "applydesk/operator/_people_list_js.html" %}
 {% endif %}

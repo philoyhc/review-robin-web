@@ -307,6 +307,14 @@
     .pc-cand-n { white-space: nowrap; }
     /* Create dossiers' entries on the Dossiers page (segment AD2N). */
     .cd-card { margin-top: 16px; }
+    /* A page's own count left of its add row (author, 2026-11-27: Invitees). */
+    .pl-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 32px; align-items: start; }
+    .pl-tally { padding-top: 30px; white-space: nowrap; }
+    @media (max-width: 640px) { .pl-top { grid-template-columns: 1fr; } .pl-tally { padding-top: 0; } }
+    /* An address in a people list; a directory account's is a pill, as
+       Panels shows a verified one (author, 2026-11-27). */
+    .pl-addr { font: 12.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .pl-addr[data-verified] { display: inline-block; max-width: 100%; padding: 2px 10px; border-radius: 9999px; background: var(--chip-info-bg); color: var(--chip-info-fg); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pc-cand-n .fc-in { width: 150px; }
     @media (max-width: 639px) {
       .pc-cand-add { flex-wrap: wrap; }

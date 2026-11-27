@@ -49,7 +49,16 @@ def listing(session: Session, public_id: str) -> tuple[Listed, ...]:
         .order_by(Invitee.added_at, Invitee.id)
     )
     return tuple(
-        Listed(i.id, p.id, p.display_name or "", p.email or "", i.via, i.added_at) for i, p in rows
+        Listed(
+            i.id,
+            p.id,
+            p.display_name or "",
+            p.email or "",
+            i.via,
+            i.added_at,
+            verified=p.object_id is not None,
+        )
+        for i, p in rows
     )
 
 

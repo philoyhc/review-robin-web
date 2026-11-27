@@ -77,7 +77,7 @@
      dossiers' list is: people are invited, or taken off, while it is open,
      each change kept as it is made (cold read). #}
   <div class="pi-sec" data-invitees-row{% if from_dossiers or who_may_apply != "invitation" %} hidden{% endif %}>
-    {{ people_list("invitees", invitee_list, url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'), "invitee", "invitees", "A CSV has an <em>Email</em> column; each row is one person.", false, tokens=true, manage=("Invitees", url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'), new or not invitees_tab)) }}
+    {{ people_list("invitees", invitee_list, url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'), "invitee", "invitees", "A CSV has an <em>Email</em> column; each row is one person.", false, manage=("Invitees", url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'), new or not invitees_tab)) }}
   </div>
   {{ lock_open(form_lock) }}
   {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
@@ -100,49 +100,38 @@
    or a CSV (rulings 75, 77): Create dossiers' entries, or a Form's
    invitees (ruling 84). Its page script is `_people_list_js.html`, keyed
    by `data-cand-kind`. #}
-{% macro people_list(kind, listed, list_url, one, many, hint, titles, tokens=false, count=false, fold=true, via=false, manage=none) %}
+{% macro people_list(kind, listed, list_url, one, many, hint, titles, count=false, fold=true, via=false, manage=none, label=none, tally=none) %}
   {# ``fold``: the list folds under its count (Process); a page of its own
      shows it whole. ``via``: a *How added* column (Invitees, AD2N).
      ``manage``: (page, url, pending) where the list is kept; Process shows a count
-     line linking to it in place of the table (segment AD2N). #}
+     line linking to it in place of the table (segment AD2N). ``tally``: a
+     page's own count, on the left of the add row (author, 2026-11-27). #}
   <div data-cand-live data-cand-kind="{{ kind }}" data-cand-url="{{ list_url }}" data-cand-unit="{{ one }}|{{ many }}" data-cand-titles="{{ 'true' if titles else 'false' }}" data-cand-via="{{ 'true' if via else 'false' }}">
-  {# A typeahead (author, 2026-11-27): every match the search returns is
-     listed under the box as the name is typed, whatever field it matched
-     (not the browser's own list, which hides those not holding what was
-     typed: Codex on #4255); Add takes the one picked, beside Upload CSV. #}
-  {% if tokens %}
-  {# Invitees (author, 2026-11-27): names or emails, several at once,
-     separated by commas, as a panel's members box; each found becomes a
-     pill, its name the directory's; one not found stays as typed. #}
+  {% if tally %}<div class="pl-top"><div class="pn-readout pl-tally"><span class="pn-rl">{{ tally }}:</span> <span class="chip chip-info" data-cand-tally="{{ kind }}">{{ listed | length }}</span></div><div class="pl-add">{% endif %}
+  {# Names or emails, several at once, separated by commas, as a panel's
+     members box (author, 2026-11-27, for invitees and then Create
+     dossiers): each found becomes a pill, its name the directory's; one
+     not found stays as typed; suggestions list under the box as a name is
+     typed, a pick that account's pill. #}
+  {% set box_label = label or ("Add " ~ many) %}
   <div class="pc-cand-add">
-    <div class="fc-l pc-cand-box"><span id="pc-{{ kind }}-label">Add {{ many }}</span>
+    <div class="fc-l pc-cand-box"><span id="pc-{{ kind }}-label">{{ box_label }}</span>
       <div class="tokens" role="group" aria-labelledby="pc-{{ kind }}-label" data-cand-tokens>
-        <input class="token-input" type="text" data-cand-entry role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pc-{{ kind }}-suggest" autocomplete="off" aria-label="Add {{ many }}: names or emails, separated by commas" placeholder="Name or email; separate several with commas">
+        <input class="token-input" type="text" data-cand-entry role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pc-{{ kind }}-suggest" autocomplete="off" aria-label="{{ box_label }}: names or emails, separated by commas" placeholder="Name or email; separate several with commas">
       </div>
-      {# Suggestions as a name is typed, as a panel's members box offers
-         them (author, 2026-11-27); a pick is that account. #}
       <ul class="pc-cand-options" id="pc-{{ kind }}-suggest" role="listbox" aria-label="Suggestions" data-tok-options hidden></ul>
     </div>
+    {# Create dossiers (author, 2026-11-27): Add makes this many dossiers
+       for each person, titled Dossier 1, Dossier 2 and on after the ones
+       they hold; anything else is the CSV's or the Dossiers page's. #}
+    {% if count %}<label class="fc-l pc-cand-n">Dossiers per person<input class="fc-in" type="number" min="1" max="20" step="1" value="1" data-cand-n></label>{% endif %}
     <button type="button" class="btn btn-secondary" data-cand-add-all disabled title="Type a name or email first">Add</button>
     <button type="button" class="btn btn-secondary" data-cand-csv>Upload CSV…</button><input type="file" accept=".csv,text/csv" data-cand-file hidden aria-label="CSV of people to add">
   </div>
-  {% else %}
-  <div class="pc-cand-add pi-sec">
-    <div class="pc-cand-box">
-      <label class="fc-l">Add someone<input class="fc-in" type="search" data-cand-search role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pc-{{ kind }}-options" placeholder="Search by name or email" autocomplete="off"></label>
-      <ul class="pc-cand-options" id="pc-{{ kind }}-options" role="listbox" aria-label="Matches" data-cand-options hidden></ul>
-    </div>
-    {# Create dossiers (author, 2026-11-27): Add makes this many dossiers
-       for the person picked, titled Dossier 1, Dossier 2 and on after the
-       ones they hold; anything else is the CSV's or the Dossiers page's. #}
-    {% if count %}<label class="fc-l pc-cand-n">Dossiers per person<input class="fc-in" type="number" min="1" max="20" step="1" value="1" data-cand-n></label>{% endif %}
-    <button type="button" class="btn btn-secondary" data-cand-add disabled title="Pick someone from the list first">Add</button>
-    <button type="button" class="btn btn-secondary" data-cand-csv>Upload CSV…</button><input type="file" accept=".csv,text/csv" data-cand-file hidden aria-label="CSV of people to add">
-  </div>
-  {% endif %}
   <p class="pc-line muted pc-hint">{{ hint | safe }} Rows that do not read are listed back, not saved.</p>
   <p class="muted fb-said" data-cand-said role="status"></p>
   <ul class="pc-issues" data-cand-bad hidden></ul>
+  {% if tally %}</div></div>{% endif %}
   {# The list folds under its count, open up to ten (author, 2026-11-27). #}
   {% if manage %}
   {% set n = listed | length %}{% set ppl = listed | map(attribute="person_id") | unique | list | length %}
@@ -153,7 +142,7 @@
     {% set cols = 4 + (1 if titles else 0) + (1 if via else 0) %}
     <thead><tr><th scope="col">Name</th><th scope="col">Email</th>{% if titles %}<th scope="col">Title</th>{% endif %}{% if via %}<th scope="col">How added</th>{% endif %}<th scope="col">Added</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
     <tbody>
-    {% for c in listed %}<tr data-cand-id="{{ c.id }}"><td>{{ c.name or "—" }}</td><td>{{ c.email }}</td>{% if titles %}<td>{{ c.title or "—" }}</td>{% endif %}{% if via %}<td>{{ "CSV" if c.via == "csv" else "Search" }}</td>{% endif %}<td>{{ short(c.added_at) }}</td><td><button type="button" class="btn btn-destructive btn-short" data-cand-remove="{{ c.id }}" aria-label="Remove {{ c.name or c.email }}{% if c.title %} ({{ c.title }}){% endif %}">Remove</button></td></tr>
+    {% for c in listed %}<tr data-cand-id="{{ c.id }}"><td>{{ c.name or "—" }}</td><td><span class="pl-addr"{% if c.verified %} data-verified title="Matched to a directory account"{% endif %}>{{ c.email }}</span></td>{% if titles %}<td>{{ c.title or "—" }}</td>{% endif %}{% if via %}<td>{{ "CSV" if c.via == "csv" else "Search" }}</td>{% endif %}<td>{{ short(c.added_at) }}</td><td><button type="button" class="btn btn-destructive btn-short" data-cand-remove="{{ c.id }}" aria-label="Remove {{ c.name or c.email }}{% if c.title %} ({{ c.title }}){% endif %}">Remove</button></td></tr>
     {% else %}<tr data-cand-none><td colspan="{{ cols }}" class="muted">No one yet.</td></tr>{% endfor %}
     </tbody>
   </table>
@@ -173,7 +162,7 @@
   {{ head("Create dossiers", "Create dossiers", chips, open) }}
   <div class="pi-body">
   <p class="pc-line">People added by hand, with the dossiers each holds, for the gates that follow. A Form after it writes to these dossiers.</p>
-  {{ people_list("candidates", listed, url('/operator/exercises/' ~ exercise.public_id ~ '/candidates'), "dossier", "dossiers", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier.", true, count=true, manage=("Dossiers", url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers'), not saved)) }}
+  {{ people_list("candidates", listed, url('/operator/exercises/' ~ exercise.public_id ~ '/candidates'), "dossier", "dossiers", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier.", true, count=true, label="Add people", manage=("Dossiers", url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers'), not saved)) }}
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-candidates">Remove Create dossiers</button></div>
   </div>
 </div>

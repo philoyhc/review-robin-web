@@ -33,8 +33,9 @@ on the operator allowlist who operates the exercise, and 404 otherwise
 ordinary operator, the Owner the seed made it.
 
 The local people search finds Cordware's fake accounts and every sample
-panel's members (the RA exercise's panels among them), some fifty
-institutional accounts to add, invite or admit (`directory.for_request`).
+panel member, applicant and assessor, each with a name and an address:
+about 150 institutional accounts to add, invite or admit
+(`directory.for_request`).
 
 | Path | Holds |
 |---|---|

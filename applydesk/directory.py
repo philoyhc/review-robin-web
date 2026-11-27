@@ -2,8 +2,8 @@
 person searches by name or email, people already on record first, then
 the institution's directory through Graph (`cordware/graph.py`,
 `search_users`), as Review Robin's pickers do. A local run's directory is
-Cordware's fake one, with the sample panels' members added
-(`for_request`), so a local check has some fifty accounts to find.
+Cordware's fake one, with the sample panels' members, applicants and
+assessors added, names and addresses (`for_request`).
 
 A failed directory search is reported, never read as "nobody there": the
 result then holds only people on record and names the failure's kind.
@@ -37,23 +37,28 @@ MIN_QUERY = 2
 
 @cache
 def _local_users() -> tuple[DirectoryUser, ...]:
-    """Cordware's fake accounts, then every sample panel's members not
-    already among them (author, 2026-11-27: the RA exercise's panels make
-    a longer list of institutional accounts to check with on localhost).
+    """Cordware's fake accounts, then every sample panel's members, sample
+    applicant and assessor not already among them, each with a name and an
+    address (author, 2026-11-27: the RA exercise's panels make a longer
+    list of institutional accounts to check with on localhost).
     Each member's object ID is derived from the address, so it is the same
     on every run."""
     from applydesk import sample_data
 
+    sampled = (
+        *((m.name, m.email) for panel in sample_data.PANELS for m in panel.members),
+        *((a.applicant, a.email) for a in sample_data.APPLICATIONS),
+        *((a.name, a.email) for a in sample_data.ASSESSORS),
+    )
     taken = {(u.mail or u.user_principal_name).lower() for u in FAKE_USERS}
     added: list[DirectoryUser] = []
-    for panel in sample_data.PANELS:
-        for member in panel.members:
-            address = member.email.lower()
-            if address in taken:
-                continue
-            taken.add(address)
-            object_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"mailto:{address}"))
-            added.append(DirectoryUser(object_id, member.name, address, address))
+    for name, email in sampled:
+        address = email.lower()
+        if address in taken:
+            continue
+        taken.add(address)
+        object_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"mailto:{address}"))
+        added.append(DirectoryUser(object_id, name, address, address))
     return (*FAKE_USERS, *added)
 
 
@@ -119,6 +124,17 @@ def search(
     # a snapshot, and a reassigned address is another account (Codex on
     # #4110). Only a pending person is matched by address.
     known = {p.object_id for p in on_record if p.object_id}
+    # A pending person the directory now finds, by address and by one
+    # account only, is offered as that account, so a pick binds them with
+    # the directory's name (author, 2026-11-27: names come from the
+    # directory) rather than adding the nameless row.
+    by_address: dict[str, list[DirectoryUser]] = {}
+    for user in found:
+        by_address.setdefault((user.mail or user.user_principal_name).casefold(), []).append(user)
+    found_once = {key for key, users in by_address.items() if len(users) == 1}
+    on_record = tuple(
+        p for p in on_record if p.object_id or not p.email_key or p.email_key not in found_once
+    )
     known_keys = {p.email_key for p in on_record if p.email_key and not p.object_id}
     fresh = tuple(
         user

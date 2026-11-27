@@ -62,6 +62,9 @@ class Listed:
     via: str
     added_at: datetime
     title: str = ""
+    #: Bound to a directory account (author, 2026-11-27: shown as a pill, as
+    #: Panels shows a verified address).
+    verified: bool = False
 
 
 @dataclass(frozen=True)
@@ -108,7 +111,16 @@ def listing(session: Session, public_id: str) -> tuple[Listed, ...]:
         .order_by(Candidate.added_at, Candidate.id)
     )
     return tuple(
-        Listed(c.id, p.id, p.display_name or "", p.email or "", c.via, c.added_at, c.title)
+        Listed(
+            c.id,
+            p.id,
+            p.display_name or "",
+            p.email or "",
+            c.via,
+            c.added_at,
+            c.title,
+            verified=p.object_id is not None,
+        )
         for c, p in rows
     )
 

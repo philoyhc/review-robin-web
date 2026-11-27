@@ -980,9 +980,12 @@ but the lobby's *Stage* column reads:
   the Setup row after *Process* and before *Form*, shown only while the
   Form's *Who may apply* is *Invitees* as saved and no Create dossiers is on
   the timeline (`invitees.tab_shown`); the page answers either way, saying
-  when the list is kept unused. Modeled on Panels: a roster card with the
-  count, *Add invitees* and *Upload CSV…*, and the full list (Name, Email,
-  *How added*: Search or CSV, Added, *Remove*), each change kept as made.
+  when the list is kept unused. Modeled on Panels: a roster card, the count
+  on the left and *Add invitees* with *Upload CSV…* on the right (author,
+  2026-11-27), above the full list (Name, Email, *How added*: Search or CSV,
+  Added, *Remove*), each change kept as made. An address bound to a
+  directory account is a pill, as Panels shows a verified one; its name is
+  the directory's.
 - **A gate** is one Review Robin run (ruling 28), in four parts, in this
   order. The *Gate* and *Evaluators* cards are collapsible, start shut and
   say what they hold on their summary line (`stages.gate_summary`,
@@ -1299,7 +1302,7 @@ but the lobby's *Stage* column reads:
   another value. A removed value's key stays on its retired row.
 - **The *Create dossiers* item** (rulings 77 and 83, `applydesk/candidates.py`; *Candidates* in code): people
   kept by hand, each holding the dossiers added for them, shown as a stage
-  item with a count, one row of *Add someone*, *Dossiers per person*, *Add*
+  item with a count, one row of *Add people*, *Dossiers per person*, *Add*
   and *Upload CSV…*, and a count line, *34 dossiers for 12 people · Manage
   on Dossiers →*. The list (name, email, title, when added, *Remove*),
   folding under *Dossiers (n)*, open up to ten, is the Dossiers page's
@@ -1314,9 +1317,13 @@ but the lobby's *Stage* column reads:
   - **No most per person** (author, 2026-11-27): *Max dossiers per person*
     is the Form's alone; a person holds as many dossiers as are added.
   - **Search** is the people search of ruling 75 (`applydesk/directory.py`:
-    people on record, then the directory; a failed directory search says
-    so). *Add* makes *Dossiers per person* entries (1 to 20) for the one
-    picked, added as `search` (`candidates.add_many`); an entry without a
+    people on record, then the directory, a person on record by address
+    alone whom the directory finds offered as that account so a pick takes
+    its name; a failed directory search says
+    so). *Add people* is the *Add invitees* box (author, 2026-11-27): names
+    or emails separated by commas, each found a pill, suggestions as a name
+    is typed. *Add* makes *Dossiers per person* entries (1 to 20) for each
+    pill, added as `search` (`candidates.add_many`); an entry without a
     title is *Dossier n*, numbered after the ones the person holds. More
     than that is the CSV's or the Dossiers page's.
   - **CSV** has an *Email* column and, if given, a *Name* and a *Title*

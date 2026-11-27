@@ -54,7 +54,7 @@ def test_add_makes_as_many_dossiers_as_its_box_says(page: Page) -> None:
     assert item.locator('[data-rel="per-person"]').count() == 0
     _pick(item, "admin@", "admin@example.edu")
     item.locator("[data-cand-n]").fill("2")
-    item.locator("[data-cand-add]").click()
+    item.locator("[data-cand-add-all]").click()
     item.locator("[data-cand-sum]").filter(has_text="2 dossiers for 1 person").wait_for()
     # The list itself is on the Dossiers page (segment AD2N).
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/dossiers")
@@ -86,7 +86,7 @@ def test_the_dossiers_page_holds_create_dossiers_entries(page: Page) -> None:
     card = page.locator(".cd-card")
     item = card.locator('[data-cand-live][data-cand-kind="candidates"]')
     _pick(item, "admin@", "admin@example.edu")
-    item.locator("[data-cand-add]").click()
+    item.locator("[data-cand-add-all]").click()
     row = item.locator("[data-cand-list] tr", has_text="admin@example.edu")
     row.wait_for()
     assert "Dossier 1" in row.inner_text()
