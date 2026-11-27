@@ -116,8 +116,11 @@
   <div class="pc-cand-add">
     <div class="fc-l pc-cand-box"><span id="pc-{{ kind }}-label">Add {{ many }}</span>
       <div class="tokens" role="group" aria-labelledby="pc-{{ kind }}-label" data-cand-tokens>
-        <input class="token-input" type="text" data-cand-entry autocomplete="off" aria-label="Add {{ many }}: names or emails, separated by commas" placeholder="Name or email; separate several with commas">
+        <input class="token-input" type="text" data-cand-entry role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pc-{{ kind }}-suggest" autocomplete="off" aria-label="Add {{ many }}: names or emails, separated by commas" placeholder="Name or email; separate several with commas">
       </div>
+      {# Suggestions as a name is typed, as a panel's members box offers
+         them (author, 2026-11-27); a pick is that account. #}
+      <ul class="pc-cand-options" id="pc-{{ kind }}-suggest" role="listbox" aria-label="Suggestions" data-tok-options hidden></ul>
     </div>
     <button type="button" class="btn btn-secondary" data-cand-add-all disabled title="Type a name or email first">Add</button>
     <button type="button" class="btn btn-secondary" data-cand-csv>Upload CSV…</button><input type="file" accept=".csv,text/csv" data-cand-file hidden aria-label="CSV of people to add">

@@ -469,6 +469,38 @@ def test_an_address_is_that_address_or_nothing(page: Page) -> None:
     assert lst.locator("[data-cand-tokens] .token").count() == 0
 
 
+def test_invitees_are_suggested_as_a_name_is_typed(page: Page) -> None:
+    """Author, 2026-11-27: the invitees box suggests as a panel's members
+    box does; a pick, by mouse or by arrow and Enter, makes that account's
+    pill and clears what was typed."""
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Suggestions Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    page.goto(page.url + "/process")
+    stage = page.locator("#pc-cards > .fc").first
+    stage.locator('[data-pc-act="form"]').click()
+    stage.locator('[data-rel="who-may-apply"]').select_option("invitation")
+    lst = stage.locator('[data-cand-live][data-cand-kind="invitees"]')
+    entry = lst.locator("[data-cand-entry]")
+    options = lst.locator("[data-tok-options] li")
+    entry.press_sequentially("Jane")
+    options.filter(has_text="Jane Tan").first.wait_for()
+    options.filter(has_text="Jane Tan").first.click()
+    pills = lst.locator("[data-cand-tokens] .token")
+    assert pills.count() == 1 and "Jane Tan" in pills.first.inner_text()
+    assert entry.input_value() == ""
+    assert lst.locator("[data-tok-options]").is_hidden()
+    entry.press_sequentially("Kumar")
+    options.filter(has_text="Arun Kumar").first.wait_for()
+    entry.press("ArrowDown")
+    entry.press("Enter")
+    assert pills.count() == 2
+    lst.locator("[data-cand-add-all]").click()
+    lst.locator("[data-cand-fold-n]").filter(has_text="Invitees (2)").wait_for()
+
+
 def test_a_stages_items_reorder_within_the_rules(page: Page) -> None:
     """Ruling 84: a stage's gates swap by their grips and save in that
     order; a move putting a gate before Create dossiers, or the outcome

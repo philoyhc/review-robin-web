@@ -2120,22 +2120,111 @@
     item._settling = Promise.all([before, batch]);
     return item._settling;
   }
+  // Suggestions as the entry after the last comma is typed (author,
+  // 2026-11-27): the people search's matches under the box; a pick makes
+  // that account's pill, so a name two people share is told apart by
+  // picking. Arrow keys move, Enter picks, Escape closes.
+  var tokTimer = null;
+  function tokList(item) { return item.querySelector("[data-tok-options]"); }
+  function tokShow(item, open) {
+    var list = tokList(item), input = item.querySelector("[data-cand-entry]");
+    list.hidden = !open;
+    input.setAttribute("aria-expanded", open ? "true" : "false");
+    if (!open) { input.removeAttribute("aria-activedescendant"); item._tokOn = -1; }
+  }
+  function tokSegment(input) { return input.value.split(",").pop().trim(); }
+  function tokOffer(item, got, q) {
+    var list = tokList(item), rows = [];
+    list.textContent = "";
+    got.on_record.forEach(function (p) {
+      rows.push({ label: p.name ? p.name + " (" + p.email + ")" : p.email, hit: { name: p.name || p.email, email: p.email, body: { action: "add", person_id: p.id } } });
+    });
+    got.directory.forEach(function (u) {
+      rows.push({ label: (u.name || u.address) + " (" + u.address + ") · directory", hit: { name: u.name || u.address, email: u.address, body: { action: "add", object_id: u.object_id, address: u.address } } });
+    });
+    rows.forEach(function (r, i) {
+      var li = el("li", "", r.label);
+      li.id = "pc-" + item.dataset.candKind + "-sug-" + i;
+      li.setAttribute("role", "option");
+      li.dataset.tokOpt = String(i);
+      list.appendChild(li);
+    });
+    item._tokRows = rows;
+    item._tokOn = -1;
+    tokShow(item, rows.length > 0);
+    if (!rows.length && got.directory_failed) item.querySelector("[data-cand-said]").textContent = "The directory could not be searched: try again.";
+  }
+  function tokHighlight(item, i) {
+    var rows = item._tokRows || [], list = tokList(item);
+    if (!rows.length) return;
+    item._tokOn = (i + rows.length) % rows.length;
+    list.querySelectorAll("li").forEach(function (li, j) {
+      li.classList.toggle("on", j === item._tokOn);
+      li.setAttribute("aria-selected", j === item._tokOn ? "true" : "false");
+    });
+    var on = list.querySelectorAll("li")[item._tokOn];
+    item.querySelector("[data-cand-entry]").setAttribute("aria-activedescendant", on.id);
+    on.scrollIntoView({ block: "nearest" });
+  }
+  function tokPick(item, i) {
+    var row = (item._tokRows || [])[i], input = item.querySelector("[data-cand-entry]");
+    if (!row) return;
+    pill(item, row.hit);
+    // The entry being typed goes; anything left before it stays.
+    var parts = input.value.split(",");
+    parts.pop();
+    var left = parts.map(function (p) { return p.trim(); }).filter(Boolean);
+    input.value = left.length ? left.join(", ") + ", " : "";
+    tokShow(item, false);
+    addable(item);
+    input.focus();
+  }
   root.addEventListener("input", function (e) {
     if (!e.target.matches("[data-cand-entry]")) return;
     var item = e.target.closest("[data-cand-live]");
+    window.clearTimeout(tokTimer);
+    tokShow(item, false);
     if (e.target.value.indexOf(",") >= 0) settle(item, false); else addable(item);
+    var q = tokSegment(e.target);
+    if (q.length < 2) return;
+    tokTimer = window.setTimeout(function () {
+      fetch(item.dataset.candUrl + "/search?q=" + encodeURIComponent(q), { credentials: "same-origin" })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (got) { if (tokSegment(e.target) === q) tokOffer(item, got, q); }, function () {});
+    }, 250);
   });
   root.addEventListener("keydown", function (e) {
     if (!e.target.matches("[data-cand-entry]")) return;
-    var item = e.target.closest("[data-cand-live]");
-    if (e.key === "Enter") { e.preventDefault(); settle(item, true); }
-    else if (e.key === "Backspace" && !e.target.value) {
+    var item = e.target.closest("[data-cand-live]"), open = !tokList(item).hidden;
+    if ((e.key === "ArrowDown" || e.key === "ArrowUp") && open) {
+      e.preventDefault();
+      tokHighlight(item, (item._tokOn == null ? -1 : item._tokOn) + (e.key === "ArrowDown" ? 1 : -1));
+    } else if (e.key === "Escape" && open) {
+      e.preventDefault();
+      tokShow(item, false);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (open && item._tokOn >= 0) tokPick(item, item._tokOn);
+      else { tokShow(item, false); settle(item, true); }
+    } else if (e.key === "Backspace" && !e.target.value) {
       var last = pillsOf(item).pop();
       if (last) { last.remove(); addable(item); }
     }
   });
+  // A pick is a mousedown, before the box loses its focus; a click
+  // elsewhere closes the list.
+  root.addEventListener("mousedown", function (e) {
+    var li = e.target.closest("[data-tok-opt]");
+    if (li) { e.preventDefault(); tokPick(li.closest("[data-cand-live]"), Number(li.dataset.tokOpt)); return; }
+    root.querySelectorAll("[data-tok-options]").forEach(function (list) {
+      if (!list.hidden && !list.closest(".pc-cand-box").contains(e.target)) tokShow(list.closest("[data-cand-live]"), false);
+    });
+  });
   root.addEventListener("focusout", function (e) {
-    if (e.target.matches("[data-cand-entry]") && e.target.value.trim()) settle(e.target.closest("[data-cand-live]"), true);
+    if (!e.target.matches("[data-cand-entry]")) return;
+    var item = e.target.closest("[data-cand-live]");
+    tokShow(item, false);
+    if (e.target.value.trim()) settle(item, true);
   });
   root.addEventListener("click", function (e) {
     var item = e.target.closest("[data-cand-live]");
