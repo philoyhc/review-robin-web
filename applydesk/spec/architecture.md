@@ -35,6 +35,8 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/process_store.py` | An exercise's timeline in the database ("Process"): `load` and `stored_stages` build the dataclasses the pages read, `save` keeps a page's snapshot whole (the revision guard, keys, the references check, the audit), `move_form` is Home's *Open form* and *Close form*. Flushes, never commits; refuses with `Refused` and its `key` |
 | `applydesk/rules.py` | The rule engine, the only rule evaluator: `propose` answers what each rule would change in a table of dossiers (Dossiers' *Apply rules…*), over `Dossier`, `Column` and `Cell` rows built by `columns_of` and `rows_of`. Pure: reads no database |
 | `applydesk/candidates.py` | An exercise's Candidates ("Candidates"): `listing`, `add`, `remove` and `import_csv`. Flushes, never commits |
+| `applydesk/invitees.py` | A Form's invite list ("Invitees"): `listing`, `full`, `add`, `remove` and `import_csv`, sharing `candidates.read_csv`. Flushes, never commits |
+| `applydesk/timeline_checks.py` | The timeline checked as saved, whole: the errors and warnings Process's Outline shows (`NO_FIRST_ITEM`, `POPULATE_AFTER_FORM`, `NO_ENTRIES`, `NO_INVITEES`, `NO_LAST_OUTCOME`) |
 | `applydesk/workflow.py` | Each item's state, the status row, the emails owed, the counts and the steps. Its email readers read `email_store`, else the sample's: `sends` (the stored ticks), `template_text` (subject, body and version from one read) and `emails` |
 | `applydesk/locks.py` | A stage's status and what a published stage fixes (ruling 35); `status_tally`, the exercises counted by status |
 | `applydesk/timeline.py` | The timeline Home and the applicant's page share: nothing operator-only |
@@ -100,7 +102,11 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
   and `exercise.sends_saved`) and `ad2s1_gate_scale.py`
   (revision `ad2s1gatescale` after `ad2l1emails`: `gate_field.scale` and
   `gate_field.scale_labels`) and `ad2j1_applications.py` (revision
-  `ad2j1applications`: `application`).
+  `ad2j1applications`: `application`) and `ad2i1_invitees.py` (revision
+  `ad2i1invitees` after `ad2k1entries`: `invitee`, and the data move: each
+  person on an *Invitation only* exercise's live Create dossiers entries, where
+  a stage holds both it and the Form, becomes an invitee from their earliest
+  entry, which stays).
 
 | Table (model) | Holds |
 |---|---|
@@ -125,6 +131,7 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
 | `outcome_release` (`OutcomeRelease`) | Who released an outcome to which audience, when: `outcome_id`, `audience`, `released_at`, `released_by_id`; (outcome, `audience`) unique. Written only by a release, which is not built; the table is empty |
 | `email_send` (`EmailSend`) | An email Process ticks: `exercise_id`, `item` (`receipt`, `reminder` or an outcome's key), `audience` (`Applicants` or `Evaluators`), `retired_at` (an unticked pair is retired, never deleted, and revived if ticked again). (exercise, `item`, `audience`) unique (`uq_email_send_pair`). Recorded whole with each Process save; `exercise.sends_saved` is false until the first, and a sample keeps its own ticks until then |
 | `email_template` (`EmailTemplate`) | An email's template: `exercise_id`, `item`, `audience`, `subject` (at most 300 characters), `body`, `version` (how many times it was saved) and `saved_at`. (exercise, `item`, `audience`) unique (`uq_email_template_pair`). A card never saved has no row. The row of an email Process retires stays |
+| `invitee` (`Invitee`) | One person a Form invites: `exercise_id`, `person_id`, `via` (`search` or `csv`), `added_by_id`, `added_at`, `removed_at`. (exercise, `person_id`) unique (`uq_invitee_pair`), so removing sets `removed_at` and adding again clears it on the same row. Migration `applydesk/alembic/versions/ad2i1_invitees.py` |
 | `candidate` (`Candidate`) | One person on an exercise's Candidates: `exercise_id`, `person_id`, `via` (`search` or `csv`), `added_by_id`, `added_at`, `removed_at`. (exercise, `person_id`) unique, so removing sets `removed_at` and adding again clears it |
 
 The database enforces what a race could otherwise break, each as a partial
@@ -164,8 +171,10 @@ or the first change, records them (`exercise.settings_recorded`).
 - **Owner-only.** Archive, restore and delete require an Owner
   (`operators.is_owner`); a ticked set is done whole or not at all.
 - **Locks.** Each change takes the exercise's row lock. The route, not the
-  service, refuses what the page locks: a published exercise's code and
-  eligibility, and blind review once a gate's stage is published.
+  service, refuses what the page locks: a published exercise's code, and
+  blind review once a gate's stage is published. Who may apply is the Form's,
+  refused while its stage is published (`exercises.set_eligibility`), and
+  a published stage's gates are not reordered (`process_store`).
 - **Dates.** `applydesk/clock.py`: today is the sample's fixed day while the
   sample's stages stand (`clock.FROZEN`), else the wall clock's in the
   exercise's timezone.
@@ -304,10 +313,20 @@ records and each card's template. Nothing is deleted.
   subject and a body; one never saved is the sample's default, or owed for an
   ordinary exercise).
 
+### Invitees
+
+`applydesk/invitees.py` lists the people a Form invites (`exercise.eligibility`
+`invitation`, shown as *Invitees*). `add` and `remove` flush and audit
+(`invitee.added`, `invitee.removed`); a person is listed once
+(`uq_invitee_pair`), and removing then adding revives the same row. `import_csv`
+reads as Create dossiers' does. The list is kept as each change is made, not by
+Process's save, through `GET …/invitees/search` and `POST …/invitees`. An
+archived or deleted exercise refuses every change. `timeline_checks` warns when
+the Form is for invitees and none is listed.
+
 ### Candidates
 
-`applydesk/candidates.py` lists an exercise's people (the form's roster on an
-*Invitation only* exercise). `add` and `remove` flush and audit; a person is
+`applydesk/candidates.py` lists an exercise's people (Create dossiers' entries). `add` and `remove` flush and audit; a person is
 listed once (`uq_candidate_pair`), and removing then adding revives the same
 row. `import_csv` adds each good row, matching an address to a person on
 record or making a pending one (`people.pending`), and returns the rows it
@@ -383,7 +402,8 @@ and `retired`; `context.revision`), `exercise.stage_reverted` (`reason`,
 `exercise.panels_saved` (a counts envelope: panels and people kept and
 `retired`; `context.revision`), `exercise.form_saved` (a counts envelope:
 `cards`, `fields`, `retired`; `context.revision`), `exercise.email_saved`
-(`context`: `item`, `audience`, `version`, `written`), `candidate.added` (`refs.person_id`, `context.via`) and `candidate.removed`
+(`context`: `item`, `audience`, `version`, `written`), `candidate.added` (`refs.person_id`, `context.via`), `candidate.removed`
+(`refs.person_id`), `invitee.added` (`refs.person_id`, `context.via`) and `invitee.removed`
 (`refs.person_id`). A directory find is audited to the searcher, not the
 person found.
 

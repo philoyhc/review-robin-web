@@ -808,7 +808,7 @@ Reopening a closed form is not built.
 ### Details
 
 Name, Exercise code, Description (`Exercise.summary`), Help contact,
-Timezone, Who may apply and Blind review, locked until *Unlock*. A Help
+Timezone and Blind review, locked until *Unlock*. A Help
 contact or Timezone left unset reads the operator settings' default
 (`DEFAULT_HELP_CONTACT`, `DEFAULT_TIMEZONE`) followed by *· the default*
 (`help_contact(e)` / `timezone(e)`, template globals in `applydesk/web.py`).
@@ -827,13 +827,14 @@ Unlocked, each is a field with a line saying where it is used.
   server's to refuse, saying *<code> is already another live exercise's
   code* and naming no exercise, and *Restore* on the Archive likewise says
   the code *is now another live exercise's code*.
-- A published exercise's Exercise code and Who may apply are fixed, saying
-  so; changing them waits for re-publishing (G2).
+- A published exercise's Exercise code is fixed, saying so; changing it
+  waits for re-publishing (G2). Who may apply is not Details': the Form's
+  item holds it ("The Process page").
 - **Blind review** is fixed, with its reason, once the first stage holding a
   gate is published (`locks.blind_lock`).
-- **The server refuses what the page locks**: a changed Exercise code or Who
-  may apply on a published exercise, and a changed Blind review once it is
-  fixed, are refused whatever the post says.
+- **The server refuses what the page locks**: a changed Exercise code on a
+  published exercise, and a changed Blind review once it is fixed, are
+  refused whatever the post says. A post's `eligibility` is not read.
 - **Saved to the database**, for any exercise the viewer operates, sample or
   ordinary: *Lock* posts JSON to `…/details` (`routes_operator.exercise_details`;
   415 for non-JSON, 413 past `web.MAX_BODY`), and a reload or a restart
@@ -843,12 +844,9 @@ Unlocked, each is a field with a line saying where it is used.
   An accepted save returns the new revision, which the page then names; a save
   that changes nothing leaves the revision alone. A change is audited
   `exercise.details_changed`.
-- **Unset is NULL**, never the text *Not set*, which the page prints: Who may
-  apply unset reads *Not set*; a Help contact or Timezone left unset, or
-  chosen as the default, is stored unset and reads the operator settings'
-  default followed by *· the default*. Who may apply is stored as `open`
-  (*Open to all signed in*) or `invitation` (*Invitation only*); who is
-  invited is the *Create dossiers* stage item ("The Process page").
+- **Unset is NULL**, never the text *Not set*, which the page prints: a Help
+  contact or Timezone left unset, or chosen as the default, is stored unset
+  and reads the operator settings' default followed by *· the default*.
 - Process shows Help contact and Timezone read-only.
 
 ## The Process page
@@ -885,8 +883,8 @@ but the lobby's *Stage* column reads:
   *Starts* and *Ends*, and *Shown to applicants*. Collapsed, it shows its
   name, dates, status chip and a summary (`Form · Outcome: Shortlist`,
   `2 gates`, `No gates`). Cards load collapsed; a lone card is open. At its
-  head, its status box ("Stage status"); below, its items in order: the form,
-  gates, the outcome.
+  head, its status box ("Stage status"); below, its items in order: *Create dossiers*, the form,
+  gates, the outcome ("Items reorder within their stage").
 - **Dates are typed** (author, 2026-11-18). A stage's *Starts* and *Ends* are
   date-time inputs (`stages.StageDates`, in the exercise's time zone; a bare
   day's end is its last minute, 23:59). An empty pair is unset: stored NULL,
@@ -906,6 +904,11 @@ but the lobby's *Stage* column reads:
   its title: *+Gate* on the form's stage, *+Form* on a stage with gates or
   when another holds it, *+Outcome* on a stage with one. `stages.problems`
   words the same rules and the Outline names any breach.
+- **The first item comes first** (ruling 84). Until a Form or a *Create
+  dossiers* is in the process, every stage offers only *+Form* and *+Create
+  dossiers*: *+Gate* and *+Outcome* are hidden, on the page and as items are
+  added or removed. Storage is not touched: a timeline saved without one is
+  still named by the Outline (`timeline_checks.NO_FIRST_ITEM`).
 - **Buttons.** Along a card's foot, flush right: *Replicate*, *+Stage*,
   *Delete*. Each insert lands after the card and opens. *Delete* has no
   confirmation and is disabled on the last stage. A replica leaves the form
@@ -914,6 +917,15 @@ but the lobby's *Stage* column reads:
   ticked emails have no *Template →* until saved. Inside the card: *+Gate* (after the last gate, before the
   outcome), *+Outcome*, *+Form*; each item has *Remove the form* / *the gate*
   / *the outcome*.
+- **Items reorder within their stage** (ruling 84), by the grip on an item's
+  head, dragged or with ↑ ↓. The order is forced: *Create dossiers* first,
+  the outcome last, the Form never before *Create dossiers*; only the gates
+  between are free, and their order is saved as `gate.position`. No other item
+  order is stored. A move that breaks the order is put back, the reason shown
+  on the stage. A published stage keeps its items' order: the page refuses
+  the move, and the server refuses a save that reorders its gates
+  (`process_store.Refused`, key `published`). Items never move between stages
+  (remove and re-add).
 - **Links in** (ruling 65). A hash names a card: `#form`, `#gate-<key>` or
   `#outcome-<key>`. Process opens and scrolls to it, on load and on a hash
   change; a name it does not know opens the page as usual.
@@ -929,8 +941,30 @@ but the lobby's *Stage* column reads:
   shows its items collapsed; an item alone in its stage, or just added, is
   open. The chips follow the edits.
 - **The form item.** When it opens and closes (its own dates, else the
-  stage's), a link to Form, and its *Emails* to applicants: *Receipt on submitting* and *Reminder
+  stage's), a link to Form, its *Who may apply* and its *Emails* to applicants: *Receipt on submitting* and *Reminder
   to drafts*. A new form ticks the receipt only.
+  - **Who may apply** (ruling 84) is a menu: *Anyone signed in*, *Invitees*
+    or *Dossiers*. *Anyone signed in* and *Invitees* are stored in
+    `exercise.eligibility` as `open` and `invitation`, saved with Process
+    (`exercises.set_eligibility`, audited `exercise.details_changed`);
+    unset reads *Anyone signed in*. *Dossiers* is derived, never stored or
+    sent: while a *Create dossiers* is on the timeline the menu shows it,
+    locked, and without one it is greyed out. Removing *Create dossiers*
+    returns the menu to the stored value. Under the Form's lock, a changed
+    value is refused by the server while its stage is published.
+  - **Invitees** (`applydesk/invitees.py`): while *Invitees* is chosen the
+    item shows the invite list, built as *Create dossiers*' list (search,
+    *Upload CSV…* with *Email* and optional *Name* columns, *Remove*; no
+    *Title*) with a row per person. Each add and removal is made at once,
+    audited (`invitee.added`, `invitee.removed`), outside the Form's lock and
+    not waiting for *Save*. Routes: `GET …/invitees/search`, `POST
+    …/invitees` (`search`, `remove` and `csv` changes, as Create dossiers').
+    A person is listed once; *Remove* retires the row and adding them again
+    revives it. The list stays when another choice is picked, unused. An
+    invitee may submit up to *Dossiers per person*; their dossiers are made
+    only as they submit. Checking the list when someone applies is not
+    built (AD4). *Invitees* with no one on the list is an Outline warning
+    (`timeline_checks.NO_INVITEES`), not an error.
 - **A gate** is one Review Robin run (ruling 28), in four parts, in this
   order. The *Gate* and *Evaluators* cards are collapsible, start shut and
   say what they hold on their summary line (`stages.gate_summary`,
@@ -1247,8 +1281,8 @@ but the lobby's *Stage* column reads:
   another value. A removed value's key stays on its retired row.
 - **The *Create dossiers* item** (rulings 77 and 83, `applydesk/candidates.py`; *Candidates* in code): people
   kept by hand, shown as a stage item with a count, a search, *Upload CSV…*
-  and a list (name, email, when added, *Remove*). It is the form's roster
-  when Who may apply is *Invitation only*; feeding gates as dossiers is not
+  and a list (name, email, when added, *Remove*). A Form
+  after it invites from its dossiers (the Form's *Who may apply*); feeding gates as dossiers is not
   built. At most one stage holds it, with the form, with gates or alone
   (`stages.problems`): *+Create dossiers* is disabled with its reason once an
   exercise has one, and *Remove Create dossiers* removes the item,
@@ -1267,8 +1301,8 @@ but the lobby's *Stage* column reads:
     reported. A file with no *Email* column, an empty file or one that
     cannot be read is refused whole. Added as `csv`.
   - **Remove** retires the row; adding the person again revives it.
-  - The list stays if Who may apply returns to *Open to all signed in*; it
-    is then unused. Checking it when someone applies is not built.
+  - A Form after it invites from these dossiers; nothing checks the dossiers
+    when someone applies yet (AD4).
 - **Emails** (ruling 16). Process picks no template. Each email ticked, the
   form's receipt and reminder or an outcome's *Send email* per audience, is a
   template owed on the Emails page, named for its stage (*Review: Outcome ·
