@@ -72,3 +72,27 @@ def test_the_form_s_box_shows_only_without_create_dossiers(page: Page) -> None:
     assert form.locator("[data-per-person-row]").is_hidden()
     item.locator('[data-pc-act="remove-candidates"]').click()
     assert form.locator("[data-per-person-row]").is_visible()
+
+
+def test_the_dossiers_page_holds_create_dossiers_entries(page: Page) -> None:
+    """Segment AD2N: with Create dossiers in the process, the Dossiers page
+    lists its entries in a card of their own, added and removed there."""
+    from applydesk.tests.test_candidates_browser import _pick
+
+    _held()
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/dossiers")
+    card = page.locator(".cd-card")
+    item = card.locator('[data-cand-live][data-cand-kind="candidates"]')
+    _pick(item, "admin@", "admin@example.edu")
+    item.locator("[data-cand-add]").click()
+    row = item.locator("[data-cand-list] tr", has_text="admin@example.edu")
+    row.wait_for()
+    assert "Dossier 1" in row.inner_text()
+    row.locator("[data-cand-remove]").click()
+    item.locator("[data-cand-none]").wait_for()
+
+
+def test_the_dossiers_page_has_no_card_without_create_dossiers(page: Page) -> None:
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{DRAFT}/dossiers")
+    page.locator("[data-applications]").wait_for()
+    assert page.locator(".cd-card").count() == 0

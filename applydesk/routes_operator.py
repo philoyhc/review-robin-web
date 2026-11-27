@@ -1808,7 +1808,9 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
             for key, q in sample_data.list_questions(exercise.public_id).items()
         },
         # Ruling 77: the Candidates list, read only where Process draws it.
-        cand_list=_candidates_of(exercise.public_id) if section == "process" else (),
+        cand_list=(
+            _candidates_of(exercise.public_id) if section in ("process", "dossiers") else ()
+        ),
         # Ruling 84: the Form's invite list, read only where Process draws it.
         invitee_list=(
             _invitees_of(exercise.public_id) if section in ("process", "invitees") else ()

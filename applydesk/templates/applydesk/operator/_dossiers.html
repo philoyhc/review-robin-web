@@ -155,6 +155,20 @@
   {% if not cols and plan.rows %}<div class="ap-foot"><span class="muted">No gates or outcomes yet: stages, their gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span></div>{% endif %}
   <p class="muted ap-help"><em>Rows</em>: <em>Last applications</em> keeps each applicant's last submitted application. A gate's chip says whether the dossier is sent through it, cycling <em>—</em> (no status yet), <em>Entered</em>, <em>Not entered</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> checkbox does what Process sets.</p>
 </div>
+{# Create dossiers' entries (segment AD2N, author 2026-11-27): the list
+   kept off Process, on the page for dossiers, while Create dossiers is in
+   the process, before and after publishing. Added and removed as each
+   change is made (`applydesk/candidates.py`); a removed entry's dossier,
+   once minted, is retired with it (ruling 83). #}
+{% if plan.stages | selectattr("candidates") | list %}
+{% from "applydesk/operator/_process_cards.html" import people_list with context %}
+<section class="card cd-card" data-people-root aria-labelledby="cd-h">
+  <h2 id="cd-h">Created by hand</h2>
+  <p class="pc-line muted">The dossiers <em>Create dossiers</em> makes, a row each. Removing one retires its dossier once the exercise is published.</p>
+  {{ people_list("candidates", cand_list, url('/operator/exercises/' ~ exercise.public_id ~ '/candidates'), "dossier", "dossiers", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier.", true, count=true) }}
+</section>
+{% include "applydesk/operator/_people_list_js.html" %}
+{% endif %}
 <script>
 // Segment AD1C: the Dossiers page's moves, on screen only; a reload
 // restores the sample. Chips cycle, outcomes are picked and dated, the
