@@ -2048,12 +2048,11 @@
           hits.push({ name: u.name || u.address, email: u.address, keys: [u.address, u.upn], body: { action: "add", object_id: u.object_id, address: u.address } });
         });
         var exact = hits.filter(function (h) { return h.keys.some(function (k) { return k && k.toLowerCase() === low; }); });
-        if (exact.length) {
-          // One person, on record or in the directory: the record's row.
-          var emails = {};
-          exact.forEach(function (h) { emails[h.email.toLowerCase()] = true; });
-          return Object.keys(emails).length === 1 ? exact[0] : null;
-        }
+        // One account by its address, or the only match; the search leaves
+        // out a directory account that is someone on record, so two exact
+        // hits are two accounts (an address reassigned, say), and the
+        // entry stays to be told apart (Codex on #4264).
+        if (exact.length) return exact.length === 1 ? exact[0] : null;
         return hits.length === 1 ? hits[0] : null;
       });
   }
@@ -2085,7 +2084,10 @@
     input.value = tail.replace(/^\s+/, "");
     var said = item.querySelector("[data-cand-said]");
     said.textContent = "Looking up…";
-    item._settling = Promise.all(entries.map(function (q) {
+    // Every lookup still on its way is waited on by Add, not only this
+    // one (Codex on #4264).
+    var before = item._settling || Promise.resolve();
+    var batch = Promise.all(entries.map(function (q) {
       return resolve(item, q).then(function (h) { return [q, h]; }, function () { return [q, null]; });
     })).then(function (res) {
       var left = [];
@@ -2095,6 +2097,7 @@
       said.textContent = left.length ? "Not found, already invited, or more than one match: " + left.join(", ") + "." : "";
       addable(item);
     });
+    item._settling = Promise.all([before, batch]);
     return item._settling;
   }
   root.addEventListener("input", function (e) {
