@@ -114,6 +114,8 @@ PLACES: tuple[Mapping[str, Any], ...] = (
 #: (path segment, tab label).
 SETUP_PAGES: tuple[tuple[str, str], ...] = (
     ("process", "Process"),
+    # Shown only while the Form is for invitees (segment AD2N).
+    ("invitees", "Invitees"),
     ("form", "Form"),
     ("panels", "Panels"),
     ("emails", "Emails"),
@@ -136,7 +138,12 @@ def exercise_nav(exercise_id: str, current: str) -> Mapping[str, Any]:
             {"label": label, "path": f"{base}/{key}", "on": key == current} for key, label in pages
         ]
 
-    setup, operations = row(SETUP_PAGES), row(OPERATIONS_PAGES)
+    # The Invitees tab only while the Form is for invitees (segment AD2N);
+    # its page answers either way.
+    from applydesk import invitees
+
+    shown = tuple(p for p in SETUP_PAGES if p[0] != "invitees" or invitees.tab_shown(exercise_id))
+    setup, operations = row(shown), row(OPERATIONS_PAGES)
     return {
         "home": {"label": "Exercise Home", "path": base, "on": current == ""},
         "setup": setup,

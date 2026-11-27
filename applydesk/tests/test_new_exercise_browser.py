@@ -343,8 +343,10 @@ def test_invitees_show_with_their_choice_and_are_added(page: Page) -> None:
     assert lst.locator("[data-cand-tokens] .token").count() == 1
     assert "nobody.here@nowhere.example" in entry.input_value()
     lst.locator("[data-cand-add-all]").click()
-    lst.locator("[data-cand-list] tr", has_text="admin@example.edu").wait_for()
-    assert lst.locator("[data-cand-fold-n]").inner_text() == "Invitees (1)"
+    # On Process the list is a count line and a link, saying to save first
+    # while the Invitees tab is not shown (segment AD2N).
+    lst.locator("[data-cand-sum]").filter(has_text="1 invitee").wait_for()
+    assert "Save, then manage on Invitees" in lst.locator("[data-cand-line]").inner_text()
     assert lst.locator("[data-cand-tokens] .token").count() == 0
 
 
@@ -397,7 +399,7 @@ def test_an_invite_that_fails_keeps_its_pill(page: Page) -> None:
     lst.locator("[data-cand-said]").filter(has_text="Not invited").wait_for()
     assert pills.count() == 1
     assert "Refused for the test." in lst.locator("[data-cand-said]").inner_text()
-    assert lst.locator("[data-cand-list] tbody tr").count() == 1
+    assert lst.locator("[data-cand-sum]").inner_text() == "1 invitee"
 
 
 def test_a_name_waits_when_the_directory_is_down(page: Page) -> None:
@@ -467,6 +469,69 @@ def test_an_address_is_that_address_or_nothing(page: Page) -> None:
     lst.locator("[data-cand-entry]").fill("ann@example.edu,")
     lst.locator("[data-cand-said]").filter(has_text="Not found").wait_for()
     assert lst.locator("[data-cand-tokens] .token").count() == 0
+
+
+def test_invitees_are_suggested_as_a_name_is_typed(page: Page) -> None:
+    """Author, 2026-11-27: the invitees box suggests as a panel's members
+    box does; a pick, by mouse or by arrow and Enter, makes that account's
+    pill and clears what was typed."""
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Suggestions Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    page.goto(page.url + "/process")
+    stage = page.locator("#pc-cards > .fc").first
+    stage.locator('[data-pc-act="form"]').click()
+    stage.locator('[data-rel="who-may-apply"]').select_option("invitation")
+    lst = stage.locator('[data-cand-live][data-cand-kind="invitees"]')
+    entry = lst.locator("[data-cand-entry]")
+    options = lst.locator("[data-tok-options] li")
+    entry.press_sequentially("Jane")
+    options.filter(has_text="Jane Tan").first.wait_for()
+    options.filter(has_text="Jane Tan").first.click()
+    pills = lst.locator("[data-cand-tokens] .token")
+    assert pills.count() == 1 and "Jane Tan" in pills.first.inner_text()
+    assert entry.input_value() == ""
+    assert lst.locator("[data-tok-options]").is_hidden()
+    entry.press_sequentially("Kumar")
+    options.filter(has_text="Arun Kumar").first.wait_for()
+    entry.press("ArrowDown")
+    entry.press("Enter")
+    assert pills.count() == 2
+    lst.locator("[data-cand-add-all]").click()
+    lst.locator("[data-cand-sum]").filter(has_text="2 invitees").wait_for()
+
+
+def test_the_invitees_tab_adds_and_removes(page: Page) -> None:
+    """Segment AD2N: the Invitees tab, after Process while the Form is for
+    invitees, lists them in full, with How added; a pill added here is
+    listed, the count follows, and Remove takes them off."""
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Invitees Tab Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    home = page.url
+    page.goto(home + "/process")
+    stage = page.locator("#pc-cards > .fc").first
+    stage.locator('[data-pc-act="form"]').click()
+    stage.locator('[data-rel="who-may-apply"]').select_option("invitation")
+    with page.expect_navigation():
+        page.locator("[data-fb-save]").click()
+    page.get_by_role("link", name="Invitees", exact=True).click()
+    page.wait_for_url(home + "/invitees")
+    lst = page.locator('[data-cand-live][data-cand-kind="invitees"]')
+    lst.locator("[data-cand-entry]").fill("admin@example.edu,")
+    lst.locator("[data-cand-tokens] .token").first.wait_for()
+    lst.locator("[data-cand-add-all]").click()
+    row = lst.locator("[data-cand-list] tr", has_text="admin@example.edu")
+    row.wait_for()
+    assert "Search" in row.inner_text()
+    assert page.locator('[data-cand-tally="invitees"]').inner_text() == "1"
+    row.locator("[data-cand-remove]").click()
+    lst.locator("[data-cand-none]").wait_for()
+    assert page.locator('[data-cand-tally="invitees"]').inner_text() == "0"
 
 
 def test_a_stages_items_reorder_within_the_rules(page: Page) -> None:

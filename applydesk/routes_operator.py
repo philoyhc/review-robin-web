@@ -59,7 +59,7 @@ from applydesk.web import (
     root_path,
     url_path,
 )
-from cordware.graph import GraphError, directory_for
+from cordware.graph import GraphError
 from cordware.identity import Identity, current_identity
 
 router = APIRouter(prefix="/operator", dependencies=[Depends(gate.require_exercise_operator)])
@@ -652,7 +652,7 @@ def _people_search(request: Request, exercise_id: str, q: str, svc: Any) -> Resp
     session = db.new_session()
     try:
         listed = svc.full(session, exercise.public_id)
-        found = allowlist.search(session, q, lambda: directory_for(request), exclude=listed)
+        found = allowlist.search(session, q, lambda: directory.for_request(request), exclude=listed)
     finally:
         session.close()
     return JSONResponse(
@@ -724,15 +724,35 @@ def _change_list(request: Request, exercise_id: str, sent: Any, svc: Any) -> Res
     try:
         actor = people.resolve(session, identity)
         session.commit()
-        if action == "add" and isinstance(got.get("person_id"), int):
-            person = session.get(Person, got["person_id"])
-            if person is None:
-                raise candidates.Refused("That person is no longer on record; search again.")
-            said = (
+        count = got.get("count")
+        if (
+            svc is candidates
+            and count is not None
+            and (not isinstance(count, int) or isinstance(count, bool))
+        ):
+            # Codex on #4265: a count that is not a whole number refuses the
+            # add rather than falling back to one dossier.
+            raise candidates.Refused(
+                f"Dossiers per person is a whole number from 1 to {candidates.MAX_PER_PERSON}."
+            )
+
+        def put(person: Person) -> str:
+            # Create dossiers' Add makes as many dossiers as its box says
+            # (author, 2026-11-27); an invitee is one.
+            if isinstance(count, int) and not isinstance(count, bool) and svc is candidates:
+                n = candidates.add_many(session, exercise.public_id, person, "search", actor, count)
+                return f"Added {n} {'dossier' if n == 1 else 'dossiers'}."
+            return (
                 "Added."
                 if svc.add(session, exercise.public_id, person, "search", actor)
                 else svc.already(session, exercise.public_id)
             )
+
+        if action == "add" and isinstance(got.get("person_id"), int):
+            person = session.get(Person, got["person_id"])
+            if person is None:
+                raise candidates.Refused("That person is no longer on record; search again.")
+            said = put(person)
         elif (
             action == "add"
             and isinstance(got.get("object_id"), str)
@@ -743,17 +763,17 @@ def _change_list(request: Request, exercise_id: str, sent: Any, svc: Any) -> Res
                 raise candidates.Refused("The directory cannot be searched from this sign-in.")
             address, object_id = got["address"], got["object_id"]
             found = next(
-                (u for u in directory_for(request).find_users(address) if u.id == object_id),
+                (
+                    u
+                    for u in directory.for_request(request).find_users(address)
+                    if u.id == object_id
+                ),
                 None,
             )
             if found is None:
                 raise candidates.Refused("The directory no longer has that account; search again.")
             person = people.from_directory(session, found, tenant, actor)
-            said = (
-                "Added."
-                if svc.add(session, exercise.public_id, person, "search", actor)
-                else svc.already(session, exercise.public_id)
-            )
+            said = put(person)
         elif action == "remove" and isinstance(got.get("entry_id"), int):
             said = (
                 "Removed."
@@ -1801,15 +1821,26 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
             key: {"label": q.label, "options": list(q.options)}
             for key, q in sample_data.list_questions(exercise.public_id).items()
         },
-        # Ruling 77: the Candidates list, read only where Process draws it.
-        cand_list=_candidates_of(exercise.public_id) if section == "process" else (),
-        # Ruling 84: the Form's invite list, read only where Process draws it.
-        invitee_list=_invitees_of(exercise.public_id) if section == "process" else (),
+        # Ruling 77: the Candidates list, read where Process or Dossiers
+        # draws it (segment AD2N).
+        cand_list=(
+            _candidates_of(exercise.public_id) if section in ("process", "dossiers") else ()
+        ),
+        # Ruling 84: the Form's invite list, read where Process or Invitees
+        # draws it (segment AD2N).
+        invitee_list=(
+            _invitees_of(exercise.public_id) if section in ("process", "invitees") else ()
+        ),
         # Segment AD2K: how many dossiers one person may hold, on the
         # populating item.
         per_person=_per_person_of(exercise.public_id) if section == "process" else 1,
         # The Form's Who may apply as stored (ruling 84): unset reads open.
         who_may_apply=exercise_store.eligibility_of(exercise.eligibility) or "open",
+        # Segment AD2N: whether the Setup row shows Invitees, so Process
+        # says to save first and Invitees says when the list is unused.
+        invitees_tab=(
+            invitees.tab_shown(exercise.public_id) if section in ("process", "invitees") else False
+        ),
         # The timeline checked as a whole, as saved (segment AD2K).
         checked=timeline_checks.of(exercise.public_id) if section == "process" else None,
         short=clock.short,

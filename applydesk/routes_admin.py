@@ -21,7 +21,7 @@ from applydesk import allowlist, db, directory, exercises, gate, locks, operator
 from applydesk.ids import row_id
 from applydesk.models import Exercise
 from applydesk.web import ADMIN, render, url_path
-from cordware.graph import GraphError, directory_for
+from cordware.graph import GraphError
 from cordware.identity import Identity, current_identity, super_admin_configured
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(gate.require_admin)])
@@ -157,7 +157,7 @@ def suggest(request: Request, q: str = "", session: Session = Depends(db.get_ses
     """The *Add an operator* box's typeahead (segment AD2W): records, then
     the directory, as JSON; never cached. A sync route, so Graph's blocking
     calls run off the event loop."""
-    answer = allowlist.suggest(session, q, lambda: directory_for(request))
+    answer = allowlist.suggest(session, q, lambda: directory.for_request(request))
     return JSONResponse(answer, headers={"Cache-Control": "no-store"})
 
 
@@ -297,7 +297,7 @@ def _admit(request: Request, form: dict[str, str]) -> Response:
             allowlist.admit_from_directory(
                 session,
                 actor,
-                directory_for(request),
+                directory.for_request(request),
                 tenant,
                 form["object_id"],
                 form["address"],

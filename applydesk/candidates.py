@@ -5,8 +5,10 @@ invites from these dossiers (ruling 84); where the item is the first, each
 entry's dossier is minted once the exercise is published (rulings 81, 83,
 `dossiers`).
 
-Each entry is one dossier, so a person may hold several, up to the
-exercise's ``dossiers_per_person``; an add past it is refused. Removing an
+Each entry is one dossier, so a person may hold several, as many as are
+added (author, 2026-11-27: *Max dossiers per person* is the Form's alone);
+an entry added without a title is *Dossier n*, numbered after the ones the
+person holds. Removing an
 entry sets ``removed_at``; adding the person again is a new entry, never
 the old one back (ruling 83). A CSV saves its good rows and lists the rest
 back, as the Panels roster import does: each row is one address and, if
@@ -128,46 +130,23 @@ def held(session: Session, exercise: Exercise, person_id: int) -> int:
 
 
 def full(session: Session, public_id: str) -> frozenset[int]:
-    """The people holding as many entries as the exercise allows: the
-    search leaves them out."""
-    exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
-    if exercise is None:
-        return frozenset()
-    rows = session.execute(
-        select(Candidate.person_id)
-        .where(Candidate.exercise_id == exercise.id, Candidate.removed_at.is_(None))
-        .group_by(Candidate.person_id)
-        .having(func.count() >= exercise.dossiers_per_person)
-    )
-    return frozenset(r for (r,) in rows)
+    """The people the search leaves out: none, since anyone may be given
+    more dossiers (author, 2026-11-27)."""
+    return frozenset()
 
 
 def set_per_person(session: Session, public_id: str, most: int, actor: Person | None) -> bool:
-    """Set how many dossiers one person may hold (segment AD2K), saved with
-    Process from the item that populates them; refused, naming who, if
-    someone already holds more. True if it changed. Flushes."""
+    """Set the Form's *Max dossiers per person* (segment AD2K), saved with
+    Process. Create dossiers' entries do not count against it (author,
+    2026-11-27: Create dossiers has no most per person; Codex on #4265), so
+    entries kept from an earlier timeline never refuse it. True if it
+    changed. Flushes."""
     if not 1 <= most <= MAX_PER_PERSON:
         raise Refused(f"Dossiers per person is a whole number from 1 to {MAX_PER_PERSON}.")
     exercise = _exercise(session, public_id, lock=True)
     was = exercise.dossiers_per_person
     if most == was:
         return False
-    over = session.execute(
-        select(Person.display_name, Person.email)
-        .join(Candidate, Candidate.person_id == Person.id)
-        .where(Candidate.exercise_id == exercise.id, Candidate.removed_at.is_(None))
-        .group_by(Person.id, Person.display_name, Person.email)
-        .having(func.count() > most)
-        .order_by(Person.id)
-    ).all()
-    if over:
-        names = [name or email or "someone" for name, email in over]
-        shown = ", ".join(names[:3]) + (f" and {len(names) - 3} more" if len(names) > 3 else "")
-        held_ = "holds" if len(names) == 1 else "hold"
-        raise Refused(
-            f"Not saved: {shown} {held_} more than {most} "
-            f"{'dossier' if most == 1 else 'dossiers'}; remove entries first."
-        )
     exercise.dossiers_per_person = most
     session.flush()
     audit.write_event(
@@ -205,15 +184,14 @@ def add(
     mint: bool = True,
     title: str = "",
 ) -> bool:
-    """Add an entry for ``person``; False if they already hold as many as
-    the exercise allows (``dossiers_per_person``). Flushes. With ``mint``,
-    its dossier is given where Create dossiers is the first item (rulings
-    81, 83); a CSV mints once, after its rows."""
+    """Add an entry for ``person``, titled *Dossier n* after the ones they
+    hold when no title is given; True. Flushes. With ``mint``, its dossier
+    is given where Create dossiers is the first item (rulings 81, 83); a
+    CSV mints once, after its rows."""
     if via not in VIA:
         raise ValueError(via)
     exercise = _exercise(session, public_id, lock=True)
-    if held(session, exercise, person.id) >= exercise.dossiers_per_person:
-        return False
+    title = title.strip() or f"Dossier {held(session, exercise, person.id) + 1}"
     row = Candidate(
         exercise_id=exercise.id,
         person_id=person.id,
@@ -235,6 +213,24 @@ def add(
     if mint:
         dossiers.sync_candidates(session, exercise, actor)  # ruling 81: on each add
     return True
+
+
+def add_many(
+    session: Session,
+    public_id: str,
+    person: Person,
+    via: str,
+    actor: Person | None,
+    count: int,
+) -> int:
+    """Add ``count`` entries for ``person`` (author, 2026-11-27: Create
+    dossiers' *Dossiers per person* beside Add), each *Dossier n* after the
+    ones they hold, minting once after the last; how many were added."""
+    if not 1 <= count <= MAX_PER_PERSON:
+        raise Refused(f"Dossiers per person is a whole number from 1 to {MAX_PER_PERSON}.")
+    for i in range(count):
+        add(session, public_id, person, via, actor, mint=i == count - 1)
+    return count
 
 
 def remove(session: Session, public_id: str, entry_id: int, actor: Person | None) -> bool:
@@ -284,14 +280,14 @@ def import_csv(session: Session, public_id: str, text: str, actor: Person | None
     """Add each good row of a CSV with an *Email* column and, if given,
     *Name* and *Title* ones (any case, any order), one entry a row; the rest
     are listed back by row number. A person may be in the file as often as
-    the exercise allows entries (segment AD2K). Flushes; the caller
-    commits."""
+    they are to hold dossiers; a row without a title is *Dossier n*.
+    Flushes; the caller commits."""
     done = read_csv(
         session,
         public_id,
         text,
         actor,
-        most=_exercise(session, public_id).dossiers_per_person,
+        most=MAX_ROWS,
         add=lambda person, title: add(
             session, public_id, person, "csv", actor, mint=False, title=title
         ),

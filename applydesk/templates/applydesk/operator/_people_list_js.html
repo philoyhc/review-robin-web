@@ -1,0 +1,480 @@
+{# The people lists' script (rulings 75, 77, 84; segment AD2N): Create
+   dossiers' entries and a Form's invitees, each a [data-cand-live] keyed by
+   its kind, on Process, the Invitees tab and the Dossiers page. #}
+<script>
+// The people lists, kept as each change is made (not by Process's Save,
+// which places the items): Create dossiers' entries, an entry a dossier
+// (rulings 77, 83), and a Form's invitees (ruling 84). Each list is a
+// [data-cand-live] with its own URL and kind; the people search, Add,
+// Remove and a CSV upload are each answered with the list as it now stands.
+(function () {
+  // Process, Invitees and Dossiers each hold lists (segment AD2N).
+  var root = document.querySelector("[data-process], [data-people-root]");
+  if (!root) return;
+  var timer = null;
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+  function draw(item, got) {
+    var body = item.querySelector("[data-cand-list] tbody"), titles = item.dataset.candTitles === "true";
+    var via = item.dataset.candVia === "true";
+    // On Process the list is a count line, the table kept on its own page
+    // (segment AD2N).
+    var sum = item.querySelector("[data-cand-sum]");
+    if (sum) {
+      var u = (item.dataset.candUnit || "|").split("|"), cn = got.candidates.length, who = {};
+      got.candidates.forEach(function (c) { who[c.person_id] = true; });
+      var ppl = Object.keys(who).length;
+      sum.textContent = !cn ? "No one yet"
+        : item.dataset.candKind === "candidates" ? cn + " " + (cn === 1 ? u[0] : u[1]) + " for " + ppl + (ppl === 1 ? " person" : " people")
+        : cn + " " + (cn === 1 ? u[0] : u[1]);
+    }
+    if (body) body.textContent = "";
+    if (body && !got.candidates.length) {
+      var none = el("tr"), td = el("td", "muted", "No one yet.");
+      none.setAttribute("data-cand-none", ""); td.colSpan = 4 + (titles ? 1 : 0) + (via ? 1 : 0); none.appendChild(td); body.appendChild(none);
+    }
+    if (body) got.candidates.forEach(function (c) {
+      var tr = el("tr"), b = el("button", "btn btn-destructive btn-short", "Remove");
+      tr.dataset.candId = c.id;
+      tr.appendChild(el("td", "", c.name || "—")); tr.appendChild(el("td", "", c.email));
+      if (titles) tr.appendChild(el("td", "", c.title || "—"));
+      if (via) tr.appendChild(el("td", "", c.via === "csv" ? "CSV" : "Search"));
+      tr.appendChild(el("td", "", c.added));
+      b.type = "button"; b.dataset.candRemove = c.id; b.setAttribute("aria-label", "Remove " + (c.name || c.email) + (c.title ? " (" + c.title + ")" : ""));
+      var cell = el("td"); cell.appendChild(b); tr.appendChild(cell); body.appendChild(tr);
+    });
+    var n = got.candidates.length, units = (item.dataset.candUnit || "|").split("|");
+    var holder = item.closest(".pc-item"), chip = holder && holder.querySelector("[data-cand-count]");
+    if (chip) chip.textContent = n ? n + " " + (n === 1 ? units[0] : units[1]) : "No one yet";
+    // A page's own count (Invitees, segment AD2N) follows the list too.
+    var tally = document.querySelector('[data-cand-tally="' + item.dataset.candKind + '"]');
+    if (tally && document.contains(item)) tally.textContent = String(n);
+    var fold = item.querySelector("[data-cand-fold-n]");
+    if (fold) fold.textContent = units[1].charAt(0).toUpperCase() + units[1].slice(1) + " (" + n + ")";
+    var bad = item.querySelector("[data-cand-bad]");
+    bad.textContent = "";
+    (got.bad || []).forEach(function (t) { bad.appendChild(el("li", "", t)); });
+    bad.hidden = !(got.bad || []).length;
+    item.querySelector("[data-cand-said]").textContent = got.said || "";
+    // The item +Create dossiers or +Form adds is drawn from a template: it
+    // keeps the list as it now stands, so moving the item to another stage
+    // shows it (Codex on #4161).
+    var kind = item.dataset.candKind;
+    var tpl = document.getElementById(kind === "invitees" ? "pc-new-form" : "pc-new-candidates");
+    if (tpl && !tpl.content.contains(item)) {
+      var kept = tpl.content.querySelector('[data-cand-live][data-cand-kind="' + kind + '"]');
+      if (kept) draw(kept, { candidates: got.candidates });
+    }
+  }
+  // One change at a time, each sent once the one before has answered, so
+  // an older answer never redraws over a newer list (Codex on #4161).
+  var queue = Promise.resolve();
+  function current(item) {
+    return root.querySelector('#pc-cards [data-cand-live][data-cand-kind="' + item.dataset.candKind + '"]') || item;
+  }
+  // Each change answers with its outcome, "" when saved or why not, so a
+  // batch can keep what failed (Codex on #4264).
+  function change(item, body) {
+    var said = item.querySelector("[data-cand-said]");
+    said.textContent = "Saving…";
+    queue = queue.then(function () {
+      return fetch(item.dataset.candUrl, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(body) })
+        .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }); })
+        .then(function (got) {
+          // The list on the page now: its item may have moved stage while
+          // this change was waiting (Codex on #4161).
+          var now = current(item);
+          var nowSaid = now.querySelector("[data-cand-said]");
+          if (!got[0]) {
+            var why = (got[1] && (got[1].error || got[1].detail)) || "Not saved: try again.";
+            nowSaid.textContent = why;
+            return why;
+          }
+          draw(now, got[1]);
+          return "";
+        }, function () {
+          current(item).querySelector("[data-cand-said]").textContent = "Not saved: try again.";
+          return "Not saved: try again.";
+        });
+    });
+    return queue;
+  }
+  // The typeahead's offers (author, 2026-11-27): every match the search
+  // returns, listed under the box (Codex on #4255: the browser's own list
+  // hid matches not holding what was typed). A label picked names its own
+  // account; an address typed whole is a shortcut only while one account
+  // holds it, else the operator picks from the list.
+  function found(item, got) {
+    var list = item.querySelector("[data-cand-options]"), labels = {}, aliases = {}, rows = [];
+    list.textContent = "";
+    function offer(label, keys, body) {
+      // Two accounts with one name and address keep two picks (as the
+      // Operators box does, Codex on #4122).
+      for (var n = 2, base = label; labels[label.toLowerCase()]; n++) label = base + " (" + n + ")";
+      var li = el("li", "", label);
+      li.setAttribute("role", "option");
+      li.id = "pc-" + item.dataset.candKind + "-opt-" + rows.length;
+      li.dataset.candOpt = String(rows.length);
+      list.appendChild(li);
+      rows.push({ label: label, body: body });
+      labels[label.toLowerCase()] = body;
+      keys.forEach(function (k) {
+        if (!k) return;
+        k = k.toLowerCase();
+        aliases[k] = k in aliases && aliases[k] !== body ? null : body;
+      });
+    }
+    got.on_record.forEach(function (p) {
+      offer(p.name ? p.name + " (" + p.email + ")" : p.email, [p.email], { action: "add", person_id: p.id });
+    });
+    got.directory.forEach(function (u) {
+      var upn = u.upn && u.upn.toLowerCase() !== u.address.toLowerCase() ? u.upn : "";
+      offer(u.name + " (" + u.address + ")" + (upn ? " · " + upn : "") + " · directory", [u.address, upn], { action: "add", object_id: u.object_id, address: u.address });
+    });
+    item._candOffers = { labels: labels, aliases: aliases, rows: rows, on: -1 };
+    showList(item, rows.length > 0);
+    if (!rows.length) item.querySelector("[data-cand-said]").textContent = got.directory_failed ? "No one on record; the directory could not be searched." : "No one found.";
+    pickable(item);
+  }
+  function showList(item, open) {
+    var list = item.querySelector("[data-cand-options]"), box = item.querySelector("[data-cand-search]");
+    list.hidden = !open;
+    box.setAttribute("aria-expanded", open ? "true" : "false");
+    if (!open) box.removeAttribute("aria-activedescendant");
+  }
+  function highlight(item, i) {
+    var offers = item._candOffers, list = item.querySelector("[data-cand-options]");
+    if (!offers || !offers.rows.length) return;
+    offers.on = (i + offers.rows.length) % offers.rows.length;
+    list.querySelectorAll("li").forEach(function (li, j) {
+      li.classList.toggle("on", j === offers.on);
+      li.setAttribute("aria-selected", j === offers.on ? "true" : "false");
+    });
+    var on = list.querySelectorAll("li")[offers.on];
+    item.querySelector("[data-cand-search]").setAttribute("aria-activedescendant", on.id);
+    on.scrollIntoView({ block: "nearest" });
+  }
+  function choose(item, i) {
+    var row = item._candOffers && item._candOffers.rows[i];
+    if (!row) return;
+    var box = item.querySelector("[data-cand-search]");
+    box.value = row.label;
+    showList(item, false);
+    pickable(item);
+    box.focus();
+  }
+  function picked(item) {
+    var offers = item._candOffers;
+    if (!offers) return null;
+    var typed = item.querySelector("[data-cand-search]").value.trim().toLowerCase();
+    return offers.labels[typed] || offers.aliases[typed] || null;
+  }
+  function pickable(item) {
+    var b = item.querySelector("[data-cand-add]"), ok = !!picked(item);
+    b.disabled = !ok;
+    if (ok) b.removeAttribute("title"); else b.title = "Pick someone from the list first";
+  }
+  function addPicked(item) {
+    var body = picked(item);
+    if (!body) return;
+    // Create dossiers makes as many dossiers as its box says (author,
+    // 2026-11-27).
+    var n = item.querySelector("[data-cand-n]");
+    if (n) body = Object.assign({}, body, { count: Math.max(1, Math.min(20, Number(n.value) || 1)) });
+    change(item, body);
+    item.querySelector("[data-cand-search]").value = "";
+    item.querySelector("[data-cand-options]").textContent = "";
+    item._candOffers = null;
+    showList(item, false);
+    pickable(item);
+  }
+  root.addEventListener("input", function (e) {
+    if (!e.target.matches("[data-cand-search]")) return;
+    var item = e.target.closest("[data-cand-live]"), q = e.target.value.trim();
+    pickable(item);
+    if (picked(item)) return;  // an offer chosen, or an address typed whole: nothing more to ask
+    // The search changed: the last one's list and highlight go, so Enter
+    // cannot pick a match the new search has not returned (Codex on #4255).
+    if (item._candOffers) item._candOffers.on = -1;
+    item.querySelector("[data-cand-options]").textContent = "";
+    showList(item, false);
+    window.clearTimeout(timer);
+    if (q.length < 2) { showList(item, false); return; }
+    timer = window.setTimeout(function () {
+      fetch(item.dataset.candUrl + "/search?q=" + encodeURIComponent(q), { credentials: "same-origin" })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (got) { if (e.target.value.trim() === q) found(item, got); },
+              function () { if (e.target.value.trim() === q) item.querySelector("[data-cand-said]").textContent = "The search failed: try again."; });
+    }, 250);
+  });
+  root.addEventListener("keydown", function (e) {
+    if (!e.target.matches("[data-cand-search]")) return;
+    var item = e.target.closest("[data-cand-live]"), offers = item._candOffers;
+    var open = !item.querySelector("[data-cand-options]").hidden;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (!offers || !offers.rows.length) return;
+      e.preventDefault();
+      if (!open) showList(item, true);
+      highlight(item, offers.on + (e.key === "ArrowDown" ? 1 : -1));
+    } else if (e.key === "Escape" && open) {
+      e.preventDefault();
+      showList(item, false);
+    } else if (e.key === "Enter") {
+      if (open && offers && offers.on >= 0) { e.preventDefault(); choose(item, offers.on); }
+      else if (picked(item)) { e.preventDefault(); addPicked(item); }
+    }
+  });
+  // A click elsewhere closes the list; a pick is a mousedown, before the
+  // box loses its focus.
+  root.addEventListener("mousedown", function (e) {
+    var li = e.target.closest("[data-cand-opt]");
+    if (li) { e.preventDefault(); choose(li.closest("[data-cand-live]"), Number(li.dataset.candOpt)); return; }
+    root.querySelectorAll("[data-cand-live]").forEach(function (item) {
+      if (!item.querySelector("[data-cand-options]")) return;  // a box of pills has no list
+      if (!item.querySelector(".pc-cand-box").contains(e.target)) showList(item, false);
+    });
+  });
+  // Invitees' box (author, 2026-11-27): names or emails, separated by
+  // commas, as a panel's members box. Each finished entry is searched; one
+  // that names a single person (by address, or the only match) becomes a
+  // pill, its name the directory's or the record's; one that does not
+  // stays in the box as typed, and the line says so. Add invites each pill.
+  function resolve(item, entry) {
+    return fetch(item.dataset.candUrl + "/search?q=" + encodeURIComponent(entry), { credentials: "same-origin" })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (got) {
+        var low = entry.toLowerCase(), hits = [];
+        got.on_record.forEach(function (p) {
+          hits.push({ name: p.name || p.email, email: p.email, keys: [p.email], body: { action: "add", person_id: p.id } });
+        });
+        got.directory.forEach(function (u) {
+          hits.push({ name: u.name || u.address, email: u.address, keys: [u.address, u.upn], body: { action: "add", object_id: u.object_id, address: u.address } });
+        });
+        var exact = hits.filter(function (h) { return h.keys.some(function (k) { return k && k.toLowerCase() === low; }); });
+        // One account by its address, or the only match; the search leaves
+        // out a directory account that is someone on record, so two exact
+        // hits are two accounts (an address reassigned, say), and the
+        // entry stays to be told apart (Codex on #4264).
+        if (exact.length) return exact.length === 1 ? exact[0] : null;
+        // An address typed whole is that address or nothing: the search
+        // matches part of one, and leaves out whoever is already invited
+        // (Codex on #4264).
+        if (entry.indexOf("@") >= 0) return null;
+        // A name matching one person on record is only that when the
+        // directory was searched too (Codex on #4264).
+        if (got.directory_failed) { item._dirDown = true; return null; }
+        return hits.length === 1 ? hits[0] : null;
+      });
+  }
+  function pillsOf(item) { return Array.prototype.slice.call(item.querySelectorAll("[data-cand-tokens] .token")); }
+  function addable(item) {
+    var b = item.querySelector("[data-cand-add-all]"), n = pillsOf(item).length;
+    if (!b) return;
+    b.disabled = !n && !item.querySelector("[data-cand-entry]").value.trim();
+    b.textContent = n > 1 ? "Add " + n : "Add";
+    if (!b.disabled) b.removeAttribute("title"); else b.title = "Type a name or email first";
+  }
+  function pill(item, hit) {
+    // One pill per account, not per address: two accounts may share one
+    // (Codex on #4264).
+    var box = item.querySelector("[data-cand-tokens]");
+    var key = hit.body.person_id ? "p" + hit.body.person_id : "d" + hit.body.object_id;
+    if (pillsOf(item).some(function (t) { return t.dataset.key === key; })) return;
+    var t = el("span", "token", hit.name), x = el("button", "token-x", "×");
+    t.title = hit.email;
+    t.dataset.key = key;
+    t.dataset.body = JSON.stringify(hit.body);
+    x.type = "button";
+    x.setAttribute("aria-label", "Take " + hit.name + " out");
+    t.appendChild(x);
+    box.insertBefore(t, box.querySelector("[data-cand-entry]"));
+  }
+  function settle(item, all) {
+    var input = item.querySelector("[data-cand-entry]"), parts = input.value.split(",");
+    var tail = all ? "" : parts.pop();
+    var entries = parts.map(function (p) { return p.trim(); }).filter(Boolean);
+    if (!entries.length) return item._settling || Promise.resolve();
+    input.value = tail.replace(/^\s+/, "");
+    var said = item.querySelector("[data-cand-said]");
+    said.textContent = "Looking up…";
+    // Every lookup still on its way is waited on by Add, not only this
+    // one (Codex on #4264).
+    var before = item._settling || Promise.resolve();
+    var batch = Promise.all(entries.map(function (q) {
+      return resolve(item, q).then(function (h) { return [q, h]; }, function () { return [q, null]; });
+    })).then(function (res) {
+      var left = [];
+      res.forEach(function (r) { if (r[1]) pill(item, r[1]); else left.push(r[0]); });
+      var rest = input.value;
+      input.value = left.length ? left.join(", ") + (all && !rest ? "" : ", ") + rest : rest;
+      said.textContent = left.length ? "Not found, already invited, or more than one match: " + left.join(", ") + "." + (item._dirDown ? " The directory could not be searched: try again." : "") : "";
+      item._dirDown = false;
+      addable(item);
+    });
+    item._settling = Promise.all([before, batch]);
+    return item._settling;
+  }
+  // Suggestions as the entry after the last comma is typed (author,
+  // 2026-11-27): the people search's matches under the box; a pick makes
+  // that account's pill, so a name two people share is told apart by
+  // picking. Arrow keys move, Enter picks, Escape closes.
+  var tokTimer = null;
+  function tokList(item) { return item.querySelector("[data-tok-options]"); }
+  function tokShow(item, open) {
+    var list = tokList(item), input = item.querySelector("[data-cand-entry]");
+    list.hidden = !open;
+    input.setAttribute("aria-expanded", open ? "true" : "false");
+    if (!open) { input.removeAttribute("aria-activedescendant"); item._tokOn = -1; }
+  }
+  function tokSegment(input) { return input.value.split(",").pop().trim(); }
+  function tokOffer(item, got, q) {
+    var list = tokList(item), rows = [];
+    list.textContent = "";
+    got.on_record.forEach(function (p) {
+      rows.push({ label: p.name ? p.name + " (" + p.email + ")" : p.email, hit: { name: p.name || p.email, email: p.email, body: { action: "add", person_id: p.id } } });
+    });
+    got.directory.forEach(function (u) {
+      rows.push({ label: (u.name || u.address) + " (" + u.address + ") · directory", hit: { name: u.name || u.address, email: u.address, body: { action: "add", object_id: u.object_id, address: u.address } } });
+    });
+    rows.forEach(function (r, i) {
+      var li = el("li", "", r.label);
+      li.id = "pc-" + item.dataset.candKind + "-sug-" + i;
+      li.setAttribute("role", "option");
+      li.dataset.tokOpt = String(i);
+      list.appendChild(li);
+    });
+    item._tokRows = rows;
+    item._tokOn = -1;
+    tokShow(item, rows.length > 0);
+    if (!rows.length && got.directory_failed) item.querySelector("[data-cand-said]").textContent = "The directory could not be searched: try again.";
+  }
+  function tokHighlight(item, i) {
+    var rows = item._tokRows || [], list = tokList(item);
+    if (!rows.length) return;
+    item._tokOn = (i + rows.length) % rows.length;
+    list.querySelectorAll("li").forEach(function (li, j) {
+      li.classList.toggle("on", j === item._tokOn);
+      li.setAttribute("aria-selected", j === item._tokOn ? "true" : "false");
+    });
+    var on = list.querySelectorAll("li")[item._tokOn];
+    item.querySelector("[data-cand-entry]").setAttribute("aria-activedescendant", on.id);
+    on.scrollIntoView({ block: "nearest" });
+  }
+  function tokPick(item, i) {
+    var row = (item._tokRows || [])[i], input = item.querySelector("[data-cand-entry]");
+    if (!row) return;
+    pill(item, row.hit);
+    // The entry being typed goes; anything left before it stays.
+    var parts = input.value.split(",");
+    parts.pop();
+    var left = parts.map(function (p) { return p.trim(); }).filter(Boolean);
+    input.value = left.length ? left.join(", ") + ", " : "";
+    tokShow(item, false);
+    addable(item);
+    input.focus();
+  }
+  root.addEventListener("input", function (e) {
+    if (!e.target.matches("[data-cand-entry]")) return;
+    var item = e.target.closest("[data-cand-live]");
+    window.clearTimeout(tokTimer);
+    tokShow(item, false);
+    if (e.target.value.indexOf(",") >= 0) settle(item, false); else addable(item);
+    var q = tokSegment(e.target);
+    if (q.length < 2) return;
+    tokTimer = window.setTimeout(function () {
+      fetch(item.dataset.candUrl + "/search?q=" + encodeURIComponent(q), { credentials: "same-origin" })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (got) { if (tokSegment(e.target) === q) tokOffer(item, got, q); }, function () {});
+    }, 250);
+  });
+  root.addEventListener("keydown", function (e) {
+    if (!e.target.matches("[data-cand-entry]")) return;
+    var item = e.target.closest("[data-cand-live]"), open = !tokList(item).hidden;
+    if ((e.key === "ArrowDown" || e.key === "ArrowUp") && open) {
+      e.preventDefault();
+      tokHighlight(item, (item._tokOn == null ? -1 : item._tokOn) + (e.key === "ArrowDown" ? 1 : -1));
+    } else if (e.key === "Escape" && open) {
+      e.preventDefault();
+      tokShow(item, false);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (open && item._tokOn >= 0) tokPick(item, item._tokOn);
+      else { tokShow(item, false); settle(item, true); }
+    } else if (e.key === "Backspace" && !e.target.value) {
+      var last = pillsOf(item).pop();
+      if (last) { last.remove(); addable(item); }
+    }
+  });
+  // A pick is a mousedown, before the box loses its focus; a click
+  // elsewhere closes the list.
+  root.addEventListener("mousedown", function (e) {
+    var li = e.target.closest("[data-tok-opt]");
+    if (li) { e.preventDefault(); tokPick(li.closest("[data-cand-live]"), Number(li.dataset.tokOpt)); return; }
+    root.querySelectorAll("[data-tok-options]").forEach(function (list) {
+      if (!list.hidden && !list.closest(".pc-cand-box").contains(e.target)) tokShow(list.closest("[data-cand-live]"), false);
+    });
+  });
+  root.addEventListener("focusout", function (e) {
+    if (!e.target.matches("[data-cand-entry]")) return;
+    var item = e.target.closest("[data-cand-live]");
+    tokShow(item, false);
+    if (e.target.value.trim()) settle(item, true);
+  });
+  root.addEventListener("click", function (e) {
+    var item = e.target.closest("[data-cand-live]");
+    if (!item) return;
+    var x = e.target.closest("[data-cand-tokens] .token-x");
+    if (x) { x.closest(".token").remove(); addable(item); item.querySelector("[data-cand-entry]").focus(); return; }
+    if (e.target.closest("[data-cand-add-all]")) {
+      // What is still typed is looked up first; what is not found stays.
+      // Each pill goes once saved; one that fails stays to be tried again,
+      // and the line names it once the batch is done (Codex on #4264).
+      settle(item, true).then(function () {
+        var pills = pillsOf(item);
+        if (!pills.length) return;
+        item.querySelector("[data-cand-add-all]").disabled = true;
+        Promise.all(pills.map(function (t) {
+          return change(item, JSON.parse(t.dataset.body)).then(function (why) {
+            if (!why) t.remove();
+            return why ? t.textContent.replace(/×$/, "") + " (" + why + ")" : "";
+          });
+        })).then(function (failed) {
+          failed = failed.filter(Boolean);
+          var now = current(item);
+          if (failed.length) now.querySelector("[data-cand-said]").textContent = "Not invited: " + failed.join("; ");
+          addable(item);
+        });
+      });
+      return;
+    }
+    if (e.target.closest("[data-cand-add]")) { addPicked(item); return; }
+    var rm = e.target.closest("[data-cand-remove]");
+    if (rm) { change(item, { action: "remove", entry_id: Number(rm.dataset.candRemove) }); return; }
+    if (e.target.closest("[data-cand-csv]")) item.querySelector("[data-cand-file]").click();
+  });
+  // The Form's invite list shows while Invitees is chosen (segment AD2I).
+  root.addEventListener("change", function (e) {
+    if (!e.target.matches('[data-rel="who-may-apply"]')) return;
+    var row = e.target.closest(".pc-item").querySelector("[data-invitees-row]");
+    if (row) row.hidden = e.target.value !== "invitation";
+  });
+  // Dossiers per person is one setting for the exercise: an edit on any
+  // item's box is shown on every other, so none is left behind (cold read).
+  root.addEventListener("input", function (e) {
+    if (!e.target.matches('[data-rel="per-person"]')) return;
+    root.querySelectorAll('[data-rel="per-person"]').forEach(function (box) {
+      if (box !== e.target) box.value = e.target.value;
+    });
+    document.querySelectorAll('template[id^="pc-new-"]').forEach(function (tpl) {
+      tpl.content.querySelectorAll('[data-rel="per-person"]').forEach(function (box) {
+        box.setAttribute("value", e.target.value);
+      });
+    });
+  });
+  root.addEventListener("change", function (e) {
+    if (!e.target.matches("[data-cand-file]")) return;
+    var item = e.target.closest("[data-cand-live]"), file = e.target.files[0];
+    if (!file) return;
+    file.text().then(function (text) { change(item, { action: "csv", text: text }); e.target.value = ""; });
+  });
+})();
+</script>

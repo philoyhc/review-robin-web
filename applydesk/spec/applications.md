@@ -108,7 +108,8 @@ answer only for a Published or Closed exercise.
   *super admin* or *admin*. Each lobby's H1 and tab read its name, as Review Robin's
   do (author, 2026-11-13). An exercise's operator pages add Review Robin's chrome
   under a breadcrumb (ruling 14, segment AD1D): *Exercise Home*
-  double-height on the left; a Setup row (Process, Form, Panels, Emails)
+  double-height on the left; a Setup row (Process, Invitees while shown (segment AD2N), Form, Panels,
+  Emails)
   and an Operations row (Dossiers, Evaluations, Extract data); and a
   status row of the exercise, its form, gates, outcomes, emails and
   applications.
@@ -955,16 +956,19 @@ but the lobby's *Stage* column reads:
     returns the menu to the stored value. Under the Form's lock, a changed
     value is refused by the server while its stage is published.
   - **Invitees** (`applydesk/invitees.py`): while *Invitees* is chosen the
-    item shows the invite list. *Add invitees* takes names or emails
-    separated by commas, as a panel's members box (author, 2026-11-27):
-    each that names one person (by address, or the only match) becomes a
-    pill, its name the record's or the directory's; one not found, already
-    invited or matching several stays in the box as typed, and the line
-    says so. *Add* invites each pill; *Upload CSV…* takes an *Email*
-    column. The list folds under *Invitees (n)*, open up to ten, with
-    *Remove* per row and a row per person. Each add and removal is made at once,
-    audited (`invitee.added`, `invitee.removed`), outside the Form's lock and
-    not waiting for *Save*. Routes: `GET …/invitees/search`, `POST
+    item shows *Add invitees* and *Upload CSV…* and a count line, *4
+    invitees · Manage on Invitees →*; the list itself is the Invitees tab's
+    (segment AD2N). *Add invitees* takes names or emails separated by
+    commas, as a panel's members box (author, 2026-11-27): each that names
+    one person (by address, or the only match) becomes a pill, its name the
+    record's or the directory's; one not found, already invited or matching
+    several stays in the box as typed, and the line says so. Suggestions
+    list under the box as a name is typed, the people search's matches; a
+    pick is that account's pill. The box grows with its pills to five
+    rows, then scrolls. *Add* invites each pill; *Upload CSV…* takes an
+    *Email* column. Each add and removal is made at once, audited
+    (`invitee.added`, `invitee.removed`), outside the Form's lock and not
+    waiting for *Save*. Routes: `GET …/invitees/search`, `POST
     …/invitees` (`search`, `remove` and `csv` changes, as Create dossiers').
     A person is listed once; *Remove* retires the row and adding them again
     revives it. The list stays when another choice is picked, unused. An
@@ -972,6 +976,13 @@ but the lobby's *Stage* column reads:
     only as they submit. Checking the list when someone applies is not
     built (AD4). *Invitees* with no one on the list is an Outline warning
     (`timeline_checks.NO_INVITEES`), not an error.
+- **The Invitees tab** (segment AD2N, author 2026-11-27), `…/invitees`: in
+  the Setup row after *Process* and before *Form*, shown only while the
+  Form's *Who may apply* is *Invitees* as saved and no Create dossiers is on
+  the timeline (`invitees.tab_shown`); the page answers either way, saying
+  when the list is kept unused. Modeled on Panels: a roster card with the
+  count, *Add invitees* and *Upload CSV…*, and the full list (Name, Email,
+  *How added*: Search or CSV, Added, *Remove*), each change kept as made.
 - **A gate** is one Review Robin run (ruling 28), in four parts, in this
   order. The *Gate* and *Evaluators* cards are collapsible, start shut and
   say what they hold on their summary line (`stages.gate_summary`,
@@ -1287,27 +1298,38 @@ but the lobby's *Stage* column reads:
   carried keys are assigned first, so reordering rows hands no key to
   another value. A removed value's key stays on its retired row.
 - **The *Create dossiers* item** (rulings 77 and 83, `applydesk/candidates.py`; *Candidates* in code): people
-  kept by hand, shown as a stage item with a count, a search, *Upload CSV…*
-  and a list (name, email, when added, *Remove*). A Form
-  after it invites from its dossiers (the Form's *Who may apply*); feeding gates as dossiers is not
-  built. At most one stage holds it, with the form, with gates or alone
-  (`stages.problems`): *+Create dossiers* is disabled with its reason once an
-  exercise has one, and *Remove Create dossiers* removes the item,
-  not the list. A person is listed once, and each add and removal is made at
-  once, audited, not waiting for *Save*.
+  kept by hand, each holding the dossiers added for them, shown as a stage
+  item with a count, one row of *Add someone*, *Dossiers per person*, *Add*
+  and *Upload CSV…*, and a count line, *34 dossiers for 12 people · Manage
+  on Dossiers →*. The list (name, email, title, when added, *Remove*),
+  folding under *Dossiers (n)*, open up to ten, is the Dossiers page's
+  *Created by hand* card, while Create dossiers is in the process, before
+  and after publishing (segment AD2N). A Form after it invites
+  from its dossiers (the Form's *Who may apply*); feeding gates as dossiers
+  is not built. At most one stage holds it, with the form, with gates or
+  alone (`stages.problems`): *+Create dossiers* is disabled with its reason
+  once an exercise has one, and *Remove Create dossiers* removes the item,
+  not the list. Each add and removal is made at once, audited, not waiting
+  for *Save*.
+  - **No most per person** (author, 2026-11-27): *Max dossiers per person*
+    is the Form's alone; a person holds as many dossiers as are added.
   - **Search** is the people search of ruling 75 (`applydesk/directory.py`:
-    people on record, then the directory; those listed left out; a failed
-    directory search says so). A pick is added as `search`.
-  - **CSV** has an *Email* column and, if given, a *Name* (any case, any
-    order), one address a row, at most 2,000 rows. Each row's address is
-    matched to a person on record, else made a pending person
-    (`people.pending`; the directory is not searched per row); a name fills a
-    pending person's blank name. The good rows are saved in one transaction
-    and the rest reported back by row number, not saved: an address that is
-    not one, or in the file twice. A person listed already is counted, not
-    reported. A file with no *Email* column, an empty file or one that
-    cannot be read is refused whole. Added as `csv`.
-  - **Remove** retires the row; adding the person again revives it.
+    people on record, then the directory; a failed directory search says
+    so). *Add* makes *Dossiers per person* entries (1 to 20) for the one
+    picked, added as `search` (`candidates.add_many`); an entry without a
+    title is *Dossier n*, numbered after the ones the person holds. More
+    than that is the CSV's or the Dossiers page's.
+  - **CSV** has an *Email* column and, if given, a *Name* and a *Title*
+    (any case, any order), one dossier a row, at most 2,000 rows; a person
+    may be in it as often as they are to hold dossiers, and a row without a
+    title is *Dossier n*. Each row's address is matched to a person on
+    record, else made a pending person (`people.pending`; the directory is
+    not searched per row); a name fills a pending person's blank name. The
+    good rows are saved in one transaction and the rest reported back by row
+    number, not saved. A file with no *Email* column, an empty file or one
+    that cannot be read is refused whole. Added as `csv`.
+  - **Remove** retires the entry; adding the person again makes a new one
+    (ruling 83).
   - A Form after it invites from these dossiers; nothing checks the dossiers
     when someone applies yet (AD4).
 - **Emails** (ruling 16). Process picks no template. Each email ticked, the
@@ -1468,7 +1490,13 @@ row in view, or clears them, and *Set ticked rows* with none ticked says *No
 rows ticked*. *Download CSV* writes the rows in view in the shape *Upload
 CSV* reads, a cell a spreadsheet would run as a formula guarded with `'` (a
 lone `-`, no status, is not), named `<code>_dossiers_<date>.csv`; *Upload
-CSV* undoes the guard. The page has no *Save*; nothing is kept until AD2.
+CSV* undoes the guard. The grid has no *Save*; nothing in it is kept until AD2.
+While Create dossiers is in the process (as saved), a *Created by hand* card
+below the grid lists its entries (Name, Email, Title, Added, *Remove*) with
+its add row, each change kept as made (segment AD2N); the page's placeholder
+line says the grid's changes are not saved and the card's are. Process's
+link to it reads *Save, then manage on Dossiers* on an item not yet saved, as
+the Form's link to Invitees does while the tab is not shown.
 
 - **The header** (ruling 52). Under the stages, an information row holds
   each column's kind, counts, rule, lock and *Released*, top-aligned; under
