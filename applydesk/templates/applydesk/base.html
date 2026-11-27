@@ -301,6 +301,11 @@
     .pc-cand-fold > summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-body); }
     .pc-cand-add .tokens { margin-top: 4px; min-height: 40px; box-sizing: border-box; }
     .pc-cand-add .token-input { font-weight: 400; }
+    /* The invitees box grows with its pills, up to five rows, then
+       scrolls (author, 2026-11-27). */
+    .pc-cand-add .tokens { max-height: 168px; overflow-y: auto; }
+    .pc-cand-n { white-space: nowrap; }
+    .pc-cand-n .fc-in { width: 150px; }
     @media (max-width: 639px) {
       .pc-cand-add { flex-wrap: wrap; }
       .pc-cand-add .pc-cand-box { flex-basis: 100%; }

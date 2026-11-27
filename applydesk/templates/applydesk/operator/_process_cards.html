@@ -45,9 +45,6 @@
    Create dossiers where the timeline holds it, else the Form (author,
    2026-11-27); every box kept the same (cold read); saved with Process. #}
 {% macro per_person_box(hidden=False) %}<label class="fc-l" data-per-person-row{% if hidden %} hidden{% endif %}>Max dossiers per person<input class="fc-in" type="number" min="1" max="20" step="1" data-rel="per-person" value="{{ per_person }}"></label>{% endmacro %}
-{% macro per_person_field(hidden=False) %}
-  <div class="pc-row pi-sec">{{ per_person_box(hidden) }}</div>
-{% endmacro %}
 
 {% macro form_item(new=False, open=False, w=none) %}
 {% set n = 1 if new else ((1 if sends('receipt', 'Applicants') else 0) + (1 if sends('reminder', 'Applicants') else 0)) %}
@@ -103,7 +100,7 @@
    or a CSV (rulings 75, 77): Create dossiers' entries, or a Form's
    invitees (ruling 84). Its page script is `_process.html`'s, keyed by
    `data-cand-kind`. #}
-{% macro people_list(kind, listed, list_url, one, many, hint, titles, tokens=false) %}
+{% macro people_list(kind, listed, list_url, one, many, hint, titles, tokens=false, count=false) %}
   <div data-cand-live data-cand-kind="{{ kind }}" data-cand-url="{{ list_url }}" data-cand-unit="{{ one }}|{{ many }}" data-cand-titles="{{ 'true' if titles else 'false' }}">
   {# A typeahead (author, 2026-11-27): every match the search returns is
      listed under the box as the name is typed, whatever field it matched
@@ -131,6 +128,10 @@
       <label class="fc-l">Add someone<input class="fc-in" type="search" data-cand-search role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pc-{{ kind }}-options" placeholder="Search by name or email" autocomplete="off"></label>
       <ul class="pc-cand-options" id="pc-{{ kind }}-options" role="listbox" aria-label="Matches" data-cand-options hidden></ul>
     </div>
+    {# Create dossiers (author, 2026-11-27): Add makes this many dossiers
+       for the person picked, titled Dossier 1, Dossier 2 and on after the
+       ones they hold; anything else is the CSV's or the Dossiers page's. #}
+    {% if count %}<label class="fc-l pc-cand-n">Dossiers per person<input class="fc-in" type="number" min="1" max="20" step="1" value="1" data-cand-n></label>{% endif %}
     <button type="button" class="btn btn-secondary" data-cand-add disabled title="Pick someone from the list first">Add</button>
     <button type="button" class="btn btn-secondary" data-cand-csv>Upload CSV…</button><input type="file" accept=".csv,text/csv" data-cand-file hidden aria-label="CSV of people to add">
   </div>
@@ -138,7 +139,8 @@
   <p class="pc-line muted pc-hint">{{ hint | safe }} Rows that do not read are listed back, not saved.</p>
   <p class="muted fb-said" data-cand-said role="status"></p>
   <ul class="pc-issues" data-cand-bad hidden></ul>
-  {% if tokens %}<details class="pc-cand-fold" data-cand-fold{% if listed | length <= 10 %} open{% endif %}><summary><span data-cand-fold-n>{{ many | capitalize }} ({{ listed | length }})</span></summary>{% endif %}
+  {# The list folds under its count, open up to ten (author, 2026-11-27). #}
+  <details class="pc-cand-fold" data-cand-fold{% if listed | length <= 10 %} open{% endif %}><summary><span data-cand-fold-n>{{ many | capitalize }} ({{ listed | length }})</span></summary>
   <table class="pc-cands" data-cand-list>
     <thead><tr><th scope="col">Name</th><th scope="col">Email</th>{% if titles %}<th scope="col">Title</th>{% endif %}<th scope="col">Added</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
     <tbody>
@@ -146,7 +148,7 @@
     {% else %}<tr data-cand-none><td colspan="{{ 5 if titles else 4 }}" class="muted">No one yet.</td></tr>{% endfor %}
     </tbody>
   </table>
-  {% if tokens %}</details>{% endif %}
+  </details>
   </div>
 {% endmacro %}
 
@@ -160,9 +162,8 @@
   {% set chips %}<span class="chip chip-mute" data-cand-count>{{ listed | length if listed else "No one yet" }}{% if listed %} {{ "dossier" if listed | length == 1 else "dossiers" }}{% endif %}</span>{% endset %}
   {{ head("Create dossiers", "Create dossiers", chips, open) }}
   <div class="pi-body">
-  <p class="pc-line">People added by hand, one dossier each, for the gates that follow. A Form after it writes to these dossiers.</p>
-  {{ per_person_field() }}
-  {{ people_list("candidates", listed, url('/operator/exercises/' ~ exercise.public_id ~ '/candidates'), "dossier", "dossiers", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier.", true) }}
+  <p class="pc-line">People added by hand, with the dossiers each holds, for the gates that follow. A Form after it writes to these dossiers.</p>
+  {{ people_list("candidates", listed, url('/operator/exercises/' ~ exercise.public_id ~ '/candidates'), "dossier", "dossiers", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier.", true, count=true) }}
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-candidates">Remove Create dossiers</button></div>
   </div>
 </div>

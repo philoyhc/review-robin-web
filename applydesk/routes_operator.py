@@ -724,15 +724,25 @@ def _change_list(request: Request, exercise_id: str, sent: Any, svc: Any) -> Res
     try:
         actor = people.resolve(session, identity)
         session.commit()
-        if action == "add" and isinstance(got.get("person_id"), int):
-            person = session.get(Person, got["person_id"])
-            if person is None:
-                raise candidates.Refused("That person is no longer on record; search again.")
-            said = (
+        count = got.get("count")
+
+        def put(person: Person) -> str:
+            # Create dossiers' Add makes as many dossiers as its box says
+            # (author, 2026-11-27); an invitee is one.
+            if isinstance(count, int) and not isinstance(count, bool) and svc is candidates:
+                n = candidates.add_many(session, exercise.public_id, person, "search", actor, count)
+                return f"Added {n} {'dossier' if n == 1 else 'dossiers'}."
+            return (
                 "Added."
                 if svc.add(session, exercise.public_id, person, "search", actor)
                 else svc.already(session, exercise.public_id)
             )
+
+        if action == "add" and isinstance(got.get("person_id"), int):
+            person = session.get(Person, got["person_id"])
+            if person is None:
+                raise candidates.Refused("That person is no longer on record; search again.")
+            said = put(person)
         elif (
             action == "add"
             and isinstance(got.get("object_id"), str)
@@ -749,11 +759,7 @@ def _change_list(request: Request, exercise_id: str, sent: Any, svc: Any) -> Res
             if found is None:
                 raise candidates.Refused("The directory no longer has that account; search again.")
             person = people.from_directory(session, found, tenant, actor)
-            said = (
-                "Added."
-                if svc.add(session, exercise.public_id, person, "search", actor)
-                else svc.already(session, exercise.public_id)
-            )
+            said = put(person)
         elif action == "remove" and isinstance(got.get("entry_id"), int):
             said = (
                 "Removed."

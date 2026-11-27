@@ -1,7 +1,7 @@
 """The Candidates list, shown as Create dossiers (rulings 77, 83;
 segments AD2C rung 9, AD2K; `applydesk/candidates.py`): entries added
-through the search or a CSV, one dossier each, up to the most a person may
-hold; each change audited; the item placed on one stage by Process's
+through the search or a CSV, one dossier each, numbered per person; each
+change audited; the item placed on one stage by Process's
 Save."""
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
 from applydesk import candidates, db, people, stages
-from applydesk.models import AuditEvent, Candidate, Exercise, Person
+from applydesk.models import AuditEvent, Candidate, Person
 from applydesk.tests._host import host_with
 
 MODEL = "wa9juxbc2t"
@@ -27,55 +27,51 @@ def _post(client: TestClient, body: dict[str, Any]) -> Any:
     return client.post(f"{LOBBY}/{MODEL}/candidates", json=body)
 
 
-def test_an_entry_a_dossier_up_to_the_most_per_person_and_no_revival() -> None:
-    """Segment AD2K (ruling 83): each add is an entry; past the exercise's
-    ``dossiers_per_person`` it is refused; removing an entry and adding the
-    person again makes a new one, not the old one back."""
+def test_an_entry_a_dossier_numbered_per_person_and_no_revival() -> None:
+    """Each add is an entry, titled Dossier n after the ones the person
+    holds when no title is given; there is no most per person on Create
+    dossiers (author, 2026-11-27); removing an entry and adding the person
+    again makes a new one, not the old one back (ruling 83)."""
     session = db.new_session()
     try:
         ann = people.pending(session, "ann@example.edu", None)
         assert candidates.add(session, MODEL, ann, "search", None)
-        assert not candidates.add(session, MODEL, ann, "search", None)  # one per person
-        assert candidates.already(session, MODEL) == "Already listed."
-        assert [c.email for c in candidates.listing(session, MODEL)] == ["ann@example.edu"]
-        assert candidates.full(session, MODEL) == frozenset({ann.id})
+        assert candidates.add(session, MODEL, ann, "search", None)
+        assert [c.title for c in candidates.listing(session, MODEL)] == ["Dossier 1", "Dossier 2"]
+        assert candidates.full(session, MODEL) == frozenset()  # the search leaves no one out
         first = candidates.listing(session, MODEL)[0].id
         assert candidates.remove(session, MODEL, first, None)
         assert not candidates.remove(session, MODEL, first, None)
-        assert candidates.listing(session, MODEL) == ()
-        assert candidates.add(session, MODEL, ann, "csv", None)
-        assert session.scalar(select(func.count()).select_from(Candidate)) == 2  # a new entry
-        assert candidates.listing(session, MODEL)[0].id != first
-        exercise = session.scalar(select(Exercise).where(Exercise.public_id == MODEL))
-        assert exercise is not None
-        exercise.dossiers_per_person = 2
-        assert candidates.add(session, MODEL, ann, "search", None, title="Second project")
-        assert [c.title for c in candidates.listing(session, MODEL)] == ["", "Second project"]
-        assert not candidates.add(session, MODEL, ann, "search", None)
-        assert candidates.already(session, MODEL) == "Already listed 2 times, the most allowed."
+        assert candidates.add(session, MODEL, ann, "csv", None, title="Second project")
+        assert session.scalar(select(func.count()).select_from(Candidate)) == 3  # a new entry
+        assert first not in [c.id for c in candidates.listing(session, MODEL)]
+        assert candidates.add_many(session, MODEL, ann, "search", None, 2) == 2
+        assert [c.title for c in candidates.listing(session, MODEL)] == [
+            "Dossier 2",
+            "Second project",
+            "Dossier 3",
+            "Dossier 4",
+        ]
         events = list(session.scalars(select(AuditEvent.event_type).order_by(AuditEvent.id)))
-        assert events.count("candidate.added") == 3 and events.count("candidate.removed") == 1
+        assert events.count("candidate.added") == 5 and events.count("candidate.removed") == 1
         session.commit()
     finally:
         session.close()
 
 
-def test_a_csv_row_a_dossier_with_its_title_up_to_the_most() -> None:
+def test_a_csv_row_a_dossier_with_its_title() -> None:
     session = db.new_session()
     try:
-        exercise = session.scalar(select(Exercise).where(Exercise.public_id == MODEL))
-        assert exercise is not None
-        exercise.dossiers_per_person = 2
         text = (
-            "Email,Title\n"
-            "eve@example.edu,Project A\n"
-            "eve@example.edu,Project B\n"
-            "eve@example.edu,Project C\n"
+            "Email,Title\neve@example.edu,Project A\neve@example.edu,Project B\neve@example.edu,\n"
         )
         done = candidates.import_csv(session, MODEL, text, None)
-        assert (done.added, done.already) == (2, 0)
-        assert done.bad == ("Row 4: eve@example.edu is in the file more than 2 times.",)
-        assert [c.title for c in candidates.listing(session, MODEL)] == ["Project A", "Project B"]
+        assert (done.added, done.already, done.bad) == (3, 0, ())
+        assert [c.title for c in candidates.listing(session, MODEL)] == [
+            "Project A",
+            "Project B",
+            "Dossier 3",
+        ]
         session.commit()
     finally:
         session.close()
@@ -95,11 +91,8 @@ def test_a_csv_saves_its_good_rows_and_lists_the_rest_back() -> None:
             "\n"
         )
         done = candidates.import_csv(session, MODEL, text, None)
-        assert (done.added, done.already) == (1, 1)
-        assert done.bad == (
-            "Row 4: “nobody” is not an email address.",
-            "Row 5: ADA@example.edu is in the file twice.",
-        )
+        assert (done.added, done.already) == (3, 0)  # Ada twice is two dossiers
+        assert done.bad == ("Row 4: “nobody” is not an email address.",)
         ada = session.scalar(select(Person).where(Person.email_key == "ada@example.edu"))
         assert ada is not None and ada.display_name == "Ada Lovelace"
         session.commit()
@@ -162,17 +155,25 @@ def test_the_routes_add_remove_and_upload() -> None:
     added = _post(client, {"action": "add", "person_id": cy_id})
     assert added.status_code == 200 and added.json()["said"] == "Added."
     assert [c["email"] for c in added.json()["candidates"]] == ["cy@example.edu"]
-    # Listed as often as allowed: the search leaves them out, an add says so.
+    # Anyone may be given more: still found, and Add with a count makes that
+    # many, each numbered (author, 2026-11-27).
     again = client.get(f"{LOBBY}/{MODEL}/candidates/search", params={"q": "cy@ex"}).json()
-    assert again["on_record"] == []
-    assert _post(client, {"action": "add", "person_id": cy_id}).json()["said"] == "Already listed."
+    assert [p["id"] for p in again["on_record"]] == [cy_id]
+    more = _post(client, {"action": "add", "person_id": cy_id, "count": 2})
+    assert more.json()["said"] == "Added 2 dossiers."
+    assert [c["title"] for c in more.json()["candidates"]] == [
+        "Dossier 1",
+        "Dossier 2",
+        "Dossier 3",
+    ]
     upload = _post(client, {"action": "csv", "text": "Email\ndee@example.edu\nbad\n"})
     assert upload.status_code == 200
     assert upload.json()["said"] == "1 added." and len(upload.json()["bad"]) == 1
     entry = added.json()["candidates"][0]
-    assert entry["person_id"] == cy_id and entry["title"] == ""
+    assert entry["person_id"] == cy_id and entry["title"] == "Dossier 1"
     removed = _post(client, {"action": "remove", "entry_id": entry["id"]})
-    assert [c["email"] for c in removed.json()["candidates"]] == ["dee@example.edu"]
+    assert "dee@example.edu" in [c["email"] for c in removed.json()["candidates"]]
+    assert len(removed.json()["candidates"]) == 3
     for bad in ({"action": "add"}, {"action": "nothing"}, {"action": "csv", "text": 3}):
         refused = _post(client, bad)
         assert refused.status_code == 400 and "malformed" in refused.json()["error"]

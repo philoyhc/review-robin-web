@@ -960,7 +960,10 @@ but the lobby's *Stage* column reads:
     each that names one person (by address, or the only match) becomes a
     pill, its name the record's or the directory's; one not found, already
     invited or matching several stays in the box as typed, and the line
-    says so. *Add* invites each pill; *Upload CSV…* takes an *Email*
+    says so. Suggestions list under the box as a name is typed, the
+    people search's matches; a pick is that account's pill. The box grows
+    with its pills to five rows, then scrolls. *Add* invites each pill;
+    *Upload CSV…* takes an *Email*
     column. The list folds under *Invitees (n)*, open up to ten, with
     *Remove* per row and a row per person. Each add and removal is made at once,
     audited (`invitee.added`, `invitee.removed`), outside the Form's lock and
@@ -1287,27 +1290,35 @@ but the lobby's *Stage* column reads:
   carried keys are assigned first, so reordering rows hands no key to
   another value. A removed value's key stays on its retired row.
 - **The *Create dossiers* item** (rulings 77 and 83, `applydesk/candidates.py`; *Candidates* in code): people
-  kept by hand, shown as a stage item with a count, a search, *Upload CSV…*
-  and a list (name, email, when added, *Remove*). A Form
-  after it invites from its dossiers (the Form's *Who may apply*); feeding gates as dossiers is not
-  built. At most one stage holds it, with the form, with gates or alone
-  (`stages.problems`): *+Create dossiers* is disabled with its reason once an
-  exercise has one, and *Remove Create dossiers* removes the item,
-  not the list. A person is listed once, and each add and removal is made at
-  once, audited, not waiting for *Save*.
+  kept by hand, each holding the dossiers added for them, shown as a stage
+  item with a count, one row of *Add someone*, *Dossiers per person*, *Add*
+  and *Upload CSV…*, and a list folding under *Dossiers (n)*, open up to
+  ten (name, email, title, when added, *Remove*). A Form after it invites
+  from its dossiers (the Form's *Who may apply*); feeding gates as dossiers
+  is not built. At most one stage holds it, with the form, with gates or
+  alone (`stages.problems`): *+Create dossiers* is disabled with its reason
+  once an exercise has one, and *Remove Create dossiers* removes the item,
+  not the list. Each add and removal is made at once, audited, not waiting
+  for *Save*.
+  - **No most per person** (author, 2026-11-27): *Max dossiers per person*
+    is the Form's alone; a person holds as many dossiers as are added.
   - **Search** is the people search of ruling 75 (`applydesk/directory.py`:
-    people on record, then the directory; those listed left out; a failed
-    directory search says so). A pick is added as `search`.
-  - **CSV** has an *Email* column and, if given, a *Name* (any case, any
-    order), one address a row, at most 2,000 rows. Each row's address is
-    matched to a person on record, else made a pending person
-    (`people.pending`; the directory is not searched per row); a name fills a
-    pending person's blank name. The good rows are saved in one transaction
-    and the rest reported back by row number, not saved: an address that is
-    not one, or in the file twice. A person listed already is counted, not
-    reported. A file with no *Email* column, an empty file or one that
-    cannot be read is refused whole. Added as `csv`.
-  - **Remove** retires the row; adding the person again revives it.
+    people on record, then the directory; a failed directory search says
+    so). *Add* makes *Dossiers per person* entries (1 to 20) for the one
+    picked, added as `search` (`candidates.add_many`); an entry without a
+    title is *Dossier n*, numbered after the ones the person holds. More
+    than that is the CSV's or the Dossiers page's.
+  - **CSV** has an *Email* column and, if given, a *Name* and a *Title*
+    (any case, any order), one dossier a row, at most 2,000 rows; a person
+    may be in it as often as they are to hold dossiers, and a row without a
+    title is *Dossier n*. Each row's address is matched to a person on
+    record, else made a pending person (`people.pending`; the directory is
+    not searched per row); a name fills a pending person's blank name. The
+    good rows are saved in one transaction and the rest reported back by row
+    number, not saved. A file with no *Email* column, an empty file or one
+    that cannot be read is refused whole. Added as `csv`.
+  - **Remove** retires the entry; adding the person again makes a new one
+    (ruling 83).
   - A Form after it invites from these dossiers; nothing checks the dossiers
     when someone applies yet (AD4).
 - **Emails** (ruling 16). Process picks no template. Each email ticked, the

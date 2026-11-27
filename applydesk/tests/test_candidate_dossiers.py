@@ -114,17 +114,13 @@ def test_removing_retires_and_adding_again_mints_a_new_dossier() -> None:
     session.close()
 
 
-def test_one_person_holds_two_dossiers_where_the_exercise_allows() -> None:
+def test_one_person_holds_as_many_dossiers_as_are_added() -> None:
+    """Author, 2026-11-27: Create dossiers has no most per person."""
     ex = _exercise(form=False, published=True)
-    session = db.new_session()
-    exercise = session.scalars(select(Exercise).where(Exercise.public_id == ex)).one()
-    exercise.dossiers_per_person = 2
-    session.commit()
-    session.close()
     _add(ex, "ann@example.edu")
     _add(ex, "ann@example.edu")
-    _add(ex, "ann@example.edu")  # past the most: refused
-    assert len(_live(ex)) == 2
+    _add(ex, "ann@example.edu")
+    assert len(_live(ex)) == 3
 
 
 def test_the_dossiers_page_lists_a_candidate_s_dossier() -> None:

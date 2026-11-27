@@ -1987,6 +1987,10 @@
   function addPicked(item) {
     var body = picked(item);
     if (!body) return;
+    // Create dossiers makes as many dossiers as its box says (author,
+    // 2026-11-27).
+    var n = item.querySelector("[data-cand-n]");
+    if (n) body = Object.assign({}, body, { count: Math.max(1, Math.min(20, Number(n.value) || 1)) });
     change(item, body);
     item.querySelector("[data-cand-search]").value = "";
     item.querySelector("[data-cand-options]").textContent = "";

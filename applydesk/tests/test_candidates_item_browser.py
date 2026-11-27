@@ -41,41 +41,34 @@ def test_candidates_is_drawn_as_itself_not_an_outcome(page: Page) -> None:
     assert "Create dossiers" in (page.locator("[data-pc-outline]").text_content() or "")
 
 
-def test_dossiers_per_person_saves_with_process(page: Page) -> None:
-    """Segment AD2K: the populating item's *Dossiers per person*, saved by
-    Process's Save and read back after its reload."""
+def test_add_makes_as_many_dossiers_as_its_box_says(page: Page) -> None:
+    """Author, 2026-11-27: Create dossiers has no Max dossiers per person;
+    beside Add, *Dossiers per person* makes that many for the one picked,
+    each Dossier 1, Dossier 2, listed under the folding count."""
+    from applydesk.tests.test_candidates_browser import _pick
+
     _held()
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
     _open_all(_cards(page).nth(0))
     item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
-    item.locator('[data-rel="per-person"]').fill("3")
-    assert page.locator("[data-unsaved]").is_visible()
-    page.locator("[data-fb-save]").click()
-    page.locator("[data-unsaved]").wait_for(state="hidden")
-    page.reload()
-    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
-    assert item.locator('[data-rel="per-person"]').input_value() == "3"
+    assert item.locator('[data-rel="per-person"]').count() == 0
+    _pick(item, "admin@", "admin@example.edu")
+    item.locator("[data-cand-n]").fill("2")
+    item.locator("[data-cand-add]").click()
+    item.locator("[data-cand-fold-n]").filter(has_text="Dossiers (2)").wait_for()
+    titles = item.locator("[data-cand-list] tbody tr td:nth-child(3)")
+    assert [titles.nth(i).inner_text() for i in range(2)] == ["Dossier 1", "Dossier 2"]
 
 
-def test_dossiers_per_person_shows_on_the_item_that_creates_the_dossiers(page: Page) -> None:
-    """Author, 2026-11-27: the Form follows the number set on Create
-    dossiers, so with both on a stage only Create dossiers shows the box;
-    its edit is the one saved. Removing Create dossiers shows the Form's.
-    A draft, so the form's box is not locked."""
+def test_the_form_s_box_shows_only_without_create_dossiers(page: Page) -> None:
+    """With Create dossiers on the timeline the Form's Max dossiers per
+    person is hidden; removing Create dossiers shows it. A draft, so the
+    form's box is not locked."""
     _held(DRAFT)
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{DRAFT}/process")
     _open_all(_cards(page).nth(0))
     form = page.locator('#pc-cards .pc-item[data-item="form"]')
     item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
     assert form.locator("[data-per-person-row]").is_hidden()
-    item.locator('[data-rel="per-person"]').fill("4")
-    page.locator("[data-fb-save]").click()
-    page.locator("[data-unsaved]").wait_for(state="hidden")
-    page.reload()
-    _open_all(_cards(page).nth(0))
-    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
-    assert item.locator('[data-rel="per-person"]').input_value() == "4"
     item.locator('[data-pc-act="remove-candidates"]').click()
-    form = page.locator('#pc-cards .pc-item[data-item="form"]')
     assert form.locator("[data-per-person-row]").is_visible()
-    assert form.locator('[data-rel="per-person"]').input_value() == "4"
