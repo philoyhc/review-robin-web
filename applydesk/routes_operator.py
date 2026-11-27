@@ -1341,7 +1341,7 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         timezones=sample_data.TIMEZONES,
         default_contact=sample_data.DEFAULT_HELP_CONTACT,
         blind_lock=locks.blind_lock(exercise),
-        # G2's code and eligibility lock: published by its state or its
+        # G2's code lock (Who may apply is the Form's, ruling 84): published by its state or its
         # stages (Codex on cordware#230).
         exercise_published=not locks.is_draft(exercise),
         revision=revision,
