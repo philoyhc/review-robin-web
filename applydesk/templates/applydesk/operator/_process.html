@@ -1777,16 +1777,23 @@
   // option, "Name (email)"; Add takes the one the box names, by its label
   // or by its address typed whole.
   function found(item, got) {
-    var list = item.querySelector("[data-cand-options]"), offers = {};
+    // Labels and addresses kept apart (Codex on #4255): a label shown names
+    // its own account always; an address typed whole is a shortcut only
+    // while one account holds it, else the operator picks from the list.
+    var list = item.querySelector("[data-cand-options]"), labels = {}, aliases = {};
     list.textContent = "";
     function offer(label, keys, body) {
       // Two accounts with one name and address keep two picks (as the
       // Operators box does, Codex on #4122).
-      for (var n = 2, base = label; offers[label.toLowerCase()]; n++) label = base + " (" + n + ")";
+      for (var n = 2, base = label; labels[label.toLowerCase()]; n++) label = base + " (" + n + ")";
       var o = document.createElement("option");
       o.value = label; list.appendChild(o);
-      offers[label.toLowerCase()] = body;
-      keys.forEach(function (k) { if (k) offers[k.toLowerCase()] = body; });
+      labels[label.toLowerCase()] = body;
+      keys.forEach(function (k) {
+        if (!k) return;
+        k = k.toLowerCase();
+        aliases[k] = k in aliases && aliases[k] !== body ? null : body;
+      });
     }
     got.on_record.forEach(function (p) {
       offer(p.name ? p.name + " (" + p.email + ")" : p.email, [p.email], { action: "add", person_id: p.id });
@@ -1797,13 +1804,14 @@
       var upn = u.upn && u.upn.toLowerCase() !== u.address.toLowerCase() ? u.upn : "";
       offer(u.name + " (" + u.address + ")" + (upn ? " · " + upn : "") + " · directory", [u.address, upn], { action: "add", object_id: u.object_id, address: u.address });
     });
-    item._candOffers = offers;
+    item._candOffers = { labels: labels, aliases: aliases };
     if (!got.on_record.length && !got.directory.length) item.querySelector("[data-cand-said]").textContent = got.directory_failed ? "No one on record; the directory could not be searched." : "No one found.";
     pickable(item);
   }
   function picked(item) {
-    var box = item.querySelector("[data-cand-search]");
-    return (item._candOffers || {})[box.value.trim().toLowerCase()] || null;
+    var offers = item._candOffers || { labels: {}, aliases: {} };
+    var typed = item.querySelector("[data-cand-search]").value.trim().toLowerCase();
+    return offers.labels[typed] || offers.aliases[typed] || null;
   }
   function pickable(item) {
     var b = item.querySelector("[data-cand-add]"), ok = !!picked(item);
@@ -1816,7 +1824,7 @@
     change(item, body);
     item.querySelector("[data-cand-search]").value = "";
     item.querySelector("[data-cand-options]").textContent = "";
-    item._candOffers = {};
+    item._candOffers = null;
     pickable(item);
   }
   root.addEventListener("input", function (e) {

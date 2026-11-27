@@ -243,3 +243,51 @@ def test_a_directory_match_by_sign_in_name_is_offered(page: Page) -> None:
     assert label == "Jane Tan (jane.tan@example.edu) · e0123456@u.edu · directory"
     item.locator("[data-cand-search]").fill("e0123456@u.edu")  # the sign-in name typed whole
     assert item.locator("[data-cand-add]").is_enabled()
+
+
+def test_a_shown_label_adds_its_own_account_not_an_address_twin(page: Page) -> None:
+    """Codex on #4255: a person on record with no name is offered by their
+    address alone; a directory account sharing it must not take over that
+    pick. The address typed whole names two accounts, so it adds neither."""
+    _with_candidates()
+    page.route(
+        "**/candidates/search*",
+        lambda route: route.fulfill(
+            json={
+                "on_record": [{"id": 4242, "name": "", "email": "sam@example.edu"}],
+                "directory": [
+                    {
+                        "object_id": "o-7",
+                        "name": "Sam Ng",
+                        "address": "sam@example.edu",
+                        "upn": "sam@example.edu",
+                    }
+                ],
+                "directory_failed": False,
+            }
+        ),
+    )
+    sent: list[str] = []
+
+    def hold(route: Route) -> None:
+        sent.append(route.request.post_data or "")
+        route.fulfill(json={"said": "Added.", "bad": [], "candidates": []})
+
+    page.route("**/candidates", hold)
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
+    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
+    stage = page.locator("#pc-cards .pc").filter(
+        has=page.locator('.pc-item[data-item="candidates"]')
+    )
+    if not stage.locator(".fc-body").first.is_visible():
+        stage.locator("[data-fc-toggle]").first.click()
+    if not item.locator("[data-cand-search]").is_visible():
+        item.locator("[data-pi-toggle]").click()
+    box = item.locator("[data-cand-search]")
+    box.fill("sam@")
+    item.locator('[data-cand-options] option[value*="directory"]').wait_for(state="attached")
+    box.fill("sam@example.edu")  # the on-record label, and an address two accounts share
+    assert item.locator("[data-cand-add]").is_enabled()
+    item.locator("[data-cand-add]").click()
+    item.locator("[data-cand-said]").filter(has_text="Added.").wait_for()
+    assert '"person_id":4242' in sent[0] and "object_id" not in sent[0]
