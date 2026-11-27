@@ -136,8 +136,11 @@
       });
   }
   function pillsOf(item) { return Array.prototype.slice.call(item.querySelectorAll("[data-cand-tokens] .token")); }
+  // The pills not yet sent: one being saved is never sent again, since a
+  // dossier added twice is two dossiers (Codex on #4266).
+  function waiting(item) { return pillsOf(item).filter(function (t) { return !t.hasAttribute("data-sending"); }); }
   function addable(item) {
-    var b = item.querySelector("[data-cand-add-all]"), n = pillsOf(item).length;
+    var b = item.querySelector("[data-cand-add-all]"), n = waiting(item).length;
     if (!b) return;
     b.disabled = !n && !item.querySelector("[data-cand-entry]").value.trim();
     b.textContent = n > 1 ? "Add " + n : "Add";
@@ -300,8 +303,9 @@
       // Each pill goes once saved; one that fails stays to be tried again,
       // and the line names it once the batch is done (Codex on #4264).
       settle(item, true).then(function () {
-        var pills = pillsOf(item);
+        var pills = waiting(item);
         if (!pills.length) return;
+        pills.forEach(function (t) { t.setAttribute("data-sending", ""); });
         item.querySelector("[data-cand-add-all]").disabled = true;
         // Create dossiers makes as many dossiers for each as its box says
         // (author, 2026-11-27).
@@ -309,7 +313,7 @@
         var each = n ? { count: Math.max(1, Math.min(20, Math.round(Number(n.value)) || 1)) } : {};
         Promise.all(pills.map(function (t) {
           return change(item, Object.assign(JSON.parse(t.dataset.body), each)).then(function (why) {
-            if (!why) t.remove();
+            if (!why) t.remove(); else t.removeAttribute("data-sending");
             return why ? t.textContent.replace(/×$/, "") + " (" + why + ")" : "";
           });
         })).then(function (failed) {

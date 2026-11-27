@@ -377,3 +377,32 @@ def test_add_makes_the_count_for_each_pill(page: Page) -> None:
     item.locator("[data-cand-add-all]").click()
     item.locator("[data-cand-sum]").filter(has_text="4 dossiers for 2 people").wait_for()
     assert item.locator("[data-cand-tokens] .token").count() == 0
+
+
+def test_a_pill_being_saved_is_not_sent_again(page: Page) -> None:
+    """Codex on #4266: a dossier added twice is two dossiers, so Add while a
+    pill's save is pending sends only the pills not yet sent."""
+    _with_candidates()
+    sent: list[str] = []
+    held: list[Route] = []
+
+    def hold(route: Route) -> None:
+        if route.request.method != "POST":
+            route.fallback()
+            return
+        sent.append(route.request.post_data or "")
+        held.append(route)
+
+    item = _open_item(page)
+    _pick(item, "zoe.cand", "zoe.candidate@example.edu")
+    page.route("**/candidates", hold)
+    item.locator("[data-cand-add-all]").click()
+    page.wait_for_timeout(200)
+    assert len(sent) == 1
+    item.locator("[data-cand-entry]").fill("som")  # typing again enables Add
+    assert item.locator("[data-cand-add-all]").is_enabled()
+    item.locator("[data-cand-add-all]").click()
+    page.wait_for_timeout(300)
+    assert len(sent) == 1  # the pill being saved is not sent again
+    held.pop().fallback()
+    item.locator("[data-cand-sum]").filter(has_text="1 dossier for 1 person").wait_for()
