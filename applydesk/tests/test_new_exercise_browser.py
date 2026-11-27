@@ -305,10 +305,11 @@ def test_who_may_apply_follows_create_dossiers(page: Page) -> None:
 
 
 def test_invitees_show_with_their_choice_and_are_added(page: Page) -> None:
-    """Ruling 84: choosing Invitees shows the Form's invite list; someone
-    found by the search is added to it and listed."""
-    from applydesk.tests.test_candidates_browser import _pick
-
+    """Ruling 84: choosing Invitees shows the Form's invite list. Names or
+    emails typed with commas become pills when found, one not found stays
+    as typed; Add invites each pill, listed under the folding count
+    (author, 2026-11-27)."""
+    page.set_viewport_size({"width": 1400, "height": 900})
     page.goto(LOBBY)
     page.get_by_role("button", name="New exercise").click()
     page.locator("[data-nx-name]").fill("Invitees Walkthrough")
@@ -317,14 +318,34 @@ def test_invitees_show_with_their_choice_and_are_added(page: Page) -> None:
     page.goto(page.url + "/process")
     stage = page.locator("#pc-cards > .fc").first
     stage.locator('[data-pc-act="form"]').click()
+    # Opens, Closes, Who may apply and Max dossiers per person: one row.
+    form = stage.locator('.pc-item[data-item="form"]')
+    tops = [
+        form.locator(sel).bounding_box()
+        for sel in (
+            '[data-pc="item-from"]',
+            '[data-pc="item-to"]',
+            '[data-rel="who-may-apply"]',
+            '[data-rel="per-person"]',
+        )
+    ]
+    assert all(t is not None for t in tops)
+    assert len({round(t["y"]) for t in tops if t}) == 1, tops
     rows = stage.locator("[data-invitees-row]")
     assert rows.is_hidden()
     stage.locator('[data-rel="who-may-apply"]').select_option("invitation")
     assert rows.is_visible()
     lst = rows.locator('[data-cand-live][data-cand-kind="invitees"]')
-    _pick(lst, "admin@", "admin@example.edu")
-    lst.locator("[data-cand-add]").click()
+    entry = lst.locator("[data-cand-entry]")
+    entry.fill("admin@example.edu, nobody.here@nowhere.example,")
+    lst.locator("[data-cand-tokens] .token").first.wait_for()
+    lst.locator("[data-cand-said]").filter(has_text="Not found").wait_for()
+    assert lst.locator("[data-cand-tokens] .token").count() == 1
+    assert "nobody.here@nowhere.example" in entry.input_value()
+    lst.locator("[data-cand-add-all]").click()
     lst.locator("[data-cand-list] tr", has_text="admin@example.edu").wait_for()
+    assert lst.locator("[data-cand-fold-n]").inner_text() == "Invitees (1)"
+    assert lst.locator("[data-cand-tokens] .token").count() == 0
 
 
 def test_a_stages_items_reorder_within_the_rules(page: Page) -> None:

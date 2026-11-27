@@ -1859,6 +1859,8 @@
     var n = got.candidates.length, units = (item.dataset.candUnit || "|").split("|");
     var holder = item.closest(".pc-item"), chip = holder && holder.querySelector("[data-cand-count]");
     if (chip) chip.textContent = n ? n + " " + (n === 1 ? units[0] : units[1]) : "No one yet";
+    var fold = item.querySelector("[data-cand-fold-n]");
+    if (fold) fold.textContent = units[1].charAt(0).toUpperCase() + units[1].slice(1) + " (" + n + ")";
     var bad = item.querySelector("[data-cand-bad]");
     bad.textContent = "";
     (got.bad || []).forEach(function (t) { bad.appendChild(el("li", "", t)); });
@@ -2025,12 +2027,106 @@
     var li = e.target.closest("[data-cand-opt]");
     if (li) { e.preventDefault(); choose(li.closest("[data-cand-live]"), Number(li.dataset.candOpt)); return; }
     root.querySelectorAll("[data-cand-live]").forEach(function (item) {
+      if (!item.querySelector("[data-cand-options]")) return;  // a box of pills has no list
       if (!item.querySelector(".pc-cand-box").contains(e.target)) showList(item, false);
     });
+  });
+  // Invitees' box (author, 2026-11-27): names or emails, separated by
+  // commas, as a panel's members box. Each finished entry is searched; one
+  // that names a single person (by address, or the only match) becomes a
+  // pill, its name the directory's or the record's; one that does not
+  // stays in the box as typed, and the line says so. Add invites each pill.
+  function resolve(item, entry) {
+    return fetch(item.dataset.candUrl + "/search?q=" + encodeURIComponent(entry), { credentials: "same-origin" })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (got) {
+        var low = entry.toLowerCase(), hits = [];
+        got.on_record.forEach(function (p) {
+          hits.push({ name: p.name || p.email, email: p.email, keys: [p.email], body: { action: "add", person_id: p.id } });
+        });
+        got.directory.forEach(function (u) {
+          hits.push({ name: u.name || u.address, email: u.address, keys: [u.address, u.upn], body: { action: "add", object_id: u.object_id, address: u.address } });
+        });
+        var exact = hits.filter(function (h) { return h.keys.some(function (k) { return k && k.toLowerCase() === low; }); });
+        if (exact.length) {
+          // One person, on record or in the directory: the record's row.
+          var emails = {};
+          exact.forEach(function (h) { emails[h.email.toLowerCase()] = true; });
+          return Object.keys(emails).length === 1 ? exact[0] : null;
+        }
+        return hits.length === 1 ? hits[0] : null;
+      });
+  }
+  function pillsOf(item) { return Array.prototype.slice.call(item.querySelectorAll("[data-cand-tokens] .token")); }
+  function addable(item) {
+    var b = item.querySelector("[data-cand-add-all]"), n = pillsOf(item).length;
+    if (!b) return;
+    b.disabled = !n && !item.querySelector("[data-cand-entry]").value.trim();
+    b.textContent = n > 1 ? "Add " + n : "Add";
+    if (!b.disabled) b.removeAttribute("title"); else b.title = "Type a name or email first";
+  }
+  function pill(item, hit) {
+    var box = item.querySelector("[data-cand-tokens]"), key = hit.email.toLowerCase();
+    if (pillsOf(item).some(function (t) { return t.dataset.email === key; })) return;
+    var t = el("span", "token", hit.name), x = el("button", "token-x", "×");
+    t.title = hit.email;
+    t.dataset.email = key;
+    t.dataset.body = JSON.stringify(hit.body);
+    x.type = "button";
+    x.setAttribute("aria-label", "Take " + hit.name + " out");
+    t.appendChild(x);
+    box.insertBefore(t, box.querySelector("[data-cand-entry]"));
+  }
+  function settle(item, all) {
+    var input = item.querySelector("[data-cand-entry]"), parts = input.value.split(",");
+    var tail = all ? "" : parts.pop();
+    var entries = parts.map(function (p) { return p.trim(); }).filter(Boolean);
+    if (!entries.length) return item._settling || Promise.resolve();
+    input.value = tail.replace(/^\s+/, "");
+    var said = item.querySelector("[data-cand-said]");
+    said.textContent = "Looking up…";
+    item._settling = Promise.all(entries.map(function (q) {
+      return resolve(item, q).then(function (h) { return [q, h]; }, function () { return [q, null]; });
+    })).then(function (res) {
+      var left = [];
+      res.forEach(function (r) { if (r[1]) pill(item, r[1]); else left.push(r[0]); });
+      var rest = input.value;
+      input.value = left.length ? left.join(", ") + (all && !rest ? "" : ", ") + rest : rest;
+      said.textContent = left.length ? "Not found, already invited, or more than one match: " + left.join(", ") + "." : "";
+      addable(item);
+    });
+    return item._settling;
+  }
+  root.addEventListener("input", function (e) {
+    if (!e.target.matches("[data-cand-entry]")) return;
+    var item = e.target.closest("[data-cand-live]");
+    if (e.target.value.indexOf(",") >= 0) settle(item, false); else addable(item);
+  });
+  root.addEventListener("keydown", function (e) {
+    if (!e.target.matches("[data-cand-entry]")) return;
+    var item = e.target.closest("[data-cand-live]");
+    if (e.key === "Enter") { e.preventDefault(); settle(item, true); }
+    else if (e.key === "Backspace" && !e.target.value) {
+      var last = pillsOf(item).pop();
+      if (last) { last.remove(); addable(item); }
+    }
+  });
+  root.addEventListener("focusout", function (e) {
+    if (e.target.matches("[data-cand-entry]") && e.target.value.trim()) settle(e.target.closest("[data-cand-live]"), true);
   });
   root.addEventListener("click", function (e) {
     var item = e.target.closest("[data-cand-live]");
     if (!item) return;
+    var x = e.target.closest("[data-cand-tokens] .token-x");
+    if (x) { x.closest(".token").remove(); addable(item); item.querySelector("[data-cand-entry]").focus(); return; }
+    if (e.target.closest("[data-cand-add-all]")) {
+      // What is still typed is looked up first; what is not found stays.
+      settle(item, true).then(function () {
+        pillsOf(item).forEach(function (t) { change(item, JSON.parse(t.dataset.body)); t.remove(); });
+        addable(item);
+      });
+      return;
+    }
     if (e.target.closest("[data-cand-add]")) { addPicked(item); return; }
     var rm = e.target.closest("[data-cand-remove]");
     if (rm) { change(item, { action: "remove", entry_id: Number(rm.dataset.candRemove) }); return; }

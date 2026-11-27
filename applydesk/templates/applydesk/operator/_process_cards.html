@@ -25,13 +25,12 @@
 
 {# An item's own dates (author, 2026-11-18): date-time inputs inside its
    stage's; blank runs it on the stage's. #}
-{% macro item_dates(w, first="From", second="To", below=none) %}
+{% macro item_dates(w, first="From", second="To") %}
 <div class="pc-row pc-dates" data-pc-dates>
   <label class="fc-l">{{ first }}<input class="fc-in" type="datetime-local" data-pc="item-from" value="{{ local_value(w.start if w else none) }}"></label>
   <label class="fc-l">{{ second }}<input class="fc-in" type="datetime-local" data-pc="item-to" value="{{ local_value(w.end if w else none) }}"></label>
-  {% if below is none %}<span class="pc-line muted pc-hint">Blank: the stage's dates.</span>{% endif %}
+  <span class="pc-line muted pc-hint">Blank: the stage's dates.</span>
 </div>
-{% if below is not none %}<p class="pc-line muted pc-hint pc-dates-below">{{ below }}</p>{% endif %}
 {% endmacro %}
 
 {# What a published stage holds, fixed (segment AD1K): one fieldset per
@@ -56,29 +55,32 @@
   {% set chips %}<span class="chip chip-{{ tone(form_state) }}">{{ form_state }}</span>{{ emails_chip(n) }}{% endset %}
   {{ head("Form", "Application form", chips, open) }}
   <div class="pi-body">
-  {% set below %}Blank: the stage's dates. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.{% endset %}
-  {{ item_dates(w, "Opens", "Closes", below) }}
-  {{ lock_open(form_lock) }}
-  {# Ruling 84: who may apply, on the Form. Dossiers is derived: with a
-     Create dossiers on the timeline the box shows it, locked; without,
-     it is greyed out. #}
+  {# Opens, Closes, Who may apply and Max dossiers per person on one row
+     (author, 2026-11-27); the dates stay editable as an extension, the
+     other two are fixed with the Form, in a lock of their own. #}
   {% set from_dossiers = plan.stages | selectattr("candidates") | list | length > 0 %}
-  <div class="pc-row pi-sec">
-    <label class="fc-l pc-wide">Who may apply<select class="fc-in" data-rel="who-may-apply" data-stored="{{ who_may_apply }}"{% if from_dossiers %} disabled title="Create dossiers comes first: the Form invites from its dossiers"{% endif %}>
+  <div class="pc-form-row" data-pc-dates>
+    <label class="fc-l">Opens<input class="fc-in" type="datetime-local" data-pc="item-from" value="{{ local_value(w.start if w else none) }}"></label>
+    <label class="fc-l">Closes<input class="fc-in" type="datetime-local" data-pc="item-to" value="{{ local_value(w.end if w else none) }}"></label>
+    <fieldset class="pc-lock pc-form-who" data-pc-lock{% if form_lock.fixed %} disabled title="{{ form_lock.reason }}"{% endif %}{% if form_lock.opened %} data-opened="{{ form_lock.reason }}"{% endif %}>
+    {# Ruling 84: who may apply, on the Form. Dossiers is derived: with a
+       Create dossiers on the timeline the box shows it, locked; without,
+       it is greyed out. #}
+    <label class="fc-l">Who may apply<select class="fc-in" data-rel="who-may-apply" data-stored="{{ who_may_apply }}"{% if from_dossiers %} disabled title="Create dossiers comes first: the Form invites from its dossiers"{% endif %}>
       <option value="open"{% if not from_dossiers and who_may_apply == "open" %} selected{% endif %}>Anyone signed in</option>
       <option value="invitation"{% if not from_dossiers and who_may_apply == "invitation" %} selected{% endif %}>Invitees</option>
       <option value="dossiers"{% if from_dossiers %} selected{% else %} disabled{% endif %}>Dossiers</option>
     </select></label>
-    {{ per_person_box(hidden=plan.stages | selectattr("candidates") | list | length > 0) }}
+    {{ per_person_box(hidden=from_dossiers) }}
+    </fieldset>
   </div>
-  </fieldset>
+  <p class="pc-line muted pc-hint">Blank: the stage's dates. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.</p>
   {# The invite list, shown while Invitees is chosen; kept when another
      choice is picked (segment AD2I). Outside the Form's lock, as Create
      dossiers' list is: people are invited, or taken off, while it is open,
      each change kept as it is made (cold read). #}
   <div class="pi-sec" data-invitees-row{% if from_dossiers or who_may_apply != "invitation" %} hidden{% endif %}>
-    <p class="pc-line">Invitees may submit up to the max dossiers per person; their dossiers are made only as they submit.</p>
-    {{ people_list("invitees", invitee_list, url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'), "invitee", "invitees", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em>; each row is one person.", false) }}
+    {{ people_list("invitees", invitee_list, url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'), "invitee", "invitees", "A CSV has an <em>Email</em> column; each row is one person.", false, tokens=true) }}
   </div>
   {{ lock_open(form_lock) }}
   {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
@@ -101,12 +103,26 @@
    or a CSV (rulings 75, 77): Create dossiers' entries, or a Form's
    invitees (ruling 84). Its page script is `_process.html`'s, keyed by
    `data-cand-kind`. #}
-{% macro people_list(kind, listed, list_url, one, many, hint, titles) %}
+{% macro people_list(kind, listed, list_url, one, many, hint, titles, tokens=false) %}
   <div data-cand-live data-cand-kind="{{ kind }}" data-cand-url="{{ list_url }}" data-cand-unit="{{ one }}|{{ many }}" data-cand-titles="{{ 'true' if titles else 'false' }}">
   {# A typeahead (author, 2026-11-27): every match the search returns is
      listed under the box as the name is typed, whatever field it matched
      (not the browser's own list, which hides those not holding what was
      typed: Codex on #4255); Add takes the one picked, beside Upload CSV. #}
+  {% if tokens %}
+  {# Invitees (author, 2026-11-27): names or emails, several at once,
+     separated by commas, as a panel's members box; each found becomes a
+     pill, its name the directory's; one not found stays as typed. #}
+  <div class="pc-cand-add">
+    <div class="fc-l pc-cand-box"><span id="pc-{{ kind }}-label">Add {{ many }}</span>
+      <div class="tokens" role="group" aria-labelledby="pc-{{ kind }}-label" data-cand-tokens>
+        <input class="token-input" type="text" data-cand-entry autocomplete="off" aria-label="Add {{ many }}: names or emails, separated by commas" placeholder="Name or email; separate several with commas">
+      </div>
+    </div>
+    <button type="button" class="btn btn-secondary" data-cand-add-all disabled title="Type a name or email first">Add</button>
+    <button type="button" class="btn btn-secondary" data-cand-csv>Upload CSV…</button><input type="file" accept=".csv,text/csv" data-cand-file hidden aria-label="CSV of people to add">
+  </div>
+  {% else %}
   <div class="pc-cand-add pi-sec">
     <div class="pc-cand-box">
       <label class="fc-l">Add someone<input class="fc-in" type="search" data-cand-search role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pc-{{ kind }}-options" placeholder="Search by name or email" autocomplete="off"></label>
@@ -115,9 +131,11 @@
     <button type="button" class="btn btn-secondary" data-cand-add disabled title="Pick someone from the list first">Add</button>
     <button type="button" class="btn btn-secondary" data-cand-csv>Upload CSV…</button><input type="file" accept=".csv,text/csv" data-cand-file hidden aria-label="CSV of people to add">
   </div>
+  {% endif %}
   <p class="pc-line muted pc-hint">{{ hint | safe }} Rows that do not read are listed back, not saved.</p>
   <p class="muted fb-said" data-cand-said role="status"></p>
   <ul class="pc-issues" data-cand-bad hidden></ul>
+  {% if tokens %}<details class="pc-cand-fold" data-cand-fold{% if listed | length <= 10 %} open{% endif %}><summary><span data-cand-fold-n>{{ many | capitalize }} ({{ listed | length }})</span></summary>{% endif %}
   <table class="pc-cands" data-cand-list>
     <thead><tr><th scope="col">Name</th><th scope="col">Email</th>{% if titles %}<th scope="col">Title</th>{% endif %}<th scope="col">Added</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
     <tbody>
@@ -125,6 +143,7 @@
     {% else %}<tr data-cand-none><td colspan="{{ 5 if titles else 4 }}" class="muted">No one yet.</td></tr>{% endfor %}
     </tbody>
   </table>
+  {% if tokens %}</details>{% endif %}
   </div>
 {% endmacro %}
 

@@ -285,6 +285,26 @@
     .pc-cands th, .pc-cands td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--border-subtle); }
     /* The typeahead, Add and Upload CSV on one row, one height (author, 2026-11-27). */
     .pc-cand-add { display: flex; align-items: flex-end; gap: 8px; }
+    /* The Form's first row (author, 2026-11-27): Opens, Closes, then Who
+       may apply and Max dossiers per person in the Form's lock; two rows
+       on a phone. */
+    .pc-form-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+    .pc-form-row fieldset.pc-form-who { display: grid; grid-template-columns: 190px max-content; gap: 10px; align-items: end; }
+    .pc-form-who .fc-l { white-space: nowrap; }
+    .pc-form-row .fc-in { box-sizing: border-box; height: 40px; }
+    .pc-form-who [data-rel="per-person"] { width: 150px; }
+    @media (max-width: 639px) {
+      .pc-form-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .pc-form-row fieldset.pc-form-who { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) max-content; }
+    }
+    .pc-cand-fold { margin-top: 8px; }
+    .pc-cand-fold > summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-body); }
+    .pc-cand-add .tokens { margin-top: 4px; min-height: 40px; box-sizing: border-box; }
+    .pc-cand-add .token-input { font-weight: 400; }
+    @media (max-width: 639px) {
+      .pc-cand-add { flex-wrap: wrap; }
+      .pc-cand-add .pc-cand-box { flex-basis: 100%; }
+    }
     .pc-cand-add .pc-cand-box { flex: 1; position: relative; }
     .pc-cand-options { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; margin: 2px 0 0; padding: 4px 0; list-style: none; max-height: 240px; overflow-y: auto; background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 8px; box-shadow: 0 8px 24px rgba(17, 24, 39, 0.14); font-size: 14px; }
     .pc-cand-options[hidden] { display: none; }
