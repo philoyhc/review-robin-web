@@ -146,7 +146,7 @@ def test_primary_has_a_hover_of_its_own() -> None:
 
 
 #: The contexts allowed to size a .btn, each for a reason: a field and its
-#: buttons one fixed height (ruling 65, AD1Q; Populate Dossiers' typeahead,
+#: buttons one fixed height (ruling 65, AD1Q; Create dossiers' typeahead,
 #: author 2026-11-27); Process's source rows' glyph buttons, trimmed at the
 #: sides only (author, 2026-11-17).
 SIZED_BTN_CONTEXTS = frozenset(

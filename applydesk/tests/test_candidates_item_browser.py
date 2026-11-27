@@ -33,12 +33,12 @@ def test_candidates_is_drawn_as_itself_not_an_outcome(page: Page) -> None:
     _held()
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
     item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
-    assert item.locator("[data-pc-kicker]").text_content() == "Populate Dossiers"
-    assert item.locator("[data-pi-name]").text_content() == "Populate Dossiers"
+    assert item.locator("[data-pc-kicker]").text_content() == "Create dossiers"
+    assert item.locator("[data-pi-name]").text_content() == "Create dossiers"
     outcomes = page.locator('#pc-cards .pc-item[data-item="outcome"]').count()
     counts = page.locator("[data-pc-counts]").text_content() or ""
     assert f"{outcomes} outcome" in counts, counts
-    assert "Populate Dossiers" in (page.locator("[data-pc-outline]").text_content() or "")
+    assert "Create dossiers" in (page.locator("[data-pc-outline]").text_content() or "")
 
 
 def test_dossiers_per_person_saves_with_process(page: Page) -> None:
@@ -57,18 +57,25 @@ def test_dossiers_per_person_saves_with_process(page: Page) -> None:
     assert item.locator('[data-rel="per-person"]').input_value() == "3"
 
 
-def test_dossiers_per_person_is_one_setting_on_every_item(page: Page) -> None:
-    """Cold read: the first stage holding both the Form and Populate
-    Dossiers shows the field twice; an edit on either is the one saved. A
-    draft, so the form's box is not locked."""
+def test_dossiers_per_person_shows_on_the_item_that_creates_the_dossiers(page: Page) -> None:
+    """Author, 2026-11-27: the Form follows the number set on Create
+    dossiers, so with both on a stage only Create dossiers shows the box;
+    its edit is the one saved. Removing Create dossiers shows the Form's.
+    A draft, so the form's box is not locked."""
     _held(DRAFT)
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{DRAFT}/process")
     _open_all(_cards(page).nth(0))
     form = page.locator('#pc-cards .pc-item[data-item="form"]')
-    form.locator('[data-rel="per-person"]').fill("4")
     item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
-    assert item.locator('[data-rel="per-person"]').input_value() == "4"
+    assert form.locator("[data-per-person-row]").is_hidden()
+    item.locator('[data-rel="per-person"]').fill("4")
     page.locator("[data-fb-save]").click()
     page.locator("[data-unsaved]").wait_for(state="hidden")
     page.reload()
-    assert page.locator('#pc-cards [data-rel="per-person"]').first.input_value() == "4"
+    _open_all(_cards(page).nth(0))
+    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
+    assert item.locator('[data-rel="per-person"]').input_value() == "4"
+    item.locator('[data-pc-act="remove-candidates"]').click()
+    form = page.locator('#pc-cards .pc-item[data-item="form"]')
+    assert form.locator("[data-per-person-row]").is_visible()
+    assert form.locator('[data-rel="per-person"]').input_value() == "4"

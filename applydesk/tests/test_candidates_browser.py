@@ -76,10 +76,12 @@ def test_the_list_is_kept_as_it_is_changed(page: Page) -> None:
 
 
 def test_candidates_moved_to_another_stage_shows_the_list_as_it_stands(page: Page) -> None:
-    """Codex on #4161: +Populate Dossiers on another stage draws the list as it
+    """Codex on #4161: +Create dossiers on another stage draws the list as it
     now is, not as the page first loaded it."""
     built = stages.plan_of(MODEL).stages
-    drafts = tuple(replace(st, status="Draft", candidates=(i == 0)) for i, st in enumerate(built))
+    drafts = tuple(
+        replace(st, status="Draft", candidates=(i == 0), form=False) for i, st in enumerate(built)
+    )
     session = db.new_session()
     try:
         process_store.save(session, MODEL, drafts, 0, None)
@@ -150,7 +152,9 @@ def test_changes_are_sent_one_at_a_time(page: Page) -> None:
 
 def _drafts_holding_candidates() -> None:
     built = stages.plan_of(MODEL).stages
-    drafts = tuple(replace(st, status="Draft", candidates=(i == 0)) for i, st in enumerate(built))
+    drafts = tuple(
+        replace(st, status="Draft", candidates=(i == 0), form=False) for i, st in enumerate(built)
+    )
     session = db.new_session()
     try:
         process_store.save(session, MODEL, drafts, 0, None)

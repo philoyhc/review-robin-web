@@ -11,7 +11,6 @@ from applydesk import locks, sample_data, stages, timeline_checks
 from applydesk.stages import Gate, GateResult, Outcome, Plan, Stage
 from applydesk.tests._host import host_with
 from applydesk.timeline_checks import (
-    FORM_AFTER_POPULATE,
     NO_ENTRIES,
     NO_FIRST_ITEM,
     NO_LAST_OUTCOME,
@@ -43,7 +42,9 @@ def test_one_populating_item_in_order() -> None:
     form_then = _plan(Stage(1, "", None, form=True), Stage(2, "", None, candidates=True))
     assert timeline_checks.check(form_then, 1).errors == (POPULATE_AFTER_FORM,)
     then_form = _plan(Stage(1, "", None, candidates=True), Stage(2, "", None, form=True))
-    assert timeline_checks.check(then_form, 1).errors == (FORM_AFTER_POPULATE,)
+    # A Form after Create dossiers writes to the dossiers it made
+    # (ruling 83 as amended, author 2026-11-27).
+    assert timeline_checks.check(then_form, 1).errors == ()
     # One stage holding both is the Invitation only roster, until AD4.
     both = _plan(Stage(1, "", None, form=True, candidates=True))
     assert timeline_checks.check(both, 1).errors == ()

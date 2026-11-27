@@ -4,7 +4,7 @@ application or a Candidates row.
 
 Until AD4 mints a form's dossiers at submit or at its close, the only
 application dossiers are the samples', which the localhost seed records
-with the IDs they carry (ruling 74). *Populate Dossiers* (the Candidates
+with the IDs they carry (ruling 74). *Create dossiers* (the Candidates
 item) mints a dossier per entry where it is the first item, once the
 exercise is published and on each later add (rulings 81, 83,
 `sync_candidates`)."""
@@ -65,10 +65,12 @@ def record_samples(session: Session, exercise: Exercise, actor: Person | None) -
 
 
 def feeds_gates(session: Session, exercise: Exercise) -> bool:
-    """Whether the exercise's Candidates (*Populate Dossiers*) populate its
-    dossiers (ruling 83, segment AD2K): its stored timeline's first stage
-    holds the item, not the form. A timeline never saved has a blank first
-    stage, so nothing populates yet."""
+    """Whether the exercise's Candidates (*Create dossiers*) create its
+    dossiers (ruling 83 as amended, author 2026-11-27): its stored
+    timeline's first stage holds the item. A Form may follow it, on that
+    stage or a later one, and writes to the dossiers it made; a Form first
+    creates them itself, so the item is not offered after one. A timeline
+    never saved has a blank first stage, so nothing is created yet."""
     if exercise.process_revision < 1:
         return False
     first = session.scalars(
@@ -77,7 +79,7 @@ def feeds_gates(session: Session, exercise: Exercise) -> bool:
         .order_by(StageRow.position, StageRow.id)
         .limit(1)
     ).first()
-    return first is not None and first.holds_candidates and not first.holds_form
+    return first is not None and first.holds_candidates
 
 
 def published(session: Session, exercise: Exercise) -> bool:
@@ -113,7 +115,7 @@ def _fresh_id(session: Session) -> str:
 
 
 def sync_candidates(session: Session, exercise: Exercise, actor: Person | None) -> int:
-    """Give each current entry a dossier where Populate Dossiers is the
+    """Give each current entry a dossier where Create dossiers is the
     exercise's first item and it is published (rulings 81, 83): minted
     once, one per entry. A removed entry's dossier stays retired; adding the
     person again is a new entry with a dossier of its own (segment AD2K).

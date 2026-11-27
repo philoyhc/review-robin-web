@@ -295,9 +295,18 @@
     var candHolder = all.filter(function (c) { return items(c, "candidates").length; })[0];
     all.forEach(function (card) {
       var hasForm = items(card, "form").length > 0, hasGates = items(card, "gate").length > 0;
-      // Ruling 77: at most one stage holds Candidates.
-      guard(card, "candidates", card === candHolder ? "This stage holds Populate Dossiers" : candHolder ? "Another stage holds Populate Dossiers" : "");
-      guard(card, "form", hasForm ? "This stage holds the form" : hasGates ? "A stage holding gates holds no form" : holder ? "Another stage holds the form" : "");
+      // Ruling 77: at most one stage holds Candidates. Ruling 83 as amended
+      // (author, 2026-11-27): a Form creates the dossiers, so none is made
+      // by hand once it exists; a Form may follow Create dossiers, never
+      // precede it.
+      guard(card, "candidates", card === candHolder ? "This stage holds Create dossiers" : candHolder ? "Another stage holds Create dossiers" : holder ? "The Form creates the dossiers" : "");
+      guard(card, "form", hasForm ? "This stage holds the form" : hasGates ? "A stage holding gates holds no form" : holder ? "Another stage holds the form" : candHolder && all.indexOf(card) < all.indexOf(candHolder) ? "The Form comes after Create dossiers" : "");
+      // Dossiers per person on the item that creates them: the Form's box
+      // only while no Create dossiers is on the timeline.
+      items(card, "form").forEach(function (f) {
+        var row = f.querySelector("[data-per-person-row]");
+        if (row) row.hidden = !!candHolder;
+      });
       var gate = card.querySelector('[data-pc-act="gate"]'), out = card.querySelector('[data-pc-act="outcome"]');
       gate.disabled = hasForm;
       if (hasForm) gate.title = "A stage holding the form holds no gate"; else gate.removeAttribute("title");
@@ -525,7 +534,7 @@
       li.appendChild(document.createTextNode(" "));
       li.appendChild(el("span", "muted", datesOf(card)));
       card.querySelectorAll(".pc-item").forEach(function (item) {
-        var kind = item.dataset.item, text = kind === "candidates" ? "Populate Dossiers" : "Form";
+        var kind = item.dataset.item, text = kind === "candidates" ? "Create dossiers" : "Form";
         if (kind === "gate" || kind === "outcome") {
           var label = kind === "gate" ? "Gate " + (++g) : "Outcome " + (++o);
           item.querySelector("[data-pc-kicker]").textContent = label;
@@ -1670,7 +1679,7 @@
       // Dossiers per person (segment AD2K): one setting, every box kept
       // the same (below); null, unchanged, where no item shows it.
       per_person: (function () {
-        var box = root.querySelector('#pc-cards [data-rel="per-person"]');
+        var box = root.querySelector('#pc-cards [data-per-person-row]:not([hidden]) [data-rel="per-person"]');
         return box ? Number(box.value) : null;
       })(),
       stages: cards().map(function (card) {
@@ -1712,7 +1721,7 @@
 })();
 </script>
 <script>
-// Rulings 77, 83: the Populate Dossiers list, an entry a dossier (segment
+// Rulings 77, 83: the Create dossiers list, an entry a dossier (segment
 // AD2K), kept as each change is made (not by
 // Process's Save, which places the item): the people search, Add, Remove
 // and a CSV upload, each answered with the list as it now stands.
