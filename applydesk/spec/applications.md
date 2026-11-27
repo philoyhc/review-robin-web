@@ -961,7 +961,7 @@ but the lobby's *Stage* column reads:
     …/invitees` (`search`, `remove` and `csv` changes, as Create dossiers').
     A person is listed once; *Remove* retires the row and adding them again
     revives it. The list stays when another choice is picked, unused. An
-    invitee may submit up to *Dossiers per person*; their dossiers are made
+    invitee may submit up to *Max dossiers per person*; their dossiers are made
     only as they submit. Checking the list when someone applies is not
     built (AD4). *Invitees* with no one on the list is an Outline warning
     (`timeline_checks.NO_INVITEES`), not an error.

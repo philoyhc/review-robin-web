@@ -25,12 +25,13 @@
 
 {# An item's own dates (author, 2026-11-18): date-time inputs inside its
    stage's; blank runs it on the stage's. #}
-{% macro item_dates(w, first="From", second="To") %}
+{% macro item_dates(w, first="From", second="To", below=none) %}
 <div class="pc-row pc-dates" data-pc-dates>
   <label class="fc-l">{{ first }}<input class="fc-in" type="datetime-local" data-pc="item-from" value="{{ local_value(w.start if w else none) }}"></label>
   <label class="fc-l">{{ second }}<input class="fc-in" type="datetime-local" data-pc="item-to" value="{{ local_value(w.end if w else none) }}"></label>
-  <span class="pc-line muted pc-hint">Blank: the stage's dates.</span>
+  {% if below is none %}<span class="pc-line muted pc-hint">Blank: the stage's dates.</span>{% endif %}
 </div>
+{% if below is not none %}<p class="pc-line muted pc-hint pc-dates-below">{{ below }}</p>{% endif %}
 {% endmacro %}
 
 {# What a published stage holds, fixed (segment AD1K): one fieldset per
@@ -44,11 +45,9 @@
    setting for the exercise, shown on the item that creates the dossiers:
    Create dossiers where the timeline holds it, else the Form (author,
    2026-11-27); every box kept the same (cold read); saved with Process. #}
+{% macro per_person_box(hidden=False) %}<label class="fc-l" data-per-person-row{% if hidden %} hidden{% endif %}>Max dossiers per person<input class="fc-in" type="number" min="1" max="20" step="1" data-rel="per-person" value="{{ per_person }}"></label>{% endmacro %}
 {% macro per_person_field(hidden=False) %}
-  <div class="pc-row pi-sec" data-per-person-row{% if hidden %} hidden{% endif %}>
-    <label class="fc-l">Dossiers per person<input class="fc-in" type="number" min="1" max="20" step="1" data-rel="per-person" value="{{ per_person }}"></label>
-    <p class="pc-line muted pc-hint">1 keeps one dossier per person; more lets someone hold several, each its own entry. One setting for the exercise.</p>
-  </div>
+  <div class="pc-row pi-sec">{{ per_person_box(hidden) }}</div>
 {% endmacro %}
 
 {% macro form_item(new=False, open=False, w=none) %}
@@ -57,9 +56,9 @@
   {% set chips %}<span class="chip chip-{{ tone(form_state) }}">{{ form_state }}</span>{{ emails_chip(n) }}{% endset %}
   {{ head("Form", "Application form", chips, open) }}
   <div class="pi-body">
-  {{ item_dates(w, "Opens", "Closes") }}
+  {% set below %}Blank: the stage's dates. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.{% endset %}
+  {{ item_dates(w, "Opens", "Closes", below) }}
   {{ lock_open(form_lock) }}
-  <p class="pc-line">The application form opens and closes on these dates, or its stage's. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.</p>
   {# Ruling 84: who may apply, on the Form. Dossiers is derived: with a
      Create dossiers on the timeline the box shows it, locked; without,
      it is greyed out. #}
@@ -70,6 +69,7 @@
       <option value="invitation"{% if not from_dossiers and who_may_apply == "invitation" %} selected{% endif %}>Invitees</option>
       <option value="dossiers"{% if from_dossiers %} selected{% else %} disabled{% endif %}>Dossiers</option>
     </select></label>
+    {{ per_person_box(hidden=plan.stages | selectattr("candidates") | list | length > 0) }}
   </div>
   </fieldset>
   {# The invite list, shown while Invitees is chosen; kept when another
@@ -77,11 +77,10 @@
      dossiers' list is: people are invited, or taken off, while it is open,
      each change kept as it is made (cold read). #}
   <div class="pi-sec" data-invitees-row{% if from_dossiers or who_may_apply != "invitation" %} hidden{% endif %}>
-    <p class="pc-line">Invitees may submit up to the dossiers per person; their dossiers are made only as they submit.</p>
+    <p class="pc-line">Invitees may submit up to the max dossiers per person; their dossiers are made only as they submit.</p>
     {{ people_list("invitees", invitee_list, url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'), "invitee", "invitees", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em>; each row is one person.", false) }}
   </div>
   {{ lock_open(form_lock) }}
-  {{ per_person_field(hidden=plan.stages | selectattr("candidates") | list | length > 0) }}
   {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
   <div class="pc-release pi-sec" data-pc-release>
     <span class="fc-l">Emails</span>
