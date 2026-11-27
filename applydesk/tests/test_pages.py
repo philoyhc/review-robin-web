@@ -801,7 +801,6 @@ def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> N
     assert re.findall(r'<li><a href="([^"]+)">([^<]+)</a> not set</li>', missing) == [
         (f"{base}#details", "Exercise code"),
         (f"{base}#details", "Description"),
-        (f"{base}#details", "Who may apply"),
         (f"{base}/process", "Dates"),
         (f"{base}/form", "Application form"),
     ]

@@ -234,13 +234,12 @@ def test_home_names_the_revision_of_the_settings_it_shows() -> None:
     [
         ({"blind": True}, "blind"),
         ({"code": "RA-28"}, "code"),
-        ({"eligibility": "Invitation only"}, "eligibility"),
     ],
 )
 def test_what_the_page_locks_the_server_refuses(change: dict[str, Any], field: str) -> None:
     """Cold read: RA-2027 is published with a gate's stage published, so
-    its code, who may apply and blind review are fixed on the server too,
-    not only by the page's disabled inputs."""
+    its code and blind review are fixed on the server too, not only by the
+    page's disabled inputs. (Who may apply is the Form's: ruling 84.)"""
     reply = _client().post(DETAILS, json=_good(**change))
     assert reply.status_code == 400 and reply.json()["field"] == field
     assert _row().revision == 1
@@ -251,3 +250,25 @@ def test_a_code_is_measured_as_its_key_is() -> None:
     blank = f"/applydesk/operator/exercises/{BLANK}/details"
     reply = _client().post(blank, json=_good(code="ß" * 21, name="G"))
     assert reply.status_code == 400 and reply.json()["field"] == "code"
+
+
+def test_who_may_apply_is_fixed_while_the_form_is_published() -> None:
+    """Codex on #4259: a published Form keeps who may apply, as Details'
+    control did; an unchanged value saves nothing and is not refused."""
+    ra = sample_data.exercise("wa9juxbc2t")  # its Form's stage is published
+    assert ra is not None
+    session = db.new_session()
+    try:
+        row = session.scalar(select(Exercise).where(Exercise.public_id == ra.public_id))
+        assert row is not None
+        stored = row.eligibility or "open"
+        other = "invitation" if stored == "open" else "open"
+        assert not exercises.set_eligibility(session, ra, stored, None)
+        row.eligibility = None  # unset reads as Anyone signed in
+        assert not exercises.set_eligibility(session, ra, "open", None)
+        row.eligibility = stored
+        with pytest.raises(exercises.Refused, match="The Form is published"):
+            exercises.set_eligibility(session, ra, other, None)
+    finally:
+        session.rollback()
+        session.close()

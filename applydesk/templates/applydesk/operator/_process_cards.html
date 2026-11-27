@@ -59,6 +59,17 @@
   {{ item_dates(w, "Opens", "Closes") }}
   {{ lock_open(form_lock) }}
   <p class="pc-line">The application form opens and closes on these dates, or its stage's. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.</p>
+  {# Ruling 84: who may apply, on the Form. Dossiers is derived: with a
+     Create dossiers on the timeline the box shows it, locked; without,
+     it is greyed out. #}
+  {% set from_dossiers = plan.stages | selectattr("candidates") | list | length > 0 %}
+  <div class="pc-row pi-sec">
+    <label class="fc-l pc-wide">Who may apply<select class="fc-in" data-rel="who-may-apply" data-stored="{{ who_may_apply }}"{% if from_dossiers %} disabled title="Create dossiers comes first: the Form invites from its dossiers"{% endif %}>
+      <option value="open"{% if not from_dossiers and who_may_apply == "open" %} selected{% endif %}>Anyone signed in</option>
+      <option value="invitation"{% if not from_dossiers and who_may_apply == "invitation" %} selected{% endif %}>Invitees</option>
+      <option value="dossiers"{% if from_dossiers %} selected{% else %} disabled{% endif %}>Dossiers</option>
+    </select></label>
+  </div>
   {{ per_person_field(hidden=plan.stages | selectattr("candidates") | list | length > 0) }}
   {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
   <div class="pc-release pi-sec" data-pc-release>

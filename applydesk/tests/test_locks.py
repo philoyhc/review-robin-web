@@ -76,7 +76,6 @@ def test_publishing_names_what_the_stage_lacks() -> None:
         "Stage 1 has no start and end.",
         "Exercise code is not set.",
         "Description is not set.",
-        "Who may apply is not set.",
         "The application form has no questions.",
     )
     assert locks.publish_problems(_e(RA), _stage(RA, 3)) == ()

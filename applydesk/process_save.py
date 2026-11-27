@@ -387,6 +387,22 @@ def _items(v: Any, key: str) -> list[Any]:
     return cast(list[Any], got) if isinstance(got, list) else []
 
 
+#: The Form's *Who may apply* (ruling 84) as stored; *Dossiers* is derived
+#: from a Create dossiers earlier, never sent as a choice.
+WHO_MAY_APPLY = ("open", "invitation")
+
+
+def who_may_apply(sent: Any) -> str | None:
+    """The Form's *Who may apply* the page sends (segment AD2I), else None:
+    unchanged (no Form, or *Dossiers*, which is derived)."""
+    got = cast(dict[str, Any], sent).get("who_may_apply") if isinstance(sent, dict) else None
+    if got is None or got == "dossiers":
+        return None
+    if got not in WHO_MAY_APPLY:
+        raise Refused("Who may apply is not one of the choices.")
+    return cast(str, got)
+
+
 def per_person(sent: Any) -> int | None:
     """The *Dossiers per person* the first stage's populating item sends
     (segment AD2K), else None: unchanged."""

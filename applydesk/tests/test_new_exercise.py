@@ -203,7 +203,9 @@ def test_details_save_into_a_new_exercise() -> None:
     good["revision"] = 2
     home = client.get(f"{LOBBY}/{made}").text
     assert "<code>SB-27</code>" in home and "Bursaries for summer study." in home
-    assert "Europe/London" in home and "Invitation only" in home
+    assert "Europe/London" in home
+    # Who may apply is the Form's (ruling 84): Details ignores it, sent or not.
+    assert "Invitation only" not in home
     assert "<code>SB-27</code>" in client.get(LOBBY).text
     for bad, reason in (
         ({**good, "name": ""}, "A name of 1 to 200 characters is needed."),
@@ -1230,3 +1232,30 @@ def test_gates_and_outcomes_wait_for_the_first_item() -> None:
     assert _post_process(client, made, sent).status_code == 200
     cards = _cards(client.get(f"{LOBBY}/{made}/process").text)
     assert 'data-pc-act="gate" hidden' not in cards and 'data-pc-act="outcome" hidden' not in cards
+
+
+def test_who_may_apply_is_set_on_the_form() -> None:
+    """Ruling 84: the Form's dropdown saves Anyone signed in and Invitees
+    with Process; with Create dossiers on the timeline it shows Dossiers,
+    locked; Details no longer offers it."""
+    client = _client()
+    made = _create(client)
+    form = {"from": "", "to": "", "receipt": False, "reminder": False}
+    sent = {"stages": [_stage("Applications", form=form)], "who_may_apply": "invitation"}
+    assert _post_process(client, made, sent).status_code == 200
+    cards = _cards(client.get(f"{LOBBY}/{made}/process").text)
+    assert 'data-stored="invitation"' in cards
+    assert '<option value="invitation" selected>Invitees</option>' in cards
+    assert '<option value="dossiers" disabled>Dossiers</option>' in cards
+    refused = _post_process(client, made, {**sent, "who_may_apply": "everyone"})
+    assert refused.status_code == 400 and "not one of the choices" in refused.json()["error"]
+    # "dossiers" is derived, never stored: sent, it changes nothing.
+    assert _post_process(client, made, {**sent, "who_may_apply": "dossiers"}).status_code == 200
+    assert 'data-stored="invitation"' in client.get(f"{LOBBY}/{made}/process").text
+    home = client.get(f"{LOBBY}/{made}").text
+    assert "Who may apply" not in home.split("data-dt-form")[0].split("Details")[-1]
+    first = {"stages": [_stage("People", candidates=True), _stage("Applications", form=form)]}
+    assert _post_process(client, made, first).status_code == 200
+    cards = _cards(client.get(f"{LOBBY}/{made}/process").text)
+    assert '<option value="dossiers" selected>Dossiers</option>' in cards
+    assert 'data-rel="who-may-apply" data-stored="invitation" disabled' in cards
