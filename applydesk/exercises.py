@@ -412,8 +412,18 @@ def set_eligibility(
     if exercise.revision < 1:
         record_sample(session, exercise, sample, actor)
     was = exercise.eligibility
-    if was == eligibility:
+    # Unset reads as Anyone signed in: the page's first save of it changes
+    # nothing, so Details' revision is not bumped behind it (cold read).
+    if (was or "open") == eligibility:
         return False
+    # Fixed with the Form while its stage is published, as Details' control
+    # was (Codex on #4259): the lock as saved, before this save.
+    if locks.form_lock(sample).fixed:
+        raise Refused(
+            "The Form is published: who may apply stays as it is until its stage"
+            " is reverted to draft and saved.",
+            key="locked",
+        )
     exercise.eligibility = eligibility
     exercise.revision += 1
     session.flush()
