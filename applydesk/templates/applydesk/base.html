@@ -285,7 +285,11 @@
     .pc-cands th, .pc-cands td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--border-subtle); }
     /* The typeahead, Add and Upload CSV on one row, one height (author, 2026-11-27). */
     .pc-cand-add { display: flex; align-items: flex-end; gap: 8px; }
-    .pc-cand-add .fc-l { flex: 1; }
+    .pc-cand-add .pc-cand-box { flex: 1; position: relative; }
+    .pc-cand-options { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; margin: 2px 0 0; padding: 4px 0; list-style: none; max-height: 240px; overflow-y: auto; background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 8px; box-shadow: 0 8px 24px rgba(17, 24, 39, 0.14); font-size: 14px; }
+    .pc-cand-options[hidden] { display: none; }
+    .pc-cand-options li { padding: 6px 12px; cursor: pointer; }
+    .pc-cand-options li.on, .pc-cand-options li:hover { background: var(--accent-tint); }
     .pc-cand-add .fc-in, .pc-cand-add .btn { box-sizing: border-box; height: 40px; min-height: 40px; }
     /* Details: locked facts, unlocked fields (rung 4). */
     .dt dd { overflow-wrap: anywhere; }

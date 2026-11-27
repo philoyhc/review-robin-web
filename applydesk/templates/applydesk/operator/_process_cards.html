@@ -89,11 +89,15 @@
   <p class="pc-line">People added by hand, one dossier each, for the gates that follow. A Form after it writes to these dossiers.</p>
   {{ per_person_field() }}
   <div data-cand-live>
-  {# A typeahead (author, 2026-11-27): matches are offered as the name is
-     typed; Add takes the one picked, beside Upload CSV. #}
+  {# A typeahead (author, 2026-11-27): every match the search returns is
+     listed under the box as the name is typed, whatever field it matched
+     (not the browser's own list, which hides those not holding what was
+     typed: Codex on #4255); Add takes the one picked, beside Upload CSV. #}
   <div class="pc-cand-add pi-sec">
-    <label class="fc-l">Add someone<input class="fc-in" type="search" data-cand-search list="pc-cand-options" placeholder="Search by name or email" autocomplete="off"></label>
-    <datalist id="pc-cand-options" data-cand-options></datalist>
+    <div class="pc-cand-box">
+      <label class="fc-l">Add someone<input class="fc-in" type="search" data-cand-search role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pc-cand-options" placeholder="Search by name or email" autocomplete="off"></label>
+      <ul class="pc-cand-options" id="pc-cand-options" role="listbox" aria-label="Matches" data-cand-options hidden></ul>
+    </div>
     <button type="button" class="btn btn-secondary" data-cand-add disabled title="Pick someone from the list first">Add</button>
     <button type="button" class="btn btn-secondary" data-cand-csv>Upload CSV…</button><input type="file" accept=".csv,text/csv" data-cand-file hidden aria-label="CSV of people to add">
   </div>

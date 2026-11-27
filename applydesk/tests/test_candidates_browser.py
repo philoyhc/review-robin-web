@@ -29,15 +29,16 @@ def _with_candidates() -> None:
 
 
 def _pick(item: Locator, typed: str, email: str) -> None:
-    """The typeahead (author, 2026-11-27): type, wait for the offer naming
-    ``email``, then choose it as the browser's list does, putting its label
+    """The typeahead (author, 2026-11-27): type, wait for the match naming
+    ``email`` in the list under the box, then click it, putting its label
     in the box; Add is enabled only then."""
     box = item.locator("[data-cand-search]")
     box.fill(typed)
-    offer = item.locator(f'[data-cand-options] option[value*="{email}"]')
-    offer.wait_for(state="attached")
+    offer = item.locator("[data-cand-options] li", has_text=email)
+    offer.wait_for()
     assert item.locator("[data-cand-add]").is_disabled()
-    box.fill(offer.get_attribute("value") or "")
+    offer.click()
+    assert item.locator("[data-cand-options]").is_hidden()
     assert item.locator("[data-cand-add]").is_enabled()
 
 
@@ -289,9 +290,91 @@ def test_a_shown_label_adds_its_own_account_not_an_address_twin(page: Page) -> N
         item.locator("[data-pi-toggle]").click()
     box = item.locator("[data-cand-search]")
     box.fill("sam@")
-    item.locator('[data-cand-options] option[value*="directory"]').wait_for(state="attached")
+    item.locator("[data-cand-options] li", has_text="directory").wait_for()
     box.fill("sam@example.edu")  # the on-record label, and an address two accounts share
     assert item.locator("[data-cand-add]").is_enabled()
     item.locator("[data-cand-add]").click()
     item.locator("[data-cand-said]").filter(has_text="Added.").wait_for()
     assert '"person_id":4242' in sent[0] and "object_id" not in sent[0]
+
+
+def test_every_match_is_listed_whatever_field_it_matched(page: Page) -> None:
+    """Codex on #4255: a directory match found by a field the label does
+    not show (a surname) is still listed and can be added; the keyboard
+    picks too."""
+    _with_candidates()
+    page.route(
+        "**/candidates/search*",
+        lambda route: route.fulfill(
+            json={
+                "on_record": [],
+                "directory": [
+                    {
+                        "object_id": "o-8",
+                        "name": "Jane",
+                        "address": "e0123456@example.edu",
+                        "upn": "e0123456@example.edu",
+                    }
+                ],
+                "directory_failed": False,
+            }
+        ),
+    )
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
+    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
+    stage = page.locator("#pc-cards .pc").filter(
+        has=page.locator('.pc-item[data-item="candidates"]')
+    )
+    if not stage.locator(".fc-body").first.is_visible():
+        stage.locator("[data-fc-toggle]").first.click()
+    if not item.locator("[data-cand-search]").is_visible():
+        item.locator("[data-pi-toggle]").click()
+    box = item.locator("[data-cand-search]")
+    box.fill("Tan")
+    item.locator("[data-cand-options] li", has_text="e0123456@example.edu").wait_for()
+    box.press("ArrowDown")
+    box.press("Enter")
+    assert box.input_value() == "Jane (e0123456@example.edu) · directory"
+    assert item.locator("[data-cand-add]").is_enabled()
+
+
+def test_a_changed_search_drops_the_last_highlight(page: Page) -> None:
+    """Codex on #4255: a match highlighted, then the search changed and its
+    answer still pending (or failed), Enter picks nothing."""
+    _with_candidates()
+    answered: list[int] = []
+
+    def search(route: Route) -> None:
+        answered.append(1)
+        if len(answered) > 1:
+            route.abort()  # the second search fails
+            return
+        route.fulfill(
+            json={
+                "on_record": [{"id": 4243, "name": "Old Match", "email": "old@example.edu"}],
+                "directory": [],
+                "directory_failed": False,
+            }
+        )
+
+    page.route("**/candidates/search*", search)
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
+    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
+    stage = page.locator("#pc-cards .pc").filter(
+        has=page.locator('.pc-item[data-item="candidates"]')
+    )
+    if not stage.locator(".fc-body").first.is_visible():
+        stage.locator("[data-fc-toggle]").first.click()
+    if not item.locator("[data-cand-search]").is_visible():
+        item.locator("[data-pi-toggle]").click()
+    box = item.locator("[data-cand-search]")
+    box.fill("old")
+    item.locator("[data-cand-options] li", has_text="old@example.edu").wait_for()
+    box.press("ArrowDown")
+    box.fill("newer")
+    box.press("Enter")
+    assert box.input_value() == "newer"
+    assert item.locator("[data-cand-add]").is_disabled()
+    item.locator("[data-cand-said]").filter(has_text="The search failed").wait_for()
+    box.press("Enter")
+    assert box.input_value() == "newer"
