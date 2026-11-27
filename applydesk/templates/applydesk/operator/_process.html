@@ -301,7 +301,7 @@
       // precede it.
       guard(card, "candidates", card === candHolder ? "This stage holds Create dossiers" : candHolder ? "Another stage holds Create dossiers" : holder ? "The Form creates the dossiers" : "");
       guard(card, "form", hasForm ? "This stage holds the form" : hasGates ? "A stage holding gates holds no form" : holder ? "Another stage holds the form" : candHolder && all.indexOf(card) < all.indexOf(candHolder) ? "The Form comes after Create dossiers" : "");
-      // Dossiers per person on the item that creates them: the Form's box
+      // Max dossiers per person on the item that creates them: the Form's box
       // only while no Create dossiers is on the timeline.
       items(card, "form").forEach(function (f) {
         var row = f.querySelector("[data-per-person-row]");

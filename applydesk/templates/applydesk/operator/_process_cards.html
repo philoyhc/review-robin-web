@@ -77,7 +77,7 @@
      dossiers' list is: people are invited, or taken off, while it is open,
      each change kept as it is made (cold read). #}
   <div class="pi-sec" data-invitees-row{% if from_dossiers or who_may_apply != "invitation" %} hidden{% endif %}>
-    <p class="pc-line">Invitees may submit up to the dossiers per person; their dossiers are made only as they submit.</p>
+    <p class="pc-line">Invitees may submit up to the max dossiers per person; their dossiers are made only as they submit.</p>
     {{ people_list("invitees", invitee_list, url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'), "invitee", "invitees", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em>; each row is one person.", false) }}
   </div>
   {{ lock_open(form_lock) }}
