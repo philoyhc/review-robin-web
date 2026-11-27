@@ -854,7 +854,7 @@ the rulings it relied on but does not move them.
       with the reason when a move breaks the rules above (the first stage
       begins with a Form or Create dossiers; Create dossiers never after a
       Form).
-    - **Built** in segment AD2I (`applydesk/guide/ad2_series.md`); a Form's
+    - **Built** in segment AD2I (closed 2026-11-27, `applydesk/guide/ad2_series.md`); a Form's
       submissions joining dossiers stay AD4's.
 
 ## What a linked Review Robin gate needs (2026-11-16)

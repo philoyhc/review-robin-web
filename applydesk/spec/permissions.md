@@ -126,7 +126,7 @@ whole or not at all. *To build:* the purge (AD2D, with stored applications:
 | Kind | Recognized by | Reaches | Built |
 |---|---|---|---|
 | **Applicant** (*Candidate*, ruling 71) | their application | `/me`: the exercises open to them, their applications, and what is released to applicants | Placeholder pages; per-person gating in AD2D |
-| **Invitee** | being listed in the Candidates item of an *Invitation only* exercise: its form's roster (`applydesk/candidates.py`; "The Process page" in `applydesk/spec/applications.md`) | as an Applicant, for that exercise | The roster is built; checking it when someone applies is AD4's |
+| **Invitee** | being on the invite list of a Form whose *Who may apply* is *Invitees* (`applydesk/invitees.py`; "The Process page" in `applydesk/spec/applications.md`) | as an Applicant, for that exercise | The list is built; checking it when someone applies is AD4's |
 | **Evaluator** | membership of a panel a gate draws on | the dossiers they evaluate, `/me/…/dossiers/<id>`, showing only what their gate × panel's view shows, during the gate's window (ruling 79); they respond in Review Robin, never in Apply Desk | AD2E, AD4, AD5 |
 
 | **Observer** | named on an exercise as observing it (pre-positioned: the model has a place for them; nothing is built until a later segment) | `/me`: what the exercise grants observers, read-only, as Review Robin's observers read `/me/sessions/<id>/collation` | Later |
@@ -276,6 +276,7 @@ Every change writes an `audit_event` with the actor.
 | `exercise.process_saved`, `exercise.stage_reverted` | Process saved; a published stage reverted to draft by a save, with its reason | Yes |
 | `exercise.form_opened`, `exercise.form_closed` | Home's *Open form*, *Close form* | Yes |
 | `candidate.added`, `candidate.removed` | someone listed in an exercise's Candidates (`context.via`: `search` or `csv`) or taken off | Yes |
+| `invitee.added`, `invitee.removed` | someone put on a Form's invite list (`context.via`: `search` or `csv`) or taken off | Yes |
 | `person.promoted`, `person.demoted` | Admin granted, taken away; a Promote that lists someone also writes `person.admitted` | Yes |
 
 ## 10. Open

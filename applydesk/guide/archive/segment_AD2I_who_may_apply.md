@@ -51,13 +51,39 @@ Taken 2026-11-27 at `d70ab00c3`.
 
 ## Status
 
-- **Rung 5 stores no `stage.item_order`** (2026-11-27). The rules fix every
-  kind's place: Create dossiers before the Form and the gates, the outcome
-  last, and the Form never beside a gate. Only the gates between stay free,
-  and they already save their order as `gate.position`. So the page draws
-  that order, the grips move items within it, and a move that breaks it is
-  put back with its reason. No migration was needed.
-- **The empty invite list** is a timeline warning (`timeline_checks.NO_INVITEES`), shown on the Outline as saved.
+Closed 2026-11-27: rung 1 #4257, rung 2 #4258, rung 3 #4259, rung 4 #4260, rung 5 #4261, close in this PR.
+
+- **Intended vs done.** Built as planned, except that rung 5 stores no
+  `stage.item_order`. The rules fix every kind's place: Create dossiers
+  before the Form and the gates, the outcome last, and the Form never
+  beside a gate. Only the gates between stay free, and they already save
+  their order as `gate.position`. So the page draws that order, the grips
+  move items within it, and a move that breaks it is put back with its
+  reason. No migration was needed. The server needs no check for the
+  forced kinds, since Create dossiers, the Form and the outcome are flags
+  drawn in a fixed order.
+- **Decisions confirmed at build:**
+  - A published Form keeps *Who may apply*: `exercises.set_eligibility`
+    refuses a change (Codex on #4259, replacing Details' server lock).
+    Unset reads as *Anyone signed in*, so the page's first save writes
+    nothing.
+  - The invite list sits outside the Form's lock, as Create dossiers'
+    list does, each change kept as made.
+  - *Dossiers* shows for a Create dossiers anywhere on the timeline (one
+    after the Form is already `POPULATE_AFTER_FORM`).
+  - The empty invite list is a warning, `timeline_checks.NO_INVITEES`.
+  - A published stage's gate order is refused on the server too.
+- **Reads.** One cumulative `diff-reviewer` read, rungs 2–5 from
+  `c521cd1`. It found 10 issues: a published-Form lock missing on the
+  server (also Codex's), a published gate order enforced only on the page,
+  the invite list inside the lock, the data move mixing MINs across
+  columns, a dead guard, an inconsistent *Dossiers* rule, test gaps, and
+  stale comments. All fixed in rungs 3–5, except two left as is: a Process
+  change bumps Details' revision, and no browser test drags a successful
+  move with the mouse.
+- **`spec-writer` at close** aligned the three specs. It flagged stale
+  AD2K text (the `candidate` table's uniqueness, `ad2k1entries` missing
+  from the migration list), which is left for AD2K's close.
 
 ## PR ladder
 
@@ -65,7 +91,7 @@ Taken 2026-11-27 at `d70ab00c3`.
 2. **The first item before gates.** *+Gate* and *+Outcome* hidden until a Form or Create dossiers is in the process (server and page). Must not touch storage.
 3. **The Form's dropdown.** *Who may apply* on the Form item, saved with Process into `exercise.eligibility`; *Dossiers* derived and locked; Details' control and field retired.
 4. **The invite list.** Migration `ad2i1_invitees` (the table, the data move); `applydesk/invitees.py`; its search and change routes; the list on the Form under *Invitees*, sharing Create dossiers' typeahead.
-5. **Reordering.** Grip handles on a stage's items; the order stored (`stage.item_order`) and read back; a breaking drop undone with its reason; the Outline's empty-invite warning.
+5. **Reordering.** Grip handles on a stage's items; ~~the order stored (`stage.item_order`)~~ the gates' order saved as their positions (Status) and read back; a breaking drop undone with its reason; the Outline's empty-invite warning.
    - **Last build rung:** `diff-reviewer` on the cumulative diff from rung 2's base.
 6. **Close:** `spec-writer` on `applydesk/spec/`; Status compacted; the plan archived.
 
