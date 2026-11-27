@@ -42,6 +42,8 @@ TABLES = {
     "application",
     # AD2F: dossiers.
     "dossier",
+    # AD2I: a Form's invitees.
+    "invitee",
     # AD2E: panels, the Panels roster and memberships.
     "panel",
     "roster_entry",
@@ -316,3 +318,43 @@ def test_reset_survives_data_old_constraints_forbid(
         )
     finally:
         session.close()
+
+
+def test_an_invitation_roster_moves_onto_the_invite_list(tmp_path: Path) -> None:
+    """AD2I's migration (ruling 84): an Invitation only exercise with
+    Create dossiers on its Form's stage has each live entry's person
+    invited once, from their earliest entry; removed entries, and an open
+    exercise's, are left off."""
+    url = f"sqlite:///{tmp_path / 'i.db'}"
+    config = _config(url)
+    command.upgrade(config, "ad2k1entries")
+    engine = create_engine(url)
+    with engine.begin() as c:
+        c.exec_driver_sql(
+            "INSERT INTO person (id, email, email_key, may_operate, created_at) VALUES"
+            " (1, 'a@x', 'a@x', 0, '2026-11-01'), (2, 'b@x', 'b@x', 0, '2026-11-01'),"
+            " (3, 'c@x', 'c@x', 0, '2026-11-01')"
+        )
+        c.exec_driver_sql(
+            "INSERT INTO exercise (id, public_id, eligibility, created_at) VALUES"
+            " (1, 'inv', 'invitation', '2026-11-01'), (2, 'opn', 'open', '2026-11-01')"
+        )
+        c.exec_driver_sql(
+            "INSERT INTO stage (exercise_id, key, position, status, shown, holds_form,"
+            " holds_candidates) VALUES (1, 's1', 1, 'draft', 1, 1, 1),"
+            " (2, 's1', 1, 'draft', 1, 1, 1)"
+        )
+        c.exec_driver_sql(
+            "INSERT INTO candidate (id, exercise_id, person_id, via, added_by_id, added_at,"
+            " removed_at) VALUES"
+            " (1, 1, 1, 'search', 3, '2026-11-02', NULL),"
+            " (2, 1, 1, 'csv', 2, '2026-11-03', NULL),"
+            " (3, 1, 2, 'csv', NULL, '2026-11-02', '2026-11-04'),"
+            " (4, 2, 3, 'search', NULL, '2026-11-02', NULL)"
+        )
+    command.upgrade(config, "head")
+    with engine.connect() as c:
+        got = c.exec_driver_sql(
+            "SELECT exercise_id, person_id, via, added_by_id FROM invitee ORDER BY id"
+        ).all()
+    assert [tuple(r) for r in got] == [(1, 1, "search", 3)]
