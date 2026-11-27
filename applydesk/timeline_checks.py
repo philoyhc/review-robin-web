@@ -6,12 +6,13 @@ Errors block publishing the first stage (`locks.publish_problems`, so Home
 lists them under *Blocking publication* and Process's Publish waits on
 them); errors and warnings both show on Process's Outline, as saved.
 
-- **Errors.** The first stage holds neither a Form nor *Populate
-  Dossiers*: nothing says whose dossiers the exercise holds. *Populate
-  Dossiers* after a Form: it populates only as the first item. A Form
-  after *Populate Dossiers*: it needs an entry rule naming whom it
-  invites, which AD4 builds.
-- **Warnings.** *Populate Dossiers* has no entries; no outcome follows
+- **Errors.** The first stage holds neither a Form nor *Create
+  dossiers*: nothing says whose dossiers the exercise holds. *Create
+  dossiers* after a Form: a Form creates the dossiers itself, so the item
+  is not offered after one (ruling 83 as amended, author 2026-11-27); a
+  timeline saved before says so. A Form after *Create dossiers* is
+  allowed: it writes to the dossiers already made.
+- **Warnings.** *Create dossiers* has no entries; no outcome follows
   the last gate, so its results decide nothing.
 
 The item is *Candidates* in code (`Stage.candidates`, `applydesk/candidates.py`).
@@ -27,16 +28,12 @@ from applydesk import db, stages
 from applydesk.models import Candidate, Exercise
 
 NO_FIRST_ITEM = (
-    "The first stage holds no Form and no Populate Dossiers: add one, so the exercise has dossiers."
+    "The first stage holds no Form and no Create dossiers: add one, so the exercise has dossiers."
 )
 POPULATE_AFTER_FORM = (
-    "Populate Dossiers comes after the Form: it populates dossiers only as the first item."
+    "Create dossiers comes after the Form, which creates the dossiers itself: remove one."
 )
-FORM_AFTER_POPULATE = (
-    "A Form after Populate Dossiers needs an entry rule, not built yet: move "
-    "the Form to the first stage or remove it."
-)
-NO_ENTRIES = "Populate Dossiers has no one on it yet."
+NO_ENTRIES = "Create dossiers has no one on it yet."
 NO_LAST_OUTCOME = "No outcome follows the last gate: its results decide nothing."
 
 
@@ -48,7 +45,7 @@ class Checked:
 
 def check(plan: stages.Plan, entries: int) -> Checked:
     """``plan``'s timeline checked, ``entries`` the live entries on its
-    Populate Dossiers item."""
+    Create dossiers item."""
     errors: list[str] = []
     warnings: list[str] = []
     if not plan.stages:
@@ -58,11 +55,8 @@ def check(plan: stages.Plan, entries: int) -> Checked:
     populate_at = next((i for i, st in enumerate(plan.stages) if st.candidates), None)
     if not (first.form or first.candidates):
         errors.append(NO_FIRST_ITEM)
-    if form_at is not None and populate_at is not None:
-        if populate_at > form_at:
-            errors.append(POPULATE_AFTER_FORM)
-        elif form_at > populate_at:
-            errors.append(FORM_AFTER_POPULATE)
+    if form_at is not None and populate_at is not None and populate_at > form_at:
+        errors.append(POPULATE_AFTER_FORM)
     if populate_at is not None and entries == 0:
         warnings.append(NO_ENTRIES)
     columns = [c for st in plan.stages for c in st.columns]
@@ -75,7 +69,7 @@ def check(plan: stages.Plan, entries: int) -> Checked:
 
 
 def entries_of(public_id: str) -> int:
-    """The live entries on the exercise's Populate Dossiers, read in a
+    """The live entries on the exercise's Create dossiers, read in a
     session of its own, as `stages.plan_of` is."""
     session = db.new_session()
     try:

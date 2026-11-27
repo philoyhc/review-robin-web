@@ -1090,7 +1090,7 @@ def setup_missing(e: Exercise) -> tuple[tuple[str, str], ...]:
     if "Not set" in (e.opens, e.application_stage_ends):
         missing.append(("Dates", "process"))
     # Only a timeline holding the form owes its questions (segment AD2K):
-    # one begun by Populate Dossiers has none to write.
+    # one begun by Create dossiers has none to write.
     from applydesk import stages  # it builds on this module
 
     if stages.plan_of(e.public_id).form_stage is not None and form_is_empty(e.public_id):

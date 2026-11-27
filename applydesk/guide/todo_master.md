@@ -826,6 +826,12 @@ the rulings it relied on but does not move them.
       and later linked to an application, and validation in segment AD2K
       (`applydesk/guide/ad2_series.md`); a later Form's entry rule and its
       submissions joining dossiers with AD4.
+    - **Amended** (author, 2026-11-27): the item is *Create dossiers*.
+      Once a Form exists, *+Create dossiers* is not offered: the Form
+      creates the dossiers. *Create dossiers* may be followed by a Form,
+      on its own stage or a later one, which writes to the dossiers it
+      made; the Form follows its dossiers per person. A Form after it is
+      no longer an error: its entry rule defaults to every dossier (AD4).
 
 ## What a linked Review Robin gate needs (2026-11-16)
 

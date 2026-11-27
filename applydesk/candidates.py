@@ -1,4 +1,4 @@
-"""An exercise's Candidates, shown as *Populate Dossiers* (rulings 77, 83;
+"""An exercise's Candidates, shown as *Create dossiers* (rulings 77, 83;
 segments AD2C rung 9, AD2K): entries kept by hand, added through the people
 search (ruling 75) or a CSV upload, removed in the list. The form's roster
 on an *Invitation only* exercise; where the item is the first, each entry's
@@ -206,7 +206,7 @@ def add(
 ) -> bool:
     """Add an entry for ``person``; False if they already hold as many as
     the exercise allows (``dossiers_per_person``). Flushes. With ``mint``,
-    its dossier is given where Populate Dossiers is the first item (rulings
+    its dossier is given where Create dossiers is the first item (rulings
     81, 83); a CSV mints once, after its rows."""
     if via not in VIA:
         raise ValueError(via)

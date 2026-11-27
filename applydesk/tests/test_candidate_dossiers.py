@@ -1,5 +1,5 @@
 """Candidates' dossiers (segment AD2F rung 5, AD2K; rulings 81, 83):
-where Populate Dossiers is the stored timeline's first item, each entry's
+where Create dossiers is the stored timeline's first item, each entry's
 dossier is minted once the exercise is published and on each later add;
 otherwise the item is only the form's roster."""
 
@@ -65,10 +65,12 @@ def test_no_form_published_mints_on_add_and_shows_on_dossiers() -> None:
     assert all(r.application is None and r.dossier.name for r in rows)
 
 
-def test_a_form_mints_nothing() -> None:
+def test_create_dossiers_with_a_form_after_it_on_its_stage_still_mints() -> None:
+    """Ruling 83 as amended (author, 2026-11-27): a Form after Create
+    dossiers writes to the dossiers it made; the item still creates them."""
     ex = _exercise(form=True, published=True)
     _add(ex, "ann@example.edu")
-    assert _live(ex) == []
+    assert len(_live(ex)) == 1
 
 
 def test_a_draft_mints_at_publish() -> None:
@@ -179,7 +181,7 @@ def test_a_publishing_process_save_mints_and_the_grid_draws_every_column() -> No
 
 
 def test_a_form_placed_first_later_keeps_the_dossiers_and_mints_no_more() -> None:
-    """Ruling 83: Populate Dossiers populates only as the first item; a
+    """Ruling 83: Create dossiers populates only as the first item; a
     stage placed before it leaves the dossiers made and mints no more."""
     ex = _exercise(form=False, published=True)
     _add(ex, "ann@example.edu")

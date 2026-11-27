@@ -898,7 +898,7 @@ def problems(stages: tuple[Stage, ...]) -> tuple[str, ...]:
     if len(holding) > 1:
         out.append("More than one stage holds the form.")
     if sum(st.candidates for st in stages) > 1:
-        out.append("More than one stage holds Populate Dossiers.")
+        out.append("More than one stage holds Create dossiers.")
     for st in stages:
         if st.form and any(isinstance(c, Gate) for c in st.columns):
             out.append(f"{st.label} holds both the form and a gate.")

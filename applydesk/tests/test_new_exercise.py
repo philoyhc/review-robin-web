@@ -58,7 +58,7 @@ def test_new_exercise_makes_a_blank_draft_and_lands_on_its_home() -> None:
     form = client.get(f"{LOBBY}/{made}/form").text
     assert "Project title" not in form
     assert "Application form" not in home
-    assert "The first stage holds no Form and no Populate Dossiers" in home
+    assert "The first stage holds no Form and no Create dossiers" in home
     # Each Setup page renders it (the lookups read its row).
     for section in ("process", "form", "panels", "emails", "dossiers", "evaluations"):
         assert client.get(f"{LOBBY}/{made}/{section}").status_code == 200, section
@@ -460,14 +460,14 @@ def _process() -> dict[str, object]:
 
 def test_a_new_exercise_starts_with_a_blank_stage() -> None:
     """Segment AD2K rung 2 (ruling 83): one stage, holding nothing, with
-    +Form and +Populate Dossiers both offered; a sample keeps its form."""
+    +Form and +Create dossiers both offered; a sample keeps its form."""
     client = _client()
     made = _create(client)
     cards = _cards(client.get(f"{LOBBY}/{made}/process").text)
     assert cards.count('class="fc pc"') == 1 and "pc-body-empty" in cards
     assert 'data-item="form"' not in cards and 'data-item="candidates"' not in cards
     assert 'data-pc-act="form">+Form</button>' in cards
-    assert 'data-pc-act="candidates">+Populate Dossiers</button>' in cards
+    assert 'data-pc-act="candidates">+Create dossiers</button>' in cards
     assert 'data-item="form"' in _cards(client.get(f"{LOBBY}/c4xh2ndv6s/process").text)
 
 

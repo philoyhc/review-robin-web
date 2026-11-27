@@ -1,4 +1,4 @@
-"""The Candidates list, shown as Populate Dossiers (rulings 77, 83;
+"""The Candidates list, shown as Create dossiers (rulings 77, 83;
 segments AD2C rung 9, AD2K; `applydesk/candidates.py`): entries added
 through the search or a CSV, one dossier each, up to the most a person may
 hold; each change audited; the item placed on one stage by Process's
@@ -193,7 +193,7 @@ def test_process_places_candidates_on_one_stage() -> None:
     assert (
         page.count('class="pc-item" data-item="candidates"') == 2
     )  # the stage's, and the template
-    assert 'data-pc-act="candidates" disabled title="Another stage holds Populate Dossiers"' in page
+    assert 'data-pc-act="candidates" disabled title="Another stage holds Create dossiers"' in page
     both = {
         "stages": [
             _stage("Applications", form=form, candidates=True),
@@ -203,7 +203,7 @@ def test_process_places_candidates_on_one_stage() -> None:
     refused = _post_process(client, MODEL, both)
     assert (
         refused.status_code == 400
-        and "More than one stage holds Populate Dossiers" in refused.json()["error"]
+        and "More than one stage holds Create dossiers" in refused.json()["error"]
     )
 
 
@@ -266,3 +266,24 @@ def test_the_search_names_a_directory_match_s_sign_in_too(monkeypatch: Any) -> N
             "upn": "e0123456@u.edu",
         }
     ]
+
+
+def test_a_form_takes_create_dossiers_away_and_follows_it() -> None:
+    """Ruling 83 as amended (author, 2026-11-27): once a Form exists no
+    stage offers +Create dossiers; with Create dossiers first, a later
+    stage still offers +Form, and no stage before it does."""
+    from applydesk.tests.test_new_exercise import _create, _post_process, _stage
+
+    client = _client()
+    page = client.get(f"{LOBBY}/{MODEL}/process").text  # the model's first stage holds the Form
+    assert 'data-pc-act="candidates" disabled title="The Form creates the dossiers"' in page
+    made = _create(client)
+    sent = {"stages": [_stage("People", candidates=True), _stage("Applications")]}
+    assert _post_process(client, made, sent).status_code == 200
+    page = client.get(f"{LOBBY}/{made}/process").text
+    cards = page[page.index('id="pc-cards"') : page.index('<template id="pc-new-stage">')]
+    assert cards.count('data-pc-act="form">+Form</button>') == 2  # its own stage, and the next
+    moved = {"stages": [_stage("Applications"), _stage("People", candidates=True)]}
+    assert _post_process(client, made, moved).status_code == 200
+    page = client.get(f"{LOBBY}/{made}/process").text
+    assert 'data-pc-act="form" disabled title="The Form comes after Create dossiers"' in page

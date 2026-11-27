@@ -40,10 +40,11 @@
 {% macro emails_chip(n) %}<span class="chip chip-mute" data-pi-emails>{{ "No email" if n == 0 else (n ~ (" email" if n == 1 else " emails")) }}</span>{% endmacro %}
 
 {# Segment AD2K (ruling 83): how many dossiers one person may hold, one
-   setting for the exercise, shown on each Form and Populate Dossiers item
-   and kept the same on all of them (cold read); saved with Process. #}
-{% macro per_person_field() %}
-  <div class="pc-row pi-sec">
+   setting for the exercise, shown on the item that creates the dossiers:
+   Create dossiers where the timeline holds it, else the Form (author,
+   2026-11-27); every box kept the same (cold read); saved with Process. #}
+{% macro per_person_field(hidden=False) %}
+  <div class="pc-row pi-sec" data-per-person-row{% if hidden %} hidden{% endif %}>
     <label class="fc-l">Dossiers per person<input class="fc-in" type="number" min="1" max="20" step="1" data-rel="per-person" value="{{ per_person }}"></label>
     <p class="pc-line muted pc-hint">1 keeps one dossier per person; more lets someone hold several, each its own entry. One setting for the exercise.</p>
   </div>
@@ -58,7 +59,7 @@
   {{ item_dates(w, "Opens", "Closes") }}
   {{ lock_open(form_lock) }}
   <p class="pc-line">The application form opens and closes on these dates, or its stage's. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.</p>
-  {{ per_person_field() }}
+  {{ per_person_field(hidden=plan.stages | selectattr("candidates") | list | length > 0) }}
   {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
   <div class="pc-release pi-sec" data-pc-release>
     <span class="fc-l">Emails</span>
@@ -83,9 +84,9 @@
 {% macro candidates_item(open=False, listed=()) %}
 <div class="pc-item" data-item="candidates"{% if open %} data-open{% endif %}>
   {% set chips %}<span class="chip chip-mute" data-cand-count>{{ listed | length if listed else "No one yet" }}{% if listed %} {{ "dossier" if listed | length == 1 else "dossiers" }}{% endif %}</span>{% endset %}
-  {{ head("Populate Dossiers", "Populate Dossiers", chips, open) }}
+  {{ head("Create dossiers", "Create dossiers", chips, open) }}
   <div class="pi-body">
-  <p class="pc-line">People added by hand, one dossier each. As the first item, each dossier goes to the gates that follow; on an <em>Invitation only</em> exercise, they are who may apply.</p>
+  <p class="pc-line">People added by hand, one dossier each, for the gates that follow. A Form after it writes to these dossiers.</p>
   {{ per_person_field() }}
   <div data-cand-live>
   {# A typeahead (author, 2026-11-27): every match the search returns is
@@ -111,7 +112,7 @@
     </tbody>
   </table>
   </div>
-  <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-candidates">Take Populate Dossiers off this stage</button></div>
+  <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-candidates">Remove Create dossiers</button></div>
   </div>
 </div>
 {% endmacro %}
@@ -502,8 +503,12 @@
     <div class="pc-adds">
       <button type="button" class="btn btn-secondary" data-pc-act="gate"{% if st.form %} disabled title="A stage holding the form holds no gate"{% endif %}>+Gate</button>
       <button type="button" class="btn btn-secondary" data-pc-act="outcome"{% if outs %} disabled title="A stage holds one outcome at most"{% endif %}>+Outcome</button>
-      <button type="button" class="btn btn-secondary" data-pc-act="candidates"{% if st.candidates %} disabled title="This stage holds Populate Dossiers"{% elif plan.stages | selectattr("candidates") | list %} disabled title="Another stage holds Populate Dossiers"{% endif %}>+Populate Dossiers</button>
-      <button type="button" class="btn btn-secondary" data-pc-act="form"{% if st.form %} disabled title="This stage holds the form"{% elif gates %} disabled title="A stage holding gates holds no form"{% elif plan.form_stage %} disabled title="Another stage holds the form"{% endif %}>+Form</button>
+      {# Ruling 83 as amended (author, 2026-11-27): a Form creates the
+         dossiers, so none is created by hand once it exists; Create
+         dossiers may be followed by a Form, never preceded by one. #}
+      {% set cand_st = plan.stages | selectattr("candidates") | first %}
+      <button type="button" class="btn btn-secondary" data-pc-act="candidates"{% if st.candidates %} disabled title="This stage holds Create dossiers"{% elif cand_st %} disabled title="Another stage holds Create dossiers"{% elif plan.form_stage %} disabled title="The Form creates the dossiers"{% endif %}>+Create dossiers</button>
+      <button type="button" class="btn btn-secondary" data-pc-act="form"{% if st.form %} disabled title="This stage holds the form"{% elif gates %} disabled title="A stage holding gates holds no form"{% elif plan.form_stage %} disabled title="Another stage holds the form"{% elif cand_st and st.number < cand_st.number %} disabled title="The Form comes after Create dossiers"{% endif %}>+Form</button>
     </div>
     <div class="fc-foot">
       <button type="button" class="btn btn-secondary" data-fc-act="replicate">Replicate</button>
