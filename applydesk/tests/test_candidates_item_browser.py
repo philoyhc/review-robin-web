@@ -110,3 +110,56 @@ def test_the_dossiers_page_has_no_add_row_without_create_dossiers(page: Page) ->
     page.locator("[data-applications]").wait_for()
     assert page.locator(".ap-hand-add").count() == 0
     assert page.locator("[data-ap-remove]").count() == 0
+
+
+def test_a_partly_failed_add_keeps_what_failed_across_the_redraw(page: Page) -> None:
+    """Codex on #4267: on the Dossiers page an add that partly fails draws
+    the table again with what was added, and keeps the pill that failed,
+    with the line naming it, to be tried again."""
+    from playwright.sync_api import Route
+
+    from applydesk.tests.test_candidates_browser import _pick
+
+    _held()
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/dossiers")
+    strip = page.locator('.ap-hand-add [data-cand-live][data-cand-kind="candidates"]')
+    _pick(strip, "admin@", "admin@example.edu")
+    strip.locator("[data-cand-entry]").fill("jane.tan@example.edu,")
+    strip.locator("[data-cand-tokens] .token").nth(1).wait_for()
+
+    def refuse_jane(route: Route) -> None:
+        if route.request.method == "POST" and "jane.tan" in (route.request.post_data or ""):
+            route.fulfill(status=400, json={"error": "Not now."})
+        else:
+            route.fallback()
+
+    page.route("**/candidates", refuse_jane)
+    with page.expect_navigation():
+        strip.locator("[data-cand-add-all]").click()
+    page.locator("tr[data-entry]", has_text="admin@example.edu").wait_for()
+    strip = page.locator('.ap-hand-add [data-cand-live][data-cand-kind="candidates"]')
+    tokens = strip.locator("[data-cand-tokens] .token")
+    assert tokens.count() == 1 and "Jane Tan" in tokens.inner_text()
+    assert "Not now." in strip.locator("[data-cand-said]").inner_text()
+
+
+def test_a_csv_with_bad_rows_shows_its_good_rows_and_keeps_the_bad(page: Page) -> None:
+    """Codex on #4267: a CSV with good and bad rows draws the table with the
+    good ones and still lists the bad ones under the box."""
+    _held()
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/dossiers")
+    strip = page.locator('.ap-hand-add [data-cand-live][data-cand-kind="candidates"]')
+    with page.expect_navigation():
+        strip.locator("[data-cand-file]").set_input_files(
+            files=[
+                {
+                    "name": "c.csv",
+                    "mimeType": "text/csv",
+                    "buffer": b"Email\nyan@example.edu\nnope\n",
+                }
+            ]
+        )
+    page.locator("tr[data-entry]", has_text="yan@example.edu").wait_for()
+    strip = page.locator('.ap-hand-add [data-cand-live][data-cand-kind="candidates"]')
+    assert "is not an email address" in strip.locator("[data-cand-bad]").inner_text()
+    assert strip.locator("[data-cand-said]").inner_text() == "1 added."
