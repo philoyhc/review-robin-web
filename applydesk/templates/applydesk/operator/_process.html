@@ -1863,6 +1863,11 @@
     var item = e.target.closest('.pc-item[data-item="candidates"]'), q = e.target.value.trim();
     pickable(item);
     if (picked(item)) return;  // an offer chosen, or an address typed whole: nothing more to ask
+    // The search changed: the last one's list and highlight go, so Enter
+    // cannot pick a match the new search has not returned (Codex on #4255).
+    if (item._candOffers) item._candOffers.on = -1;
+    item.querySelector("[data-cand-options]").textContent = "";
+    showList(item, false);
     window.clearTimeout(timer);
     if (q.length < 2) { showList(item, false); return; }
     timer = window.setTimeout(function () {
