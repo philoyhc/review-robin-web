@@ -159,6 +159,7 @@ def test_process_saved_into_a_new_exercise_survives_a_reload(page: Page) -> None
     if first.locator("[data-fc-toggle]").get_attribute("aria-expanded") == "false":
         first.locator("[data-fc-toggle]").click()
     first.locator('[data-pc="name"]').fill("Applications")
+    first.locator('[data-pc-act="form"]').click()  # ruling 84: the first item before gates
     first.locator('[data-fc-act="new"]').click()
     second = page.locator("#pc-cards > .fc").nth(1)
     if second.locator("[data-fc-toggle]").get_attribute("aria-expanded") == "false":
@@ -263,3 +264,20 @@ def test_an_email_saved_into_a_new_exercise_survives_a_reload(page: Page) -> Non
     assert card.locator("[data-em-chip]").text_content() == "Written"
     assert card.locator("[data-em-subject]").input_value().startswith("$exercise_name")
     assert card.locator('[data-em-act="save"]').is_disabled()
+
+
+def test_gates_and_outcomes_appear_once_a_first_item_is_added(page: Page) -> None:
+    """Ruling 84: a new exercise's stage offers only +Form and +Create
+    dossiers; adding either brings +Gate and +Outcome."""
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("First Item Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    page.goto(page.url + "/process")
+    adds = page.locator("#pc-cards .pc-adds").first
+    assert adds.locator('[data-pc-act="gate"]').is_hidden()
+    assert adds.locator('[data-pc-act="outcome"]').is_hidden()
+    adds.locator('[data-pc-act="candidates"]').click()
+    assert adds.locator('[data-pc-act="gate"]').is_visible()
+    assert adds.locator('[data-pc-act="outcome"]').is_visible()
