@@ -142,9 +142,7 @@ def exercise_nav(exercise_id: str, current: str) -> Mapping[str, Any]:
     # its page answers either way.
     from applydesk import invitees
 
-    shown = tuple(
-        p for p in SETUP_PAGES if p[0] != "invitees" or invitees.tab_shown(exercise_id)
-    )
+    shown = tuple(p for p in SETUP_PAGES if p[0] != "invitees" or invitees.tab_shown(exercise_id))
     setup, operations = row(shown), row(OPERATIONS_PAGES)
     return {
         "home": {"label": "Exercise Home", "path": base, "on": current == ""},
