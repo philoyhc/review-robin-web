@@ -225,3 +225,42 @@ def test_a_local_run_finds_the_sample_panels_members() -> None:
     found = client.get(f"{LOBBY}/{MODEL}/invitees/search", params={"q": member.email[:6]})
     assert found.status_code == 200, found.text
     assert member.email in found.text
+
+
+def test_a_nameless_record_the_directory_finds_is_offered_as_its_account() -> None:
+    """Author, 2026-11-27: names come from the directory. Someone on record
+    by address alone (a panel member saved, say) whom the directory finds is
+    suggested as the directory's account, and adding them binds them with
+    its name, listed as a verified address."""
+    from applydesk import sample_data
+
+    member = next(p for p in sample_data.PANELS if p.exercise_id == MODEL).members[0]
+    session = db.new_session()
+    try:
+        people.pending(session, member.email, None)
+        session.commit()
+    finally:
+        session.close()
+    client = _client()
+    found = client.get(f"{LOBBY}/{MODEL}/invitees/search", params={"q": member.email}).json()
+    assert found["on_record"] == []
+    [user] = found["directory"]
+    assert user["name"] == member.name and user["address"] == member.email.lower()
+    added = _post(
+        client, {"action": "add", "object_id": user["object_id"], "address": user["address"]}
+    )
+    assert added.status_code == 200, added.text
+    [listed] = added.json()["candidates"]
+    assert listed["name"] == member.name and listed["verified"] is True
+    page = client.get(f"{LOBBY}/{MODEL}/invitees").text
+    pill = '<span class="pl-addr" data-verified title="Matched to a directory account">'
+    assert f"{pill}{member.email.lower()}</span>" in page
+
+
+def test_the_invitees_page_puts_its_count_left_of_the_add_row() -> None:
+    """Author, 2026-11-27: two columns above the table, the count on the
+    left and Add invitees on the right."""
+    page = _client().get(f"{LOBBY}/{MODEL}/invitees").text
+    top = page[page.index('<div class="pl-top">') :]
+    assert top.index('data-cand-tally="invitees"') < top.index("data-cand-entry")
+    assert top.index("data-cand-entry") < top.index("data-cand-list")

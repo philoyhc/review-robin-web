@@ -704,6 +704,7 @@ def _listed_json(rows: tuple[candidates.Listed, ...]) -> list[dict[str, object]]
             "name": c.name,
             "email": c.email,
             "via": c.via,
+            "verified": c.verified,
             "added": clock.short(c.added_at),
         }
         for c in rows

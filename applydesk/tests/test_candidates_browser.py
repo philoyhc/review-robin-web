@@ -29,17 +29,17 @@ def _with_candidates() -> None:
 
 
 def _pick(item: Locator, typed: str, email: str) -> None:
-    """The typeahead (author, 2026-11-27): type, wait for the match naming
-    ``email`` in the list under the box, then click it, putting its label
-    in the box; Add is enabled only then."""
-    box = item.locator("[data-cand-search]")
-    box.fill(typed)
-    offer = item.locator("[data-cand-options] li", has_text=email)
+    """The add box (author, 2026-11-27: as Add invitees'): type, wait for
+    the suggestion naming ``email`` under the box, then click it, making
+    that account's pill; Add is enabled then."""
+    entry = item.locator("[data-cand-entry]")
+    entry.fill(typed)
+    offer = item.locator("[data-tok-options] li", has_text=email)
     offer.wait_for()
-    assert item.locator("[data-cand-add]").is_disabled()
     offer.click()
-    assert item.locator("[data-cand-options]").is_hidden()
-    assert item.locator("[data-cand-add]").is_enabled()
+    assert item.locator("[data-tok-options]").is_hidden()
+    assert item.locator("[data-cand-tokens] .token").count() == 1
+    assert item.locator("[data-cand-add-all]").is_enabled()
 
 
 def test_the_list_is_kept_as_it_is_changed(page: Page) -> None:
@@ -51,10 +51,10 @@ def test_the_list_is_kept_as_it_is_changed(page: Page) -> None:
     )
     if not stage.locator(".fc-body").first.is_visible():
         stage.locator("[data-fc-toggle]").first.click()
-    if not item.locator("[data-cand-search]").is_visible():
+    if not item.locator("[data-cand-entry]").is_visible():
         item.locator("[data-pi-toggle]").click()
     _pick(item, "zoe.cand", "zoe.candidate@example.edu")
-    item.locator("[data-cand-add]").click()
+    item.locator("[data-cand-add-all]").click()
     # On Process the list is a count line (segment AD2N).
     sum_ = item.locator("[data-cand-sum]")
     sum_.filter(has_text="1 dossier for 1 person").wait_for()
@@ -95,10 +95,10 @@ def test_candidates_moved_to_another_stage_shows_the_list_as_it_stands(page: Pag
     for card in (first, other):
         if not card.locator(".fc-body").first.is_visible():
             card.locator("[data-fc-toggle]").first.click()
-    if not item.locator("[data-cand-search]").is_visible():
+    if not item.locator("[data-cand-entry]").is_visible():
         item.locator("[data-pi-toggle]").click()
     _pick(item, "zoe.cand", "zoe.candidate@example.edu")
-    item.locator("[data-cand-add]").click()
+    item.locator("[data-cand-add-all]").click()
     item.locator("[data-cand-sum]").filter(has_text="1 dossier for 1 person").wait_for()
     first.locator('[data-pc-act="remove-candidates"]').click()
     other.locator('[data-pc-act="candidates"]').click()
@@ -194,11 +194,11 @@ def test_an_answer_after_a_move_redraws_the_item_on_the_page(page: Page) -> None
     for card in (first, other):
         if not card.locator(".fc-body").first.is_visible():
             card.locator("[data-fc-toggle]").first.click()
-    if not item.locator("[data-cand-search]").is_visible():
+    if not item.locator("[data-cand-entry]").is_visible():
         item.locator("[data-pi-toggle]").click()
     _pick(item, "zoe.cand", "zoe.candidate@example.edu")
     page.route("**/candidates", hold)
-    item.locator("[data-cand-add]").click()
+    item.locator("[data-cand-add-all]").click()
     page.wait_for_timeout(200)
     first.locator('[data-pc-act="remove-candidates"]').click()
     other.locator('[data-pc-act="candidates"]').click()
@@ -208,9 +208,22 @@ def test_an_answer_after_a_move_redraws_the_item_on_the_page(page: Page) -> None
     assert moved.locator("[data-cand-count]").text_content() == "1 dossier"
 
 
-def test_a_directory_match_by_sign_in_name_is_offered(page: Page) -> None:
-    """Codex on #4255: typed by its sign-in name, a directory match whose
-    address differs is still offered, and Add takes it."""
+def _open_item(page: Page) -> Locator:
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
+    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
+    stage = page.locator("#pc-cards .pc").filter(
+        has=page.locator('.pc-item[data-item="candidates"]')
+    )
+    if not stage.locator(".fc-body").first.is_visible():
+        stage.locator("[data-fc-toggle]").first.click()
+    if not item.locator("[data-cand-entry]").is_visible():
+        item.locator("[data-pi-toggle]").click()
+    return item
+
+
+def test_a_directory_match_by_sign_in_name_becomes_its_pill(page: Page) -> None:
+    """Codex on #4255, kept for the pill box: typed whole by its sign-in
+    name, a directory account whose address differs is that account."""
     _with_candidates()
     page.route(
         "**/candidates/search*",
@@ -229,26 +242,19 @@ def test_a_directory_match_by_sign_in_name_is_offered(page: Page) -> None:
             }
         ),
     )
-    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
-    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
-    stage = page.locator("#pc-cards .pc").filter(
-        has=page.locator('.pc-item[data-item="candidates"]')
-    )
-    if not stage.locator(".fc-body").first.is_visible():
-        stage.locator("[data-fc-toggle]").first.click()
-    if not item.locator("[data-cand-search]").is_visible():
-        item.locator("[data-pi-toggle]").click()
-    _pick(item, "e0123", "e0123456@u.edu")
-    label = item.locator("[data-cand-search]").input_value()
-    assert label == "Jane Tan (jane.tan@example.edu) · e0123456@u.edu · directory"
-    item.locator("[data-cand-search]").fill("e0123456@u.edu")  # the sign-in name typed whole
-    assert item.locator("[data-cand-add]").is_enabled()
+    item = _open_item(page)
+    item.locator("[data-cand-entry]").fill("e0123456@u.edu,")
+    token = item.locator("[data-cand-tokens] .token")
+    token.wait_for()
+    assert token.inner_text().startswith("Jane Tan")
+    assert item.locator("[data-cand-add-all]").is_enabled()
 
 
-def test_a_shown_label_adds_its_own_account_not_an_address_twin(page: Page) -> None:
-    """Codex on #4255: a person on record with no name is offered by their
-    address alone; a directory account sharing it must not take over that
-    pick. The address typed whole names two accounts, so it adds neither."""
+def test_a_picked_suggestion_adds_its_own_account_not_an_address_twin(page: Page) -> None:
+    """Codex on #4255, kept for the pill box: a person on record and a
+    directory account sharing one address are two suggestions; the one
+    picked is the one added. Typed whole, the address names two accounts,
+    so it stays in the box."""
     _with_candidates()
     page.route(
         "**/candidates/search*",
@@ -274,29 +280,24 @@ def test_a_shown_label_adds_its_own_account_not_an_address_twin(page: Page) -> N
         route.fulfill(json={"said": "Added.", "bad": [], "candidates": []})
 
     page.route("**/candidates", hold)
-    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
-    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
-    stage = page.locator("#pc-cards .pc").filter(
-        has=page.locator('.pc-item[data-item="candidates"]')
-    )
-    if not stage.locator(".fc-body").first.is_visible():
-        stage.locator("[data-fc-toggle]").first.click()
-    if not item.locator("[data-cand-search]").is_visible():
-        item.locator("[data-pi-toggle]").click()
-    box = item.locator("[data-cand-search]")
-    box.fill("sam@")
-    item.locator("[data-cand-options] li", has_text="directory").wait_for()
-    box.fill("sam@example.edu")  # the on-record label, and an address two accounts share
-    assert item.locator("[data-cand-add]").is_enabled()
-    item.locator("[data-cand-add]").click()
+    item = _open_item(page)
+    entry = item.locator("[data-cand-entry]")
+    entry.fill("sam@example.edu,")
+    item.locator("[data-cand-said]").filter(has_text="more than one match").wait_for()
+    assert item.locator("[data-cand-tokens] .token").count() == 0
+    entry.fill("sam@")
+    item.locator("[data-tok-options] li", has_text="directory").wait_for()
+    item.locator("[data-tok-options] li").filter(has_not_text="directory").click()
+    item.locator("[data-cand-add-all]").click()
     item.locator("[data-cand-said]").filter(has_text="Added.").wait_for()
     assert '"person_id":4242' in sent[0] and "object_id" not in sent[0]
+    assert '"count":1' in sent[0]
 
 
-def test_every_match_is_listed_whatever_field_it_matched(page: Page) -> None:
-    """Codex on #4255: a directory match found by a field the label does
-    not show (a surname) is still listed and can be added; the keyboard
-    picks too."""
+def test_every_match_is_suggested_and_the_keyboard_picks(page: Page) -> None:
+    """Codex on #4255, kept for the pill box: a directory match found by a
+    field the label does not show (a surname) is still suggested, and the
+    keyboard picks it."""
     _with_candidates()
     page.route(
         "**/candidates/search*",
@@ -315,34 +316,27 @@ def test_every_match_is_listed_whatever_field_it_matched(page: Page) -> None:
             }
         ),
     )
-    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
-    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
-    stage = page.locator("#pc-cards .pc").filter(
-        has=page.locator('.pc-item[data-item="candidates"]')
-    )
-    if not stage.locator(".fc-body").first.is_visible():
-        stage.locator("[data-fc-toggle]").first.click()
-    if not item.locator("[data-cand-search]").is_visible():
-        item.locator("[data-pi-toggle]").click()
-    box = item.locator("[data-cand-search]")
-    box.fill("Tan")
-    item.locator("[data-cand-options] li", has_text="e0123456@example.edu").wait_for()
-    box.press("ArrowDown")
-    box.press("Enter")
-    assert box.input_value() == "Jane (e0123456@example.edu) · directory"
-    assert item.locator("[data-cand-add]").is_enabled()
+    item = _open_item(page)
+    entry = item.locator("[data-cand-entry]")
+    entry.fill("Tan")
+    item.locator("[data-tok-options] li", has_text="e0123456@example.edu").wait_for()
+    entry.press("ArrowDown")
+    entry.press("Enter")
+    assert item.locator("[data-cand-tokens] .token").inner_text().startswith("Jane")
+    assert entry.input_value() == ""
 
 
-def test_a_changed_search_drops_the_last_highlight(page: Page) -> None:
-    """Codex on #4255: a match highlighted, then the search changed and its
-    answer still pending (or failed), Enter picks nothing."""
+def test_a_changed_entry_drops_the_last_highlight(page: Page) -> None:
+    """Codex on #4255, kept for the pill box: a suggestion highlighted, then
+    the entry changed and its search failing, Enter makes no pill from the
+    old suggestion; the entry stays as typed."""
     _with_candidates()
     answered: list[int] = []
 
     def search(route: Route) -> None:
         answered.append(1)
         if len(answered) > 1:
-            route.abort()  # the second search fails
+            route.abort()
             return
         route.fulfill(
             json={
@@ -353,23 +347,62 @@ def test_a_changed_search_drops_the_last_highlight(page: Page) -> None:
         )
 
     page.route("**/candidates/search*", search)
-    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
-    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
-    stage = page.locator("#pc-cards .pc").filter(
-        has=page.locator('.pc-item[data-item="candidates"]')
-    )
-    if not stage.locator(".fc-body").first.is_visible():
-        stage.locator("[data-fc-toggle]").first.click()
-    if not item.locator("[data-cand-search]").is_visible():
-        item.locator("[data-pi-toggle]").click()
-    box = item.locator("[data-cand-search]")
-    box.fill("old")
-    item.locator("[data-cand-options] li", has_text="old@example.edu").wait_for()
-    box.press("ArrowDown")
-    box.fill("newer")
-    box.press("Enter")
-    assert box.input_value() == "newer"
-    assert item.locator("[data-cand-add]").is_disabled()
-    item.locator("[data-cand-said]").filter(has_text="The search failed").wait_for()
-    box.press("Enter")
-    assert box.input_value() == "newer"
+    item = _open_item(page)
+    entry = item.locator("[data-cand-entry]")
+    entry.fill("old")
+    item.locator("[data-tok-options] li", has_text="old@example.edu").wait_for()
+    entry.press("ArrowDown")
+    entry.fill("newer")
+    entry.press("Enter")
+    item.locator("[data-cand-said]").filter(has_text="newer").wait_for()
+    assert item.locator("[data-cand-tokens] .token").count() == 0
+    assert entry.input_value() == "newer"
+
+
+def test_add_makes_the_count_for_each_pill(page: Page) -> None:
+    """Author, 2026-11-27: Create dossiers' box takes several people at
+    once, as Add invitees' does; Add makes *Dossiers per person* for each."""
+    _with_candidates()
+    session = db.new_session()
+    try:
+        people.pending(session, "yan.candidate@example.edu", None)
+        session.commit()
+    finally:
+        session.close()
+    item = _open_item(page)
+    entry = item.locator("[data-cand-entry]")
+    entry.fill("zoe.candidate@example.edu, yan.candidate@example.edu,")
+    item.locator("[data-cand-tokens] .token").nth(1).wait_for()
+    item.locator("[data-cand-n]").fill("2")
+    item.locator("[data-cand-add-all]").click()
+    item.locator("[data-cand-sum]").filter(has_text="4 dossiers for 2 people").wait_for()
+    assert item.locator("[data-cand-tokens] .token").count() == 0
+
+
+def test_a_pill_being_saved_is_not_sent_again(page: Page) -> None:
+    """Codex on #4266: a dossier added twice is two dossiers, so Add while a
+    pill's save is pending sends only the pills not yet sent."""
+    _with_candidates()
+    sent: list[str] = []
+    held: list[Route] = []
+
+    def hold(route: Route) -> None:
+        if route.request.method != "POST":
+            route.fallback()
+            return
+        sent.append(route.request.post_data or "")
+        held.append(route)
+
+    item = _open_item(page)
+    _pick(item, "zoe.cand", "zoe.candidate@example.edu")
+    page.route("**/candidates", hold)
+    item.locator("[data-cand-add-all]").click()
+    page.wait_for_timeout(200)
+    assert len(sent) == 1
+    item.locator("[data-cand-entry]").fill("som")  # typing again enables Add
+    assert item.locator("[data-cand-add-all]").is_enabled()
+    item.locator("[data-cand-add-all]").click()
+    page.wait_for_timeout(300)
+    assert len(sent) == 1  # the pill being saved is not sent again
+    held.pop().fallback()
+    item.locator("[data-cand-sum]").filter(has_text="1 dossier for 1 person").wait_for()
