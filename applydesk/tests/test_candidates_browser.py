@@ -406,3 +406,37 @@ def test_a_pill_being_saved_is_not_sent_again(page: Page) -> None:
     assert len(sent) == 1  # the pill being saved is not sent again
     held.pop().fallback()
     item.locator("[data-cand-sum]").filter(has_text="1 dossier for 1 person").wait_for()
+
+
+def test_a_pill_already_in_the_box_is_not_suggested_again(page: Page) -> None:
+    """Author, 2026-11-27: the suggestions leave out whoever is already a
+    pill in the box, by account or by address."""
+    _with_candidates()
+    page.route(
+        "**/candidates/search*",
+        lambda route: route.fulfill(
+            json={
+                "on_record": [],
+                "directory": [
+                    {
+                        "object_id": "o-1",
+                        "name": "Aisha Bello",
+                        "address": "aisha.bello@example.edu",
+                        "upn": "aisha.bello@example.edu",
+                    },
+                    {
+                        "object_id": "o-2",
+                        "name": "Aisha Carter",
+                        "address": "aisha.carter@example.edu",
+                        "upn": "aisha.carter@example.edu",
+                    },
+                ],
+                "directory_failed": False,
+            }
+        ),
+    )
+    item = _open_item(page)
+    _pick(item, "aish", "aisha.bello@example.edu")
+    item.locator("[data-cand-entry]").fill("aish")
+    item.locator("[data-tok-options] li", has_text="aisha.carter@example.edu").wait_for()
+    assert item.locator("[data-tok-options] li", has_text="aisha.bello").count() == 0

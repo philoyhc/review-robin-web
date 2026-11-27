@@ -209,6 +209,14 @@
     got.directory.forEach(function (u) {
       rows.push({ label: (u.name || u.address) + " (" + u.address + ") · directory", hit: { name: u.name || u.address, email: u.address, body: { action: "add", object_id: u.object_id, address: u.address } } });
     });
+    // Those already a pill in the box are not offered again (author,
+    // 2026-11-27), by account or by address.
+    var have = {}, mails = {};
+    pillsOf(item).forEach(function (t) { have[t.dataset.key] = true; mails[(t.title || "").toLowerCase()] = true; });
+    rows = rows.filter(function (r) {
+      var b = r.hit.body, key = b.person_id ? "p" + b.person_id : "d" + b.object_id;
+      return !have[key] && !mails[(r.hit.email || "").toLowerCase()];
+    });
     rows.forEach(function (r, i) {
       var li = el("li", "", r.label);
       li.id = "pc-" + item.dataset.candKind + "-sug-" + i;
