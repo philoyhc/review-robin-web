@@ -19,9 +19,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from applydesk import audit, candidates
+from applydesk import audit, candidates, db
 from applydesk.candidates import Imported, Listed, Refused
-from applydesk.models import Invitee, Person
+from applydesk.models import Exercise, Invitee, Person, Stage
 
 __all__ = [
     "Imported",
@@ -33,13 +33,12 @@ __all__ = [
     "import_csv",
     "listing",
     "remove",
+    "tab_shown",
 ]
 
 
 def listing(session: Session, public_id: str) -> tuple[Listed, ...]:
     """The exercise's current invitees, in the order they were added."""
-    from applydesk.models import Exercise
-
     exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
     if exercise is None:
         return ()
@@ -143,3 +142,25 @@ def import_csv(session: Session, public_id: str, text: str, actor: Person | None
 def already(session: Session, public_id: str) -> str:
     """What an add of someone already invited says."""
     return "Already invited."
+
+
+def tab_shown(public_id: str) -> bool:
+    """Whether the Invitees tab shows (segment AD2N): the Form's *Who may
+    apply* is *Invitees* as saved, and no Create dossiers is on the
+    timeline (with one, the Form invites from its dossiers). Read in a
+    session of its own, as the chrome is drawn."""
+    session = db.new_session()
+    try:
+        exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
+        if exercise is None or exercise.eligibility != "invitation":
+            return False
+        held = session.scalar(
+            select(Stage.id).where(
+                Stage.exercise_id == exercise.id,
+                Stage.retired_at.is_(None),
+                Stage.holds_candidates.is_(True),
+            )
+        )
+        return held is None
+    finally:
+        session.close()

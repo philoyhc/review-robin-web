@@ -138,3 +138,28 @@ def test_an_empty_invite_list_is_warned_of_on_process() -> None:
     added = client.post(f"{LOBBY}/{made}/invitees", json={"action": "add", "person_id": ada_id})
     assert added.status_code == 200, added.text
     assert NO_INVITEES not in client.get(f"{LOBBY}/{made}/process").text
+
+
+def test_the_invitees_tab_shows_while_the_form_is_for_invitees() -> None:
+    """Segment AD2N: the tab sits after Process, only while Who may apply is
+    Invitees as saved and no Create dossiers is on the timeline; its page
+    answers either way."""
+    from applydesk.tests.test_new_exercise import _create, _post_process, _stage
+
+    client = _client()
+    made = _create(client)
+    tab = f'href="/applydesk/operator/exercises/{made}/invitees"'
+    form = {"from": "", "to": "", "receipt": False, "reminder": False}
+    sent = {"stages": [_stage("Applications", form=form)], "who_may_apply": "open"}
+    assert _post_process(client, made, sent).status_code == 200
+    assert tab not in client.get(f"{LOBBY}/{made}/process").text
+    assert client.get(f"{LOBBY}/{made}/invitees").status_code == 200
+    assert _post_process(client, made, {**sent, "who_may_apply": "invitation"}).status_code == 200
+    page = client.get(f"{LOBBY}/{made}/process").text
+    assert tab in page
+    process = page.index(f'href="/applydesk/operator/exercises/{made}/process"')
+    form_tab = page.index(f'href="/applydesk/operator/exercises/{made}/form"')
+    assert process < page.index(tab) < form_tab
+    led = {"stages": [_stage("People", candidates=True), _stage("Applications", form=form)]}
+    assert _post_process(client, made, led).status_code == 200
+    assert tab not in client.get(f"{LOBBY}/{made}/process").text

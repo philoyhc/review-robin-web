@@ -1,0 +1,27 @@
+{# Invitees (segment AD2N, author 2026-11-27): the people a Form for
+   invitees is for, kept off Process. Modeled on Panels: a roster card, its
+   count and the add row, above a full-width table. The tab shows only while
+   the Form's Who may apply is Invitees as saved; the page answers either
+   way. Scaffold: every control inert until the next rung wires it. #}
+<div class="iv" data-people-root>
+  <p class="muted pc-intro">The people the Form is for: only they may submit, each up to the Form's <em>Max dossiers per person</em>. People are added here or on Process; each change is kept as it is made.</p>
+  <section class="card pn-roster iv-roster" aria-label="Invitees roster">
+    <div class="pn-readout">
+      <span class="pn-rl">Invitees:</span> <span class="chip chip-info">0</span>
+    </div>
+    <div class="pc-cand-add">
+      <div class="fc-l pc-cand-box"><span id="iv-add-label">Add invitees</span>
+        <div class="tokens" role="group" aria-labelledby="iv-add-label">
+          <input class="token-input" type="text" disabled aria-label="Add invitees: names or emails, separated by commas" placeholder="Name or email; separate several with commas">
+        </div>
+      </div>
+      <button type="button" class="btn btn-secondary" disabled>Add</button>
+      <button type="button" class="btn btn-secondary" disabled>Upload CSV…</button>
+    </div>
+    <p class="pc-line muted pc-hint">A CSV has an <em>Email</em> column; each row is one person. Rows that do not read are listed back, not saved.</p>
+  </section>
+  <table class="pc-cands iv-table">
+    <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">How added</th><th scope="col">Added</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
+    <tbody><tr><td colspan="5" class="muted">No one yet.</td></tr></tbody>
+  </table>
+</div>
