@@ -1,8 +1,8 @@
 """An exercise's Candidates, shown as *Create dossiers* (rulings 77, 83;
 segments AD2C rung 9, AD2K): entries kept by hand, added through the people
-search (ruling 75) or a CSV upload, removed in the list. The form's roster
-on an *Invitation only* exercise; where the item is the first, each entry's
-dossier is minted once the exercise is published (rulings 81, 83,
+search (ruling 75) or a CSV upload, removed in the list. A Form after it
+invites from these dossiers (ruling 84); where the item is the first, each
+entry's dossier is minted once the exercise is published (rulings 81, 83,
 `dossiers`).
 
 Each entry is one dossier, so a person may hold several, up to the

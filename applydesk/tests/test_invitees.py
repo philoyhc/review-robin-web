@@ -61,6 +61,26 @@ def test_a_csv_invites_its_good_rows() -> None:
         session.close()
 
 
+def test_a_csv_through_the_route_is_listed_and_audited() -> None:
+    client = _client()
+    sent = _post(client, {"action": "csv", "text": "Email,Name\ndee.csv@example.edu,Dee\n"})
+    assert sent.status_code == 200, sent.text
+    listed = [c for c in sent.json()["candidates"] if c["email"] == "dee.csv@example.edu"]
+    assert len(listed) == 1 and listed[0]["name"] == "Dee"
+    session = db.new_session()
+    try:
+        row = session.scalar(select(Invitee).where(Invitee.id == listed[0]["id"]))
+        assert row is not None and row.via == "csv"
+        audited = session.scalar(
+            select(func.count())
+            .select_from(AuditEvent)
+            .where(AuditEvent.event_type == "invitee.added")
+        )
+        assert audited and audited >= 1
+    finally:
+        session.close()
+
+
 def test_the_routes_invite_and_take_off() -> None:
     client = _client()
     session = db.new_session()
