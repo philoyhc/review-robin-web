@@ -16,6 +16,7 @@
    page's script as the item is edited. #}
 {% macro head(kicker, name, chips, open) %}
 <div class="pi-head">
+  <button type="button" class="fc-grip pi-grip" data-pi-grip aria-label="Move {{ kicker }}: drag, or press the up and down arrow keys" title="Drag to reorder within the stage">⋮⋮</button>
   <button type="button" class="fc-toggle" data-pi-toggle aria-expanded="{{ 'true' if open else 'false' }}" aria-label="{{ 'Collapse' if open else 'Expand' }} {{ kicker }}"></button>
   <div class="pi-texts"><span class="fc-kicker" data-pc-kicker>{{ kicker }}</span><span class="pi-name" data-pi-name>{{ name }}</span></div>
   <span class="fc-chips">{{ chips }}</span>
@@ -520,10 +521,14 @@
     </div>
     {# An item alone in its stage opens; with others, each shows its head. #}
     {% set lone = ((1 if st.form else 0) + st.columns | length) == 1 %}
+    {# Ruling 84: the order the rules leave a stage's items in, Create
+       dossiers before the Form or the gates and the outcome last; the
+       gates between keep their own order (``gate.position``). #}
+    {% if st.candidates %}{{ candidates_item(listed=cand_list) }}{% endif %}
     {% if st.form %}{{ form_item(open=lone, w=st.form_when) }}{% endif %}
     {% for g in gates %}{{ gate_item(plan, g, rule_text, open=lone, window=window_text(window(st, g))) }}{% endfor %}
     {% for o in outs %}{{ outcome_item(plan, o, rule_text, open=lone) }}{% endfor %}
-    {% if st.candidates %}{{ candidates_item(listed=cand_list) }}{% endif %}
+    <p class="pc-line pc-move-said" data-pc-move-said role="status" hidden></p>
     {# Ruling 84: until a Form or Create dossiers is in the process, a
        stage offers only those two; gates and outcomes wait. #}
     {% set first_item = plan.form_stage or (plan.stages | selectattr("candidates") | first) %}

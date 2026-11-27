@@ -96,3 +96,25 @@ def test_the_form_shows_the_list_while_invitees_is_chosen() -> None:
     page = client.get(f"{LOBBY}/{made}/process").text
     cards = page[page.index('id="pc-cards"') : page.index('<template id="pc-new-stage">')]
     assert "data-invitees-row hidden" not in cards
+
+
+def test_an_empty_invite_list_is_warned_of_on_process() -> None:
+    from applydesk.tests.test_new_exercise import _create, _post_process, _stage
+    from applydesk.timeline_checks import NO_INVITEES
+
+    client = _client()
+    made = _create(client)
+    form = {"from": "", "to": "", "receipt": False, "reminder": False}
+    sent = {"stages": [_stage("Applications", form=form)], "who_may_apply": "invitation"}
+    assert _post_process(client, made, sent).status_code == 200
+    assert NO_INVITEES in client.get(f"{LOBBY}/{made}/process").text
+    session = db.new_session()
+    try:
+        ada = people.pending(session, "ada.invitee@example.edu", None)
+        session.commit()
+        ada_id = ada.id
+    finally:
+        session.close()
+    added = client.post(f"{LOBBY}/{made}/invitees", json={"action": "add", "person_id": ada_id})
+    assert added.status_code == 200, added.text
+    assert NO_INVITEES not in client.get(f"{LOBBY}/{made}/process").text
