@@ -250,3 +250,25 @@ def test_a_code_is_measured_as_its_key_is() -> None:
     blank = f"/applydesk/operator/exercises/{BLANK}/details"
     reply = _client().post(blank, json=_good(code="ß" * 21, name="G"))
     assert reply.status_code == 400 and reply.json()["field"] == "code"
+
+
+def test_who_may_apply_is_fixed_while_the_form_is_published() -> None:
+    """Codex on #4259: a published Form keeps who may apply, as Details'
+    control did; an unchanged value saves nothing and is not refused."""
+    ra = sample_data.exercise("wa9juxbc2t")  # its Form's stage is published
+    assert ra is not None
+    session = db.new_session()
+    try:
+        row = session.scalar(select(Exercise).where(Exercise.public_id == ra.public_id))
+        assert row is not None
+        stored = row.eligibility or "open"
+        other = "invitation" if stored == "open" else "open"
+        assert not exercises.set_eligibility(session, ra, stored, None)
+        row.eligibility = None  # unset reads as Anyone signed in
+        assert not exercises.set_eligibility(session, ra, "open", None)
+        row.eligibility = stored
+        with pytest.raises(exercises.Refused, match="The Form is published"):
+            exercises.set_eligibility(session, ra, other, None)
+    finally:
+        session.rollback()
+        session.close()

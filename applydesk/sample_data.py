@@ -1085,7 +1085,7 @@ def setup_missing(e: Exercise) -> tuple[tuple[str, str], ...]:
         missing.append(("Exercise code", ""))
     if not e.summary:
         missing.append(("Description", ""))
-    # Who may apply is the Form's (ruling 84): its dropdown, never unset.
+    # Who may apply is the Form's (ruling 84): unset reads as Anyone signed in.
     if "Not set" in (e.opens, e.application_stage_ends):
         missing.append(("Dates", "process"))
     # Only a timeline holding the form owes its questions (segment AD2K):

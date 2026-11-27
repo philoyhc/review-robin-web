@@ -322,7 +322,7 @@
         } else {
           dossiers.disabled = true;
           if (who.value === "dossiers") who.value = who.dataset.stored || "open";
-          if (!f.closest("fieldset[disabled]")) who.disabled = false;
+          if (!who.closest("fieldset[disabled]")) who.disabled = false;
           who.removeAttribute("title");
         }
         // The invite list shows while Invitees is chosen (segment AD2I).
@@ -1779,14 +1779,14 @@
       // The revision this page opened at: one opened before Process last
       // saved is refused, its keys perhaps another column's (Codex on #4028).
       revision: Number((root.querySelector("[data-fb-save]") || { dataset: {} }).dataset.revision || 0),
-      // Dossiers per person (segment AD2K): one setting, every box kept
-      // the same (below); null, unchanged, where no item shows it.
       // The Form's Who may apply (ruling 84): null where it is derived
       // (Dossiers) or there is no Form, unchanged.
       who_may_apply: (function () {
         var who = root.querySelector('#pc-cards [data-rel="who-may-apply"]');
         return who && who.value !== "dossiers" ? who.value : null;
       })(),
+      // Dossiers per person (segment AD2K): one setting, every box kept
+      // the same (below); null, unchanged, where no item shows it.
       per_person: (function () {
         var box = root.querySelector('#pc-cards [data-per-person-row]:not([hidden]) [data-rel="per-person"]');
         return box ? Number(box.value) : null;
