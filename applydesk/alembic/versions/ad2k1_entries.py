@@ -4,7 +4,7 @@ Revision ID: ad2k1entries
 Revises: ad2f1dossiers
 Create Date: 2026-11-26
 
-Ruling 83 (segment AD2K, `applydesk/guide/segment_AD2K_populate_dossiers.md`):
+Ruling 83 (segment AD2K, `applydesk/guide/archive/segment_AD2K_populate_dossiers.md`):
 each Candidates row is an entry, one dossier each, so a person may hold
 several (``uq_candidate_pair`` dropped, an optional ``title``), up to the
 exercise's ``dossiers_per_person``; and a dossier populated first may later

@@ -53,12 +53,15 @@ Taken 2026-11-26 at `2e8ba675a`.
 
 ## Status
 
-- **2026-11-26, the build:** rungs 2–5 built; rung 4 split in two to keep each PR readable: **4a** entries (migration, service, the list by entry, minting by first item) and **4b** *Dossiers per person* on the populating items, saved with Process. Rung 2's base on `main`: `1764162` (the plan's merge).
-- **The cumulative read** (`diff-reviewer`, 1 read, at rung 5) found 1 medium and 7 lows:
-  - fixed at rung 5: *Dossiers per person* shown on two items of one stage could save the other's value: it is one setting, every box kept the same; a SQLite add race (a no-op write, as `panels_store.lock`); a comment; `plan_of`'s docstring.
-  - stays: a blank box refuses the save with the range, not silently; publishing checks the timeline for the first stage only, as planned; the spec's old one-per-person and revival lines are the close's `spec-writer` pass; seven code comments still say *Candidates* (no page does).
-  - the sample `c4xh2ndv6s` now warns that no outcome follows its last gate: true, and kept; "nothing about the samples changes" holds for their timelines, not their warnings.
-- **Decisions confirmed at build:** one stage may still hold both the Form and Populate Dossiers (the *Invitation only* roster, until AD4); only the CSV gives an entry a title.
+Closed 2026-11-27. Rungs 2–5 shipped (#4249–#4254), rung 4 in two (4a entries, migration and minting by first item; 4b the per-person setting saved with Process). Rung 2's base: `1764162`.
+
+- **Reads:** one cumulative `diff-reviewer` read at rung 5: 1 medium and 7 lows. The medium (two per-person boxes on one stage saving different values) and three lows were fixed at rung 5; the rest stayed, for reasons the PR gave.
+- **Diverged after the build** (AD2I, AD2N; author, 2026-11-27):
+  - the item is labeled *Create dossiers*, not *Populate Dossiers*;
+  - it has **no per-person maximum**. *Max dossiers per person* is the Form's alone, and `set_per_person` no longer counts the item's entries (Codex on #4265);
+  - *Add people* takes several people as pills, and *Add* makes *Dossiers per person* entries for each, titled *Dossier n*, so a search entry has a title too;
+  - a Form may follow the item on its stage (`timeline_checks.POPULATE_AFTER_FORM` is the reverse order's error).
+- **Close:** `spec-writer` on the doc-impact files, the data model's §2 rewritten for ruling 83 as built.
 
 ## PR ladder
 
@@ -84,9 +87,8 @@ Taken 2026-11-26 at `2e8ba675a`.
 
 ## Open questions
 
-- **A title for an entry added by search** (cold read): today only the CSV gives one, so two search entries for one person look alike. Author.
-
-- **The *Invitation only* setting on Details** stops meaning anything under ruling 83. It stays until AD4 replaces it with a later Form's entry rule; decided with AD4.
+- ~~A title for an entry added by search~~: each is *Dossier n* (author, 2026-11-27).
+- ~~The *Invitation only* setting on Details~~: retired by AD2I's *Who may apply*.
 
 ## Out of scope
 

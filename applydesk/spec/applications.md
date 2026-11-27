@@ -4,7 +4,7 @@
 > a real check of who may reach it. Every move works on screen. An
 > exercise's own settings (Details, the Lobby's name, code and tags, its
 > archive), its Process (stages, gates, outcomes, rules, the form's state),
-> its Form, its Panels, its Emails, its Candidates and its applications are
+> its Form, its Panels, its Emails, its Create dossiers entries and its applications are
 > stored in the database; the rest of a sample exercise saves nothing until a later AD2
 > segment, and nothing is sent to Review Robin until AD6. A made exercise
 > ("Ordinary exercises") is a row in the database like any other.
@@ -90,7 +90,7 @@ answer only for a Published or Closed exercise.
   person's row ID (`ids.row_id`) is a whole number from 1 to 2³¹−1: out of
   range in a path it is a 422; a form's malformed one is never looked up
   (the post is refused, 400, unless it names a directory pick instead).
-- **The dossier**, what an evaluator opens, one per application
+- **The dossier**, what an evaluator opens, one per submitted application
   (`/me/exercises/<id>/dossiers/<dossier>`), is named by its own ID, never the
   application's, and shows only the *Shown to evaluators* section. In a blind exercise it
   redacts the applicant's name and identifiers. It and the applicant's own
@@ -857,7 +857,8 @@ The exercise's timeline as a stack of stage cards, on the Process tab,
 flow and every rule Dossiers applies; Form, Panels and Emails flesh out its
 nodes. Every move works in the browser, and *Save* keeps the timeline in the
 database for every exercise ("Saving Process"). A blank exercise shows one
-open card, *Stage 1*, holding the form. The cards are drawn from
+open card, *Stage 1*, holding nothing, with *+Form* and *+Create dossiers* offered
+(ruling 83); a sample's first stage holds its form. The cards are drawn from
 `stages.plan_of`, which reads the stored timeline once Process has saved the
 exercise and the sample before then, so Process, Dossiers and the status row
 agree on load. There is no Workflow card:
@@ -1333,8 +1334,15 @@ but the lobby's *Stage* column reads:
     good rows are saved in one transaction and the rest reported back by row
     number, not saved. A file with no *Email* column, an empty file or one
     that cannot be read is refused whole. Added as `csv`.
-  - **Remove** retires the entry; adding the person again makes a new one
-    (ruling 83).
+  - **Dossiers.** Each entry is one dossier. Where the item is the first of
+    the first stage (`dossiers.feeds_gates`), its dossiers are minted with
+    their own IDs once the exercise is published (`dossiers.sync_candidates`)
+    and on each later add, a CSV minting once for the file; a timeline never
+    saved mints nothing. A dossier made this way has no page of its own yet
+    (AD2V): its ID is not a link on Dossiers, and `…/dossiers/<dossier>` and
+    its `/me` counterpart answer 404 for it.
+  - **Remove** retires the entry and its dossier; adding the person again
+    makes a new entry and dossier (ruling 83).
   - A Form after it invites from these dossiers; nothing checks the dossiers
     when someone applies yet (AD4).
 - **Emails** (ruling 16). Process picks no template. Each email ticked, the
@@ -1441,7 +1449,7 @@ A panel made on Form or Process appears here once that page is saved.
     naming it reads as missing, never as another panel. A page's own
     placeholder key (`made-1`, `new-1`) never reaches a row.
   - **People.** Each address is matched to a person on record, else made
-    pending (`people.pending`), as Candidates' CSV is; the directory is not
+    pending (`people.pending`), as Create dossiers' CSV is; the directory is not
     searched per row. The note belongs to the person's row, not to each panel.
     A name left blank is stored blank and shown as the address. A row ticked
     on no panel stays on the roster; a row removed retires its entry and
@@ -1464,9 +1472,9 @@ A panel made on Form or Process appears here once that page is saved.
 ## The Dossiers page
 
 At `/operator/exercises/<id>/dossiers` (the Applications page until ruling
-25): a row per dossier, an application's where it has one; until dossiers
-are made (*Create dossiers*, ruling 26), the rows are the sample's
-applications. A row is named by its *Dossier* ID, linking a submitted one
+25): a row per dossier: an application's where it has one, else one created by
+hand (*Create dossiers*, ruling 83); before any is made, the rows are the
+sample's applications. A row is named by its *Dossier* ID, linking a submitted one
 to its operator page (below), with its *Application* ID under it; a draft has no
 dossier yet (ruling 32) and says so. Search reads both IDs, the cells,
 proposals and messages name the row as it shows, and the CSV keys rows
@@ -1502,7 +1510,8 @@ and a *By hand* chip; one with no dossier yet (before publishing) is drawn
 as a draft application is, *No dossier yet*, every cell *—*, left out of
 the CSV download. While Create dossiers is in the process (as saved), Add
 people's row (as Process's) sits above the table, the page drawn again
-after an add; *Remove ticked* removes the ticked rows created by hand, each
+after an add or a CSV, what the box still held (pills not added, entries not
+found, a CSV's unread rows) kept across it (Codex on #4267); *Remove ticked* removes the ticked rows created by hand, each
 kept at once (a minted dossier retired, ruling 83), not under the lock. The
 Status filter's *By hand* shows them alone. The placeholder line says the
 cells are not saved and adding and removing these rows is. Process's
@@ -1525,7 +1534,8 @@ the Form's link to Invitees does while the tab is not shown.
 - **Finding rows.** The filters stand together at the top, each labelled
   (ruling 64): *Search* matches, in any case, a row's Dossier ID (a draft
   has none), Application ID, applicant's name and email; *Status* is *All
-  statuses*, *Submitted*, *Draft* or *Withdrawn*; *Rows* is *All dossiers*
+  statuses*, *Submitted*, *Draft*, *Withdrawn* or, where
+  Create dossiers is in the process or has rows, *By hand*; *Rows* is *All dossiers*
   or *Last applications*: per applicant, by email, the latest submitted,
   else the latest started of any status (`stages.last_submitted`), latest
   by time in UTC, ties by Application ID (segment AD2J); a gate rule's

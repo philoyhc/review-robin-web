@@ -5,7 +5,7 @@ Revises: ad2j1applications
 Create Date: 2026-11-26
 
 The dossier as its own record (segment AD2F,
-`applydesk/guide/segment_AD2F_dossiers.md`; rulings 32, 81; AD-44): its
+`applydesk/guide/archive/segment_AD2F_dossiers.md`; rulings 32, 81; AD-44): its
 own public ID, and its source, an application or a Candidates row, exactly
 one of the two, each at most once.
 """

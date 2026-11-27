@@ -1,6 +1,6 @@
 # Apply Desk architecture
 
-> **Built:** everything below. The pages read sample data; who may reach them, who operates an exercise, an exercise's own settings, its Process (the timeline, gates, outcomes and rules), its Candidates, its applications, the people and the audit trail are in the database, the rest moving there area by area (`applydesk/guide/ad2_series.md`).
+> **Built:** everything below. The pages read sample data; who may reach them, who operates an exercise, an exercise's own settings, its Process (the timeline, gates, outcomes and rules), its Create dossiers entries (*Candidates* in code), its dossiers, its applications, the people and the audit trail are in the database, the rest moving there area by area (`applydesk/guide/ad2_series.md`).
 
 How `applydesk/` is laid out, what it may import, and how its tests run.
 Its contract with the host is `applydesk/spec/applications.md`.
@@ -17,7 +17,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/lookups.py` | Path lookups the routes share: an ID's shape checked, then a 404 or the record |
 | `applydesk/gate.py` | Who reaches the pages. `require_exercise_operator` on the operator router: 404 unless the viewer is the super-admin or on the allowlist and, on a path with an `exercise_id`, holds a current grant on that exercise (the super-admin's reach is their grants too). `require_admin` on the admin router: the super-admin or an Admin. `landing` on `/` and `/operator`: any operator, else the placeholders' gate. `placeholders_only` on the participant's pages until a later AD2 segment, on `reaches_placeholders`: anyone on a local run, deployed only the super-admin; `web.render` offers a link to those pages (`participant_pages`) only where it holds. `viewer` resolves the viewer once per request, binding them (`people.resolve`), and keeps the answer on `request.state`; `is_operator` and `operates` read it; `forget_viewer` drops it after the viewer's grants change |
 | `applydesk/db.py` | Apply Desk's own database, `applydesk` ("The database"); `is_busy` and `lost_a_race` tell a concurrent change (SQLite busy, or a unique clash) from a bug |
-| `applydesk/models.py` | Its tables, on Apply Desk's own `Base`: `person`, `exercise`, `exercise_tag`, `exercise_operator`, `audit_event`, and the Process, Candidates, Panels and Form tables ("The database") |
+| `applydesk/models.py` | Its tables, on Apply Desk's own `Base`: `person`, `exercise`, `exercise_tag`, `exercise_operator`, `audit_event`, and the Process, Candidates (Create dossiers' entries), Dossier, Panels and Form tables ("The database") |
 | `applydesk/exercises.py` | An exercise's stored settings and the rules over them ("Exercises"): `overlay` and `stored` read them over the sample, `save_details` is Details' *Lock*, `save_panel`, `retag`, `archive`, `restore`, `delete` and `copy_settings` are the Lobby's, `make` is *New exercise* and *Duplicate settings only* (the row and its Owner in one transaction, `MAKE_REFUSALS`, the `MOST_MADE` cap), `from_row`, `ordinary` and `ordinaries` read an ordinary exercise (every live row that is not a sample) as a blank Draft, `record_sample` is the seed's. Flushes, never commits; refuses with `Refused` and its `key` |
 | `applydesk/clock.py` | The one clock (`today`, `midday`) and the date wording (`short`, `span`, `stamp`): no page reads the wall clock or words a date itself |
 | `applydesk/lobby.py` | The Operator Lobby's and the Archive's query string: `Query` (`sort`, `dir`, `tag`, `any`, `q`) and `apply` / `matches`, which sort and filter the rows |
@@ -30,11 +30,12 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/ids.py` | Public IDs: generation and the shape check; `row_id` and `RowId` for a database row ID in a form or path |
 | `applydesk/web.py` | Templates, mount-aware URLs (`url()`, `is_here()`, `host_url()`), the page chrome and `MAX_BODY`, the largest post an operator page takes (256 KiB) |
 | `applydesk/applications.py` | An exercise's applications in the database: `of` (an exercise's, in the order they came in) and `with_ids` read them as `sample_data.Application`, built by `from_row`, in a session of their own; `day` words a stored time as the pages show it, in UTC; `record_samples` is the seed's, and `sample_day` turns a sample's day into noon UTC. Flushes, never commits |
-| `applydesk/sample_data.py` | The sample exercises, the samples' applications as written (`sample_applications`, which the seed records; `sample_dossier_id` is where a sample's dossier ID is kept until AD2F), form cards and panels (`Panel`: key, name, members; ruling 19). `applications_of`, `application`, `by_dossier`, `my_applications` and `MY_REVIEWS` (the dossiers `/me` lists) read the stored applications. `SAMPLE_IDS` and `is_sample` tell a sample from an ordinary exercise; `sample` reads one with no database read; `exercise` and `exercises()` return a sample, else an ordinary exercise's row (`exercises()`: ordinary ones newest first, then the samples) |
+| `applydesk/sample_data.py` | The sample exercises, the samples' applications as written (`sample_applications`, which the seed records, each carrying its dossier ID, which `dossiers.record_samples` stores), form cards and panels (`Panel`: key, name, members; ruling 19). `applications_of`, `application`, `by_dossier`, `my_applications` and `MY_REVIEWS` (the dossiers `/me` lists) read the stored applications. `SAMPLE_IDS` and `is_sample` tell a sample from an ordinary exercise; `sample` reads one with no database read; `exercise` and `exercises()` return a sample, else an ordinary exercise's row (`exercises()`: ordinary ones newest first, then the samples) |
 | `applydesk/stages.py` | Stages, gates, outcomes and their rules; each row's cells; evaluators, assignments and pairs. `plan_of` reads the stored timeline (`process_store.stored_stages`) once Process has saved the exercise, else the sample (a new exercise's one stage); `gate_keyed` and `gate_numbered` find a gate by its key or its old number; `rule_problems` is what a rule reads amiss |
 | `applydesk/process_store.py` | An exercise's timeline in the database ("Process"): `load` and `stored_stages` build the dataclasses the pages read, `save` keeps a page's snapshot whole (the revision guard, keys, the references check, the audit), `move_form` is Home's *Open form* and *Close form*. Flushes, never commits; refuses with `Refused` and its `key` |
 | `applydesk/rules.py` | The rule engine, the only rule evaluator: `propose` answers what each rule would change in a table of dossiers (Dossiers' *Apply rules…*), over `Dossier`, `Column` and `Cell` rows built by `columns_of` and `rows_of`. Pure: reads no database |
-| `applydesk/candidates.py` | An exercise's Candidates ("Candidates"): `listing`, `add`, `remove` and `import_csv`. Flushes, never commits |
+| `applydesk/candidates.py` | An exercise's entries, shown as *Create dossiers* (`Candidate` in code; "Candidates"): `listing`, `add`, `add_many`, `remove` and `import_csv`; `set_per_person`, the Form's *Max dossiers per person*. Flushes, never commits |
+| `applydesk/dossiers.py` | An exercise's dossiers ("Dossiers"): `record_samples` (the seed's), `feeds_gates`, `sync_candidates` (mints), `retire_for`, and the readers Process and Dossiers draw rows from (`candidate_rows`, `hand_rows`). Flushes, never commits |
 | `applydesk/invitees.py` | A Form's invite list ("Invitees"): `listing`, `full`, `add`, `remove` and `import_csv`, sharing `candidates.read_csv`; `tab_shown`, whether the Setup row shows the Invitees tab. Flushes, never commits |
 | `applydesk/timeline_checks.py` | The timeline checked as saved, whole: the errors and warnings Process's Outline shows (`NO_FIRST_ITEM`, `POPULATE_AFTER_FORM`, `NO_ENTRIES`, `NO_INVITEES`, `NO_LAST_OUTCOME`) |
 | `applydesk/workflow.py` | Each item's state, the status row, the emails owed, the counts and the steps. Its email readers read `email_store`, else the sample's: `sends` (the stored ticks), `template_text` (subject, body and version from one read) and `emails` |
@@ -102,7 +103,12 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
   and `exercise.sends_saved`) and `ad2s1_gate_scale.py`
   (revision `ad2s1gatescale` after `ad2l1emails`: `gate_field.scale` and
   `gate_field.scale_labels`) and `ad2j1_applications.py` (revision
-  `ad2j1applications`: `application`) and `ad2i1_invitees.py` (revision
+  `ad2j1applications`: `application`) and `ad2f1_dossiers.py` (revision
+  `ad2f1dossiers`: `dossier`) and `ad2k1_entries.py` (revision
+  `ad2k1entries` after `ad2f1dossiers`: `candidate.title` and
+  `ix_candidate_person` in place of `uq_candidate_pair`,
+  `exercise.dossiers_per_person`, and `ck_dossier_a_source` in place of
+  `ck_dossier_one_source`) and `ad2i1_invitees.py` (revision
   `ad2i1invitees` after `ad2k1entries`: `invitee`, and the data move: each
   person on an *Invitation only* exercise's live Create dossiers entries, where
   a stage holds both it and the Form, becomes an invitee from their earliest
@@ -111,7 +117,7 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
 | Table (model) | Holds |
 |---|---|
 | `person` (`Person`) | Tenant ID and object ID, null while pending; email, `email_key` (the casefolded address), UPN and display name as snapshots, `display_name_key` (the name casefolded, kept in step by the model; three times the name's width, as casefolding can lengthen a name, and searched by the directory and the allowlist in place of `lower(display_name)`, which folds ASCII only on SQLite); `bound_at`; `first_signed_in_at` (the first sign-in, set once; a directory pick is bound without one); `created_at`. The allowlist is on it: `may_operate`, `admitted_by_id`, `admitted_at`, `revoked_at`, `is_admin` (an Admin, always also listed) |
-| `exercise` (`Exercise`) | `public_id`, unique, and `created_at`; `name`, `code` and `code_key` (the code casefolded), `description`, `eligibility` (`open`, `invitation` or NULL), `blind`, `help_contact` and `timezone` (NULL takes the operator settings' default), `created_by_id` (the person who made it), `archived_at`, `deleted_at`, `revision` ("Exercises") and `process_revision` ("Process") and `panels_revision` ("Panels"; 0 until Panels is first saved) and `sends_saved` ("Emails"; false until Process first records its ticks), and the form's `form_title`, `form_description` and `form_revision` ("Form") |
+| `exercise` (`Exercise`) | `public_id`, unique, and `created_at`; `name`, `code` and `code_key` (the code casefolded), `description`, `eligibility` (`open`, `invitation` or NULL), `blind`, `help_contact` and `timezone` (NULL takes the operator settings' default), `created_by_id` (the person who made it), `archived_at`, `deleted_at`, `revision` ("Exercises") and `process_revision` ("Process") and `panels_revision` ("Panels"; 0 until Panels is first saved) and `sends_saved` ("Emails"; false until Process first records its ticks), and `dossiers_per_person` (the Form's *Max dossiers per person*, 1 to 20, 1 by default), and the form's `form_title`, `form_description` and `form_revision` ("Form") |
 | `application` (`Application`) | One application: `public_id` (unique), `exercise_id`, `person_id` (the applicant; a pending person until they sign in), `name` (as the applicant gave it; a pending person has none), `title`, `state` (`draft`, `submitted` or `withdrawn`), `started_at`, `submitted_at` (kept when withdrawn), `withdrawn_at`, `withdraw_reason`, `form_revision` (the exercise's when it was submitted; NULL for a draft). Rows are in the order applications came in (`id`); none is deleted. Migration `applydesk/alembic/versions/ad2j1_applications.py`, revision `ad2j1applications` after `ad2s1gatescale` |
 | `exercise_tag` (`ExerciseTag`) | One tag on an exercise: `exercise_id`, `label` (the case first typed) and `label_key` (casefolded); (exercise, `label_key`) unique |
 | `exercise_operator` (`ExerciseOperator`) | A grant: (exercise, person) unique, `is_owner`, `added_by_id`, `added_at`, `removed_at` |
@@ -132,7 +138,8 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
 | `email_send` (`EmailSend`) | An email Process ticks: `exercise_id`, `item` (`receipt`, `reminder` or an outcome's key), `audience` (`Applicants` or `Evaluators`), `retired_at` (an unticked pair is retired, never deleted, and revived if ticked again). (exercise, `item`, `audience`) unique (`uq_email_send_pair`). Recorded whole with each Process save; `exercise.sends_saved` is false until the first, and a sample keeps its own ticks until then |
 | `email_template` (`EmailTemplate`) | An email's template: `exercise_id`, `item`, `audience`, `subject` (at most 300 characters), `body`, `version` (how many times it was saved) and `saved_at`. (exercise, `item`, `audience`) unique (`uq_email_template_pair`). A card never saved has no row. The row of an email Process retires stays |
 | `invitee` (`Invitee`) | One person a Form invites: `exercise_id`, `person_id`, `via` (`search` or `csv`), `added_by_id`, `added_at`, `removed_at`. (exercise, `person_id`) unique (`uq_invitee_pair`), so removing sets `removed_at` and adding again clears it on the same row. Migration `applydesk/alembic/versions/ad2i1_invitees.py` |
-| `candidate` (`Candidate`) | One person on an exercise's Candidates: `exercise_id`, `person_id`, `via` (`search` or `csv`), `added_by_id`, `added_at`, `removed_at`. (exercise, `person_id`) unique, so removing sets `removed_at` and adding again clears it |
+| `candidate` (`Candidate`) | One entry on an exercise's Create dossiers, one dossier each: `exercise_id`, `person_id`, `via` (`search` or `csv`), `title` (what tells a person's entries apart; *Dossier n* when none is given), `added_by_id`, `added_at`, `removed_at`. A person may hold several, so no pair is unique (`ix_candidate_person` is an index); removing sets `removed_at`, and adding the person again is a new row |
+| `dossier` (`Dossier`) | A dossier as its own record (ruling 81): `public_id` (unique, never the application's), `exercise_id`, `application_id` and `candidate_id` (each FK, each unique, at least one set: `ck_dossier_a_source`; a candidate's dossier may later gain an application, none links them yet), `created_at`, `retired_at` (set when its entry is removed; nothing is deleted). Migrations `applydesk/alembic/versions/ad2f1_dossiers.py` and `applydesk/alembic/versions/ad2k1_entries.py` |
 
 The database enforces what a race could otherwise break, each as a partial
 unique index defined identically for SQLite and Postgres:
@@ -327,21 +334,44 @@ the Form is for invitees and none is listed.
 The list has a page, the Invitees tab (`…/invitees`, segment AD2N), in the
 Setup row after Process while `tab_shown` holds: *Invitees* saved and no
 Create dossiers on the timeline. `web.exercise_nav` drops the tab otherwise;
-the route answers either way. Process, Invitees and the Dossiers page's
-*Created by hand* card draw their lists with one macro
-(`_process_cards.html` `people_list`) and one script
+the route answers either way. Process and Invitees draw their lists with one macro
+(`_process_cards.html` `people_list`), Process, Invitees and the Dossiers
+page's *Add people* row share one script
 (`templates/applydesk/operator/_people_list_js.html`), keyed by
 `data-cand-kind`; Process shows a count line and a link in place of the
 table.
 
 ### Candidates
 
-`applydesk/candidates.py` lists an exercise's people (Create dossiers' entries). `add` and `remove` flush and audit; a person is
-listed once (`uq_candidate_pair`), and removing then adding revives the same
-row. `import_csv` adds each good row, matching an address to a person on
-record or making a pending one (`people.pending`), and returns the rows it
-could not read, not saved. An archived or deleted exercise refuses every
-change.
+`applydesk/candidates.py` keeps Create dossiers' entries, one dossier each; a
+person may hold several, as many as are added (*Max dossiers per person* is the
+Form's alone). `add` titles an entry *Dossier n* after the ones the person
+holds unless a title is given; `add_many` adds a count of them (Add's
+*Dossiers per person*, 1 to 20). `add` and `remove` flush and audit; removing
+sets `removed_at` and retires the entry's dossier, and adding the person again
+is a new entry. `import_csv` adds each good row, matching an address to a
+person on record or making a pending one (`people.pending`), and returns the
+rows it could not read, not saved. An archived or deleted exercise refuses
+every change.
+
+### Dossiers
+
+`applydesk/dossiers.py` keeps the `dossier` table. `sync_candidates` mints a
+dossier for each live entry without one, in the exercise's and applications'
+ID namespace, when Create dossiers is the first stage's item (`feeds_gates`)
+and a stage is published: at publish (Process's save) and on each add. The
+seed records the samples' dossiers by the IDs they carry
+(`record_samples`). `stages.plan_of` reads them as `stages.Row`s whose
+`Dossier` view carries the ID, the person's name and address and its
+application or None; Dossiers' grid, gate pages, Extract, rules and the handoff
+read that view. `hand_rows` gives the Dossiers page the entries to draw as
+rows. Dossier events are `dossier.seeded`, `dossier.minted` (counts) and
+`dossier.retired` (`refs.dossier_id`).
+
+`timeline_checks.check` (errors block publishing the first stage through
+`locks.publish_problems`; both show on the Outline) holds the rules for the
+first item: the first stage holds a Form or Create dossiers; Create dossiers
+never after a Form.
 
 ### Binding
 
@@ -412,8 +442,8 @@ and `retired`; `context.revision`), `exercise.stage_reverted` (`reason`,
 `exercise.panels_saved` (a counts envelope: panels and people kept and
 `retired`; `context.revision`), `exercise.form_saved` (a counts envelope:
 `cards`, `fields`, `retired`; `context.revision`), `exercise.email_saved`
-(`context`: `item`, `audience`, `version`, `written`), `candidate.added` (`refs.person_id`, `context.via`), `candidate.removed`
-(`refs.person_id`), `invitee.added` (`refs.person_id`, `context.via`) and `invitee.removed`
+(`context`: `item`, `audience`, `version`, `written`), `candidate.added` (`refs.person_id`, `refs.candidate_id`, `context.via`), `candidate.removed`
+(`refs.person_id`, `refs.candidate_id`), `exercise.dossiers_per_person_set` (a changes envelope), `invitee.added` (`refs.person_id`, `context.via`) and `invitee.removed`
 (`refs.person_id`). A directory find is audited to the searcher, not the
 person found.
 
@@ -428,7 +458,9 @@ makes each sample exercise's row with them its Owner. It records each
 sample's applications (`applications.record_samples`, each once, in their
 order), the applicant of each the pending person of their address
 (`people.pending_many`), with `form_revision` set on a submitted one; the
-event is `application.seeded` (`counts.added`). Tests seed through the same
+event is `application.seeded` (`counts.added`). It then records each submitted
+or withdrawn sample application's dossier (`dossiers.record_samples`, the ID
+the sample carries, `dossier.seeded`). Tests seed through the same
 function.
 
 ## Import boundaries
