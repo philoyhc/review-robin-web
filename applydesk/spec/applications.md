@@ -940,9 +940,11 @@ but the lobby's *Stage* column reads:
   outcome's release and emails; the form's state and emails. An open stage
   shows its items collapsed; an item alone in its stage, or just added, is
   open. The chips follow the edits.
-- **The form item.** When it opens and closes (its own dates, else the
-  stage's), a link to Form, its *Who may apply* and its *Emails* to applicants: *Receipt on submitting* and *Reminder
-  to drafts*. A new form ticks the receipt only.
+- **The form item.** *Opens*, *Closes*, *Who may apply* and *Max dossiers
+  per person* on one row (two on a phone; author, 2026-11-27), one line
+  under them (blank dates are the stage's; a link to Form), then its
+  *Emails* to applicants: *Receipt on submitting* and *Reminder to
+  drafts*. A new form ticks the receipt only.
   - **Who may apply** (ruling 84) is a menu: *Anyone signed in*, *Invitees*
     or *Dossiers*. *Anyone signed in* and *Invitees* are stored in
     `exercise.eligibility` as `open` and `invitation`, saved with Process
@@ -953,9 +955,14 @@ but the lobby's *Stage* column reads:
     returns the menu to the stored value. Under the Form's lock, a changed
     value is refused by the server while its stage is published.
   - **Invitees** (`applydesk/invitees.py`): while *Invitees* is chosen the
-    item shows the invite list, built as *Create dossiers*' list (search,
-    *Upload CSV…* with *Email* and optional *Name* columns, *Remove*; no
-    *Title*) with a row per person. Each add and removal is made at once,
+    item shows the invite list. *Add invitees* takes names or emails
+    separated by commas, as a panel's members box (author, 2026-11-27):
+    each that names one person (by address, or the only match) becomes a
+    pill, its name the record's or the directory's; one not found, already
+    invited or matching several stays in the box as typed, and the line
+    says so. *Add* invites each pill; *Upload CSV…* takes an *Email*
+    column. The list folds under *Invitees (n)*, open up to ten, with
+    *Remove* per row and a row per person. Each add and removal is made at once,
     audited (`invitee.added`, `invitee.removed`), outside the Form's lock and
     not waiting for *Save*. Routes: `GET …/invitees/search`, `POST
     …/invitees` (`search`, `remove` and `csv` changes, as Create dossiers').
