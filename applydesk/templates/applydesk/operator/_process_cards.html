@@ -100,8 +100,10 @@
    or a CSV (rulings 75, 77): Create dossiers' entries, or a Form's
    invitees (ruling 84). Its page script is `_process.html`'s, keyed by
    `data-cand-kind`. #}
-{% macro people_list(kind, listed, list_url, one, many, hint, titles, tokens=false, count=false) %}
-  <div data-cand-live data-cand-kind="{{ kind }}" data-cand-url="{{ list_url }}" data-cand-unit="{{ one }}|{{ many }}" data-cand-titles="{{ 'true' if titles else 'false' }}">
+{% macro people_list(kind, listed, list_url, one, many, hint, titles, tokens=false, count=false, fold=true, via=false) %}
+  {# ``fold``: the list folds under its count (Process); a page of its own
+     shows it whole. ``via``: a *How added* column (Invitees, AD2N). #}
+  <div data-cand-live data-cand-kind="{{ kind }}" data-cand-url="{{ list_url }}" data-cand-unit="{{ one }}|{{ many }}" data-cand-titles="{{ 'true' if titles else 'false' }}" data-cand-via="{{ 'true' if via else 'false' }}">
   {# A typeahead (author, 2026-11-27): every match the search returns is
      listed under the box as the name is typed, whatever field it matched
      (not the browser's own list, which hides those not holding what was
@@ -140,15 +142,16 @@
   <p class="muted fb-said" data-cand-said role="status"></p>
   <ul class="pc-issues" data-cand-bad hidden></ul>
   {# The list folds under its count, open up to ten (author, 2026-11-27). #}
-  <details class="pc-cand-fold" data-cand-fold{% if listed | length <= 10 %} open{% endif %}><summary><span data-cand-fold-n>{{ many | capitalize }} ({{ listed | length }})</span></summary>
+  {% if fold %}<details class="pc-cand-fold" data-cand-fold{% if listed | length <= 10 %} open{% endif %}><summary><span data-cand-fold-n>{{ many | capitalize }} ({{ listed | length }})</span></summary>{% endif %}
   <table class="pc-cands" data-cand-list>
-    <thead><tr><th scope="col">Name</th><th scope="col">Email</th>{% if titles %}<th scope="col">Title</th>{% endif %}<th scope="col">Added</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
+    {% set cols = 4 + (1 if titles else 0) + (1 if via else 0) %}
+    <thead><tr><th scope="col">Name</th><th scope="col">Email</th>{% if titles %}<th scope="col">Title</th>{% endif %}{% if via %}<th scope="col">How added</th>{% endif %}<th scope="col">Added</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
     <tbody>
-    {% for c in listed %}<tr data-cand-id="{{ c.id }}"><td>{{ c.name or "—" }}</td><td>{{ c.email }}</td>{% if titles %}<td>{{ c.title or "—" }}</td>{% endif %}<td>{{ short(c.added_at) }}</td><td><button type="button" class="btn btn-destructive btn-short" data-cand-remove="{{ c.id }}" aria-label="Remove {{ c.name or c.email }}{% if c.title %} ({{ c.title }}){% endif %}">Remove</button></td></tr>
-    {% else %}<tr data-cand-none><td colspan="{{ 5 if titles else 4 }}" class="muted">No one yet.</td></tr>{% endfor %}
+    {% for c in listed %}<tr data-cand-id="{{ c.id }}"><td>{{ c.name or "—" }}</td><td>{{ c.email }}</td>{% if titles %}<td>{{ c.title or "—" }}</td>{% endif %}{% if via %}<td>{{ "CSV" if c.via == "csv" else "Search" }}</td>{% endif %}<td>{{ short(c.added_at) }}</td><td><button type="button" class="btn btn-destructive btn-short" data-cand-remove="{{ c.id }}" aria-label="Remove {{ c.name or c.email }}{% if c.title %} ({{ c.title }}){% endif %}">Remove</button></td></tr>
+    {% else %}<tr data-cand-none><td colspan="{{ cols }}" class="muted">No one yet.</td></tr>{% endfor %}
     </tbody>
   </table>
-  </details>
+  {% if fold %}</details>{% endif %}
   </div>
 {% endmacro %}
 

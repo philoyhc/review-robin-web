@@ -1810,7 +1810,9 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         # Ruling 77: the Candidates list, read only where Process draws it.
         cand_list=_candidates_of(exercise.public_id) if section == "process" else (),
         # Ruling 84: the Form's invite list, read only where Process draws it.
-        invitee_list=_invitees_of(exercise.public_id) if section == "process" else (),
+        invitee_list=(
+            _invitees_of(exercise.public_id) if section in ("process", "invitees") else ()
+        ),
         # Segment AD2K: how many dossiers one person may hold, on the
         # populating item.
         per_person=_per_person_of(exercise.public_id) if section == "process" else 1,

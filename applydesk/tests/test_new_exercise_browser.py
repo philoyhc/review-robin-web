@@ -501,6 +501,37 @@ def test_invitees_are_suggested_as_a_name_is_typed(page: Page) -> None:
     lst.locator("[data-cand-fold-n]").filter(has_text="Invitees (2)").wait_for()
 
 
+def test_the_invitees_tab_adds_and_removes(page: Page) -> None:
+    """Segment AD2N: the Invitees tab, after Process while the Form is for
+    invitees, lists them in full, with How added; a pill added here is
+    listed, the count follows, and Remove takes them off."""
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Invitees Tab Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    home = page.url
+    page.goto(home + "/process")
+    stage = page.locator("#pc-cards > .fc").first
+    stage.locator('[data-pc-act="form"]').click()
+    stage.locator('[data-rel="who-may-apply"]').select_option("invitation")
+    with page.expect_navigation():
+        page.locator("[data-fb-save]").click()
+    page.get_by_role("link", name="Invitees", exact=True).click()
+    page.wait_for_url(home + "/invitees")
+    lst = page.locator('[data-cand-live][data-cand-kind="invitees"]')
+    lst.locator("[data-cand-entry]").fill("admin@example.edu,")
+    lst.locator("[data-cand-tokens] .token").first.wait_for()
+    lst.locator("[data-cand-add-all]").click()
+    row = lst.locator("[data-cand-list] tr", has_text="admin@example.edu")
+    row.wait_for()
+    assert "Search" in row.inner_text()
+    assert page.locator('[data-cand-tally="invitees"]').inner_text() == "1"
+    row.locator("[data-cand-remove]").click()
+    lst.locator("[data-cand-none]").wait_for()
+    assert page.locator('[data-cand-tally="invitees"]').inner_text() == "0"
+
+
 def test_a_stages_items_reorder_within_the_rules(page: Page) -> None:
     """Ruling 84: a stage's gates swap by their grips and save in that
     order; a move putting a gate before Create dossiers, or the outcome

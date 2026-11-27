@@ -15,16 +15,18 @@
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
   function draw(item, got) {
     var body = item.querySelector("[data-cand-list] tbody"), titles = item.dataset.candTitles === "true";
+    var via = item.dataset.candVia === "true";
     body.textContent = "";
     if (!got.candidates.length) {
       var none = el("tr"), td = el("td", "muted", "No one yet.");
-      none.setAttribute("data-cand-none", ""); td.colSpan = titles ? 5 : 4; none.appendChild(td); body.appendChild(none);
+      none.setAttribute("data-cand-none", ""); td.colSpan = 4 + (titles ? 1 : 0) + (via ? 1 : 0); none.appendChild(td); body.appendChild(none);
     }
     got.candidates.forEach(function (c) {
       var tr = el("tr"), b = el("button", "btn btn-destructive btn-short", "Remove");
       tr.dataset.candId = c.id;
       tr.appendChild(el("td", "", c.name || "—")); tr.appendChild(el("td", "", c.email));
       if (titles) tr.appendChild(el("td", "", c.title || "—"));
+      if (via) tr.appendChild(el("td", "", c.via === "csv" ? "CSV" : "Search"));
       tr.appendChild(el("td", "", c.added));
       b.type = "button"; b.dataset.candRemove = c.id; b.setAttribute("aria-label", "Remove " + (c.name || c.email) + (c.title ? " (" + c.title + ")" : ""));
       var cell = el("td"); cell.appendChild(b); tr.appendChild(cell); body.appendChild(tr);
@@ -32,6 +34,9 @@
     var n = got.candidates.length, units = (item.dataset.candUnit || "|").split("|");
     var holder = item.closest(".pc-item"), chip = holder && holder.querySelector("[data-cand-count]");
     if (chip) chip.textContent = n ? n + " " + (n === 1 ? units[0] : units[1]) : "No one yet";
+    // A page's own count (Invitees, segment AD2N) follows the list too.
+    var tally = document.querySelector('[data-cand-tally="' + item.dataset.candKind + '"]');
+    if (tally && document.contains(item)) tally.textContent = String(n);
     var fold = item.querySelector("[data-cand-fold-n]");
     if (fold) fold.textContent = units[1].charAt(0).toUpperCase() + units[1].slice(1) + " (" + n + ")";
     var bad = item.querySelector("[data-cand-bad]");
