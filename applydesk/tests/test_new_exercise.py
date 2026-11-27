@@ -1216,3 +1216,17 @@ def test_an_ordinary_exercise_published_by_its_stages_fixes_its_code() -> None:
     finally:
         session.close()
     assert exercises.stored(exercise_or_404(made)).name == "Renamed"
+
+
+def test_gates_and_outcomes_wait_for_the_first_item() -> None:
+    """Ruling 84: until a Form or Create dossiers is in the process, a
+    stage offers only those two."""
+    client = _client()
+    made = _create(client)
+    cards = _cards(client.get(f"{LOBBY}/{made}/process").text)
+    assert 'data-pc-act="gate" hidden' in cards and 'data-pc-act="outcome" hidden' in cards
+    assert "begin with the Form or Create dossiers" in cards
+    sent = {"stages": [_stage("People", candidates=True), _stage("Review")]}
+    assert _post_process(client, made, sent).status_code == 200
+    cards = _cards(client.get(f"{LOBBY}/{made}/process").text)
+    assert 'data-pc-act="gate" hidden' not in cards and 'data-pc-act="outcome" hidden' not in cards

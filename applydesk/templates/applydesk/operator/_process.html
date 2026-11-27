@@ -313,6 +313,10 @@
       var hasOut = items(card, "outcome").length > 0;
       out.disabled = hasOut;
       if (hasOut) out.title = "A stage holds one outcome at most"; else out.removeAttribute("title");
+      // Ruling 84: gates and outcomes wait for a Form or Create dossiers.
+      gate.hidden = out.hidden = !(holder || candHolder);
+      var empty = card.querySelector("[data-pc-empty]");
+      if (empty) empty.textContent = holder || candHolder ? "Nothing in this stage yet: add the form, a gate or an outcome." : "Nothing yet: begin with the Form or Create dossiers.";
       var del = card.querySelector('[data-fc-act="delete"]');
       del.disabled = all.length === 1;
       if (all.length === 1) del.title = "The last stage cannot be deleted"; else del.removeAttribute("title");

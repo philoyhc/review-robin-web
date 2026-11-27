@@ -499,10 +499,13 @@
     {% for g in gates %}{{ gate_item(plan, g, rule_text, open=lone, window=window_text(window(st, g))) }}{% endfor %}
     {% for o in outs %}{{ outcome_item(plan, o, rule_text, open=lone) }}{% endfor %}
     {% if st.candidates %}{{ candidates_item(listed=cand_list) }}{% endif %}
-    <p class="pc-line muted pc-empty">Nothing in this stage yet: add the form, a gate or an outcome.</p>
+    {# Ruling 84: until a Form or Create dossiers is in the process, a
+       stage offers only those two; gates and outcomes wait. #}
+    {% set first_item = plan.form_stage or (plan.stages | selectattr("candidates") | first) %}
+    <p class="pc-line muted pc-empty" data-pc-empty>{% if first_item %}Nothing in this stage yet: add the form, a gate or an outcome.{% else %}Nothing yet: begin with the Form or Create dossiers.{% endif %}</p>
     <div class="pc-adds">
-      <button type="button" class="btn btn-secondary" data-pc-act="gate"{% if st.form %} disabled title="A stage holding the form holds no gate"{% endif %}>+Gate</button>
-      <button type="button" class="btn btn-secondary" data-pc-act="outcome"{% if outs %} disabled title="A stage holds one outcome at most"{% endif %}>+Outcome</button>
+      <button type="button" class="btn btn-secondary" data-pc-act="gate"{% if not first_item %} hidden{% endif %}{% if st.form %} disabled title="A stage holding the form holds no gate"{% endif %}>+Gate</button>
+      <button type="button" class="btn btn-secondary" data-pc-act="outcome"{% if not first_item %} hidden{% endif %}{% if outs %} disabled title="A stage holds one outcome at most"{% endif %}>+Outcome</button>
       {# Ruling 83 as amended (author, 2026-11-27): a Form creates the
          dossiers, so none is created by hand once it exists; Create
          dossiers may be followed by a Form, never preceded by one. #}
