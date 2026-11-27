@@ -166,6 +166,11 @@ def test_the_routes_add_remove_and_upload() -> None:
         "Dossier 2",
         "Dossier 3",
     ]
+    # Codex on #4265: a count that is not a whole number from 1 to 20 adds
+    # nothing.
+    for count in (2.5, "2", True, 0, 21):
+        odd = _post(client, {"action": "add", "person_id": cy_id, "count": count})
+        assert odd.status_code == 400 and "1 to 20" in odd.json()["error"], count
     upload = _post(client, {"action": "csv", "text": "Email\ndee@example.edu\nbad\n"})
     assert upload.status_code == 200
     assert upload.json()["said"] == "1 added." and len(upload.json()["bad"]) == 1
@@ -232,11 +237,10 @@ def test_dossiers_per_person_is_saved_with_process_and_refused_below_what_is_hel
     finally:
         session.close()
     assert 'data-rel="per-person" value="2"' in client.get(f"{LOBBY}/{MODEL}/process").text
+    # Codex on #4265: Create dossiers' entries do not hold the Form's
+    # maximum up, so lowering it below what someone was added is saved.
     lowered = _post_process(client, MODEL, {**sent, "per_person": 1})
-    assert lowered.status_code == 400
-    assert lowered.json()["error"] == (
-        "Not saved: Ann Lee holds more than 1 dossier; remove entries first."
-    )
+    assert lowered.status_code == 200, lowered.text
     for bad in (0, 21):
         refused = _post_process(client, MODEL, {**sent, "per_person": bad})
         assert refused.status_code == 400 and "1 to 20" in refused.json()["error"]

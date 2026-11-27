@@ -725,6 +725,16 @@ def _change_list(request: Request, exercise_id: str, sent: Any, svc: Any) -> Res
         actor = people.resolve(session, identity)
         session.commit()
         count = got.get("count")
+        if (
+            svc is candidates
+            and count is not None
+            and (not isinstance(count, int) or isinstance(count, bool))
+        ):
+            # Codex on #4265: a count that is not a whole number refuses the
+            # add rather than falling back to one dossier.
+            raise candidates.Refused(
+                f"Dossiers per person is a whole number from 1 to {candidates.MAX_PER_PERSON}."
+            )
 
         def put(person: Person) -> str:
             # Create dossiers' Add makes as many dossiers as its box says

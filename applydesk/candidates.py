@@ -136,31 +136,17 @@ def full(session: Session, public_id: str) -> frozenset[int]:
 
 
 def set_per_person(session: Session, public_id: str, most: int, actor: Person | None) -> bool:
-    """Set how many dossiers one person may hold (segment AD2K), saved with
-    Process from the item that populates them; refused, naming who, if
-    someone already holds more. True if it changed. Flushes."""
+    """Set the Form's *Max dossiers per person* (segment AD2K), saved with
+    Process. Create dossiers' entries do not count against it (author,
+    2026-11-27: Create dossiers has no most per person; Codex on #4265), so
+    entries kept from an earlier timeline never refuse it. True if it
+    changed. Flushes."""
     if not 1 <= most <= MAX_PER_PERSON:
         raise Refused(f"Dossiers per person is a whole number from 1 to {MAX_PER_PERSON}.")
     exercise = _exercise(session, public_id, lock=True)
     was = exercise.dossiers_per_person
     if most == was:
         return False
-    over = session.execute(
-        select(Person.display_name, Person.email)
-        .join(Candidate, Candidate.person_id == Person.id)
-        .where(Candidate.exercise_id == exercise.id, Candidate.removed_at.is_(None))
-        .group_by(Person.id, Person.display_name, Person.email)
-        .having(func.count() > most)
-        .order_by(Person.id)
-    ).all()
-    if over:
-        names = [name or email or "someone" for name, email in over]
-        shown = ", ".join(names[:3]) + (f" and {len(names) - 3} more" if len(names) > 3 else "")
-        held_ = "holds" if len(names) == 1 else "hold"
-        raise Refused(
-            f"Not saved: {shown} {held_} more than {most} "
-            f"{'dossier' if most == 1 else 'dossiers'}; remove entries first."
-        )
     exercise.dossiers_per_person = most
     session.flush()
     audit.write_event(
