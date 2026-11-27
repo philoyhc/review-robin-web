@@ -62,10 +62,10 @@ def check(plan: stages.Plan, entries: int, invited: int | None = None) -> Checke
         errors.append(POPULATE_AFTER_FORM)
     if populate_at is not None and entries == 0:
         warnings.append(NO_ENTRIES)
-    # Invitees chosen counts only where the Form does not invite from the
-    # dossiers made before it.
-    from_dossiers = populate_at is not None and form_at is not None and populate_at <= form_at
-    if form_at is not None and not from_dossiers and invited == 0:
+    # Invitees chosen counts only where the Form does not invite from
+    # Create dossiers' dossiers: with one on the timeline the page shows
+    # Dossiers, locked (cold read: one rule for both).
+    if form_at is not None and populate_at is None and invited == 0:
         warnings.append(NO_INVITEES)
     columns = [c for st in plan.stages for c in st.columns]
     last_gate = max((i for i, c in enumerate(columns) if isinstance(c, stages.Gate)), default=None)

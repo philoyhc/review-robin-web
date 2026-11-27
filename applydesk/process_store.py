@@ -548,6 +548,18 @@ def _adds_to(
     return False
 
 
+def _reorders(row: StageRow, st: stages.Stage, gate_rows: dict[str, GateRow]) -> bool:
+    """Whether the snapshot reorders the gates a published stage holds: the
+    page keeps its items in place (ruling 84, segment AD2I)."""
+    held = sorted(
+        (g for g in gate_rows.values() if g.stage_id == row.id and g.retired_at is None),
+        key=lambda g: g.position,
+    )
+    kept = {g.key for g in held}
+    sent = [c.key for c in st.columns if isinstance(c, stages.Gate) and c.key in kept]
+    return sent != [g.key for g in held if g.key in sent]
+
+
 def _upsert[R: (StageRow, GateRow, Outcome, GateField, GateResult, OutcomeValue)](
     session: Session,
     existing: dict[str, R],
@@ -735,6 +747,11 @@ def save(
             if st.status == "Published" and _adds_to(before, st, gate_rows, outcome_rows):
                 raise Refused(
                     f"{st.label} is published: revert it to draft to add to it.",
+                    key="published",
+                )
+            if st.status == "Published" and _reorders(before, st, gate_rows):
+                raise Refused(
+                    f"{st.label} is published: revert it to draft to reorder its gates.",
                     key="published",
                 )
             if st.status != "Published":

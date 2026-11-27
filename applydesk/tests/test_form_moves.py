@@ -336,3 +336,24 @@ def test_a_draft_published_by_its_stages_fixes_its_code() -> None:
     finally:
         session.rollback()
         session.close()
+
+
+def test_a_published_stage_keeps_its_gates_order() -> None:
+    """Ruling 84's grips keep a published stage's items in place; a save
+    swapping its gates is refused too (cold read on AD2I)."""
+    stored = _published()
+    at = next(
+        i for i, st in enumerate(stored) if sum(isinstance(c, stages.Gate) for c in st.columns) > 1
+    )
+    st = stored[at]
+    gates = [c for c in st.columns if isinstance(c, stages.Gate)]
+    others = [c for c in st.columns if not isinstance(c, stages.Gate)]
+    changed = list(stored)
+    changed[at] = replace(st, columns=(gates[1], gates[0], *gates[2:], *others))
+    session = db.new_session()
+    try:
+        with pytest.raises(Refused) as locked:
+            process_store.save(session, DONE, tuple(changed), 1, None)
+        assert locked.value.key == "published" and "reorder its gates" in str(locked.value)
+    finally:
+        session.close()
