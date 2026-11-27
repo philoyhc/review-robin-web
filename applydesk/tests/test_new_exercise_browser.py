@@ -302,3 +302,26 @@ def test_who_may_apply_follows_create_dossiers(page: Page) -> None:
     assert who.evaluate("s => s.querySelector('option[value=dossiers]').disabled")
     who.select_option("invitation")
     assert who.input_value() == "invitation"
+
+
+def test_invitees_show_with_their_choice_and_are_added(page: Page) -> None:
+    """Ruling 84: choosing Invitees shows the Form's invite list; someone
+    found by the search is added to it and listed."""
+    from applydesk.tests.test_candidates_browser import _pick
+
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Invitees Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    page.goto(page.url + "/process")
+    stage = page.locator("#pc-cards > .fc").first
+    stage.locator('[data-pc-act="form"]').click()
+    rows = stage.locator("[data-invitees-row]")
+    assert rows.is_hidden()
+    stage.locator('[data-rel="who-may-apply"]').select_option("invitation")
+    assert rows.is_visible()
+    lst = rows.locator('[data-cand-live][data-cand-kind="invitees"]')
+    _pick(lst, "admin@", "admin@example.edu")
+    lst.locator("[data-cand-add]").click()
+    lst.locator("[data-cand-list] tr", has_text="admin@example.edu").wait_for()

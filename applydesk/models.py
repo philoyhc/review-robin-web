@@ -446,6 +446,30 @@ class OutcomeRelease(Base):
     )
 
 
+class Invitee(Base):
+    """Someone a Form invites (ruling 84, segment AD2I): a person who may
+    submit, up to the exercise's dossiers per person, their dossiers made
+    only as they submit. Listed once per exercise (``uq_invitee_pair``);
+    removing sets ``removed_at``, adding again clears it."""
+
+    __tablename__ = "invitee"
+    __table_args__ = (UniqueConstraint("exercise_id", "person_id", name="uq_invitee_pair"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exercise_id: Mapped[int] = _exercise_fk("invitee")
+    person_id: Mapped[int] = mapped_column(
+        ForeignKey("person.id", name="fk_invitee_person"), nullable=False
+    )
+    via: Mapped[str] = mapped_column(String(8), nullable=False)  # "search" or "csv"
+    added_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("person.id", name="fk_invitee_added_by")
+    )
+    added_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_now
+    )
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class Candidate(Base):
     """One entry on an exercise's Candidates list, shown as *Populate
     Dossiers* (rulings 77, 83): someone added by hand, through the people

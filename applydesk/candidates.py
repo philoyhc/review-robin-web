@@ -21,6 +21,7 @@ from __future__ import annotations
 import csv
 import io
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -285,8 +286,43 @@ def import_csv(session: Session, public_id: str, text: str, actor: Person | None
     are listed back by row number. A person may be in the file as often as
     the exercise allows entries (segment AD2K). Flushes; the caller
     commits."""
-    most = _exercise(session, public_id).dossiers_per_person
-    reader = csv.reader(io.StringIO(text.lstrip("﻿")))
+    done = read_csv(
+        session,
+        public_id,
+        text,
+        actor,
+        most=_exercise(session, public_id).dossiers_per_person,
+        add=lambda person, title: add(
+            session, public_id, person, "csv", actor, mint=False, title=title
+        ),
+    )
+    if done.added:  # once for the file (ruling 81), not per row
+        dossiers.sync_candidates(session, _exercise(session, public_id), actor)
+    return done
+
+
+def exercise_row(session: Session, public_id: str) -> Exercise:
+    """The live, unarchived exercise a list belongs to, else Refused: for
+    the Form's invitees too (segment AD2I)."""
+    return _exercise(session, public_id)
+
+
+def read_csv(
+    session: Session,
+    public_id: str,
+    text: str,
+    actor: Person | None,
+    *,
+    most: int,
+    add: Callable[[Person, str], bool],
+) -> Imported:
+    """A people CSV read and added row by row through ``add(person,
+    title)``: an *Email* column and, if given, *Name* and *Title* ones (any
+    case, any order); a person at most ``most`` times; each bad row listed
+    back by number. Shared by Create dossiers and a Form's invitees (segment
+    AD2I). Flushes."""
+    _exercise(session, public_id)
+    reader = csv.reader(io.StringIO(text.lstrip("\ufeff")))
     try:
         header = next(reader, None)
     except csv.Error as error:  # a field past the parser's limit (Codex on #4161)
@@ -336,10 +372,8 @@ def import_csv(session: Session, public_id: str, text: str, actor: Person | None
         person = _on_record(session, address) or people.pending(session, address, actor)
         if name and not person.display_name and person.object_id is None:
             person.display_name = name[:200]  # a pending person's name, from the file
-        if add(session, public_id, person, "csv", actor, mint=False, title=title):
+        if add(person, title):
             added += 1
         else:
             already += 1
-    if added:  # once for the file (ruling 81), not per row
-        dossiers.sync_candidates(session, _exercise(session, public_id), actor)
     return Imported(added, already, tuple(bad))

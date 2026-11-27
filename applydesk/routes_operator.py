@@ -28,6 +28,7 @@ from applydesk import (
     gate,
     handoff,
     home_ops,
+    invitees,
     lobby,
     locks,
     operators,
@@ -635,12 +636,22 @@ def _check_process(exercise_id: str, sent: Any) -> Response:
 def candidates_search(request: Request, exercise_id: str, q: str = "") -> Response:
     """The Candidates item's people search (ruling 75): people on record,
     then the directory's not on record; those listed as often as allowed
-    left out."""
+    left out (segment AD2K)."""
+    return _people_search(request, exercise_id, q, candidates)
+
+
+@router.get("/exercises/{exercise_id}/invitees/search", name="applydesk_invitees_search")
+def invitees_search(request: Request, exercise_id: str, q: str = "") -> Response:
+    """The Form's invite list's people search (ruling 84, segment AD2I), as
+    Create dossiers'; those invited already left out."""
+    return _people_search(request, exercise_id, q, invitees)
+
+
+def _people_search(request: Request, exercise_id: str, q: str, svc: Any) -> Response:
     exercise = exercise_or_404(exercise_id)
     session = db.new_session()
     try:
-        # Those holding as many entries as the exercise allows (segment AD2K).
-        listed = candidates.full(session, exercise.public_id)
+        listed = svc.full(session, exercise.public_id)
         found = allowlist.search(session, q, lambda: directory_for(request), exclude=listed)
     finally:
         session.close()
@@ -672,7 +683,16 @@ async def candidates_change(request: Request, exercise_id: str) -> Response:
     someone picked in the search, remove an entry, or upload a CSV; the
     list as it now stands."""
     sent = await _page_json(request)
-    return await run_in_threadpool(_change_candidates, request, exercise_id, sent)
+    return await run_in_threadpool(_change_list, request, exercise_id, sent, candidates)
+
+
+@router.post("/exercises/{exercise_id}/invitees", name="applydesk_invitees_change")
+async def invitees_change(request: Request, exercise_id: str) -> Response:
+    """The Form's invite list's changes (ruling 84, segment AD2I): invite
+    someone picked in the search, take one off, or upload a CSV; the list
+    as it now stands."""
+    sent = await _page_json(request)
+    return await run_in_threadpool(_change_list, request, exercise_id, sent, invitees)
 
 
 def _listed_json(rows: tuple[candidates.Listed, ...]) -> list[dict[str, object]]:
@@ -690,7 +710,8 @@ def _listed_json(rows: tuple[candidates.Listed, ...]) -> list[dict[str, object]]
     ]
 
 
-def _change_candidates(request: Request, exercise_id: str, sent: Any) -> Response:
+def _change_list(request: Request, exercise_id: str, sent: Any, svc: Any) -> Response:
+    """A people list's change, Create dossiers' or the Form's invitees'."""
     exercise = exercise_or_404(exercise_id)
     identity = current_identity(request)
     if identity is None:
@@ -709,8 +730,8 @@ def _change_candidates(request: Request, exercise_id: str, sent: Any) -> Respons
                 raise candidates.Refused("That person is no longer on record; search again.")
             said = (
                 "Added."
-                if candidates.add(session, exercise.public_id, person, "search", actor)
-                else candidates.already(session, exercise.public_id)
+                if svc.add(session, exercise.public_id, person, "search", actor)
+                else svc.already(session, exercise.public_id)
             )
         elif (
             action == "add"
@@ -730,17 +751,17 @@ def _change_candidates(request: Request, exercise_id: str, sent: Any) -> Respons
             person = people.from_directory(session, found, tenant, actor)
             said = (
                 "Added."
-                if candidates.add(session, exercise.public_id, person, "search", actor)
-                else candidates.already(session, exercise.public_id)
+                if svc.add(session, exercise.public_id, person, "search", actor)
+                else svc.already(session, exercise.public_id)
             )
         elif action == "remove" and isinstance(got.get("entry_id"), int):
             said = (
                 "Removed."
-                if candidates.remove(session, exercise.public_id, got["entry_id"], actor)
+                if svc.remove(session, exercise.public_id, got["entry_id"], actor)
                 else "Not on the list: removed already."
             )
         elif action == "csv" and isinstance(got.get("text"), str):
-            done = candidates.import_csv(session, exercise.public_id, got["text"], actor)
+            done = svc.import_csv(session, exercise.public_id, got["text"], actor)
             said = (
                 f"{done.added} added"
                 + (f", {done.already} listed already" if done.already else "")
@@ -750,7 +771,7 @@ def _change_candidates(request: Request, exercise_id: str, sent: Any) -> Respons
         else:
             raise candidates.Refused("That change is malformed.")
         session.commit()
-        listed = candidates.listing(session, exercise.public_id)
+        listed = svc.listing(session, exercise.public_id)
     except candidates.Refused as why:
         session.rollback()
         return JSONResponse({"error": str(why)}, status_code=400)
@@ -775,6 +796,14 @@ def _per_person_of(public_id: str) -> int:
     session = db.new_session()
     try:
         return candidates.per_person(session, public_id)
+    finally:
+        session.close()
+
+
+def _invitees_of(public_id: str) -> tuple[candidates.Listed, ...]:
+    session = db.new_session()
+    try:
+        return invitees.listing(session, public_id)
     finally:
         session.close()
 
@@ -1774,6 +1803,8 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         },
         # Ruling 77: the Candidates list, read only where Process draws it.
         cand_list=_candidates_of(exercise.public_id) if section == "process" else (),
+        # Ruling 84: the Form's invite list, read only where Process draws it.
+        invitee_list=_invitees_of(exercise.public_id) if section == "process" else (),
         # Segment AD2K: how many dossiers one person may hold, on the
         # populating item.
         per_person=_per_person_of(exercise.public_id) if section == "process" else 1,

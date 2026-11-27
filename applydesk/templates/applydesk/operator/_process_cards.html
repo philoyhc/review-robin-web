@@ -70,6 +70,12 @@
       <option value="dossiers"{% if from_dossiers %} selected{% else %} disabled{% endif %}>Dossiers</option>
     </select></label>
   </div>
+  {# The invite list, shown while Invitees is chosen; kept when another
+     choice is picked (segment AD2I). #}
+  <div class="pi-sec" data-invitees-row{% if from_dossiers or who_may_apply != "invitation" %} hidden{% endif %}>
+    <p class="pc-line">Invitees may submit up to the dossiers per person; their dossiers are made only as they submit.</p>
+    {{ people_list("invitees", invitee_list, url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'), "invitee", "invitees", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em>; each row is one person.", false) }}
+  </div>
   {{ per_person_field(hidden=plan.stages | selectattr("candidates") | list | length > 0) }}
   {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
   <div class="pc-release pi-sec" data-pc-release>
@@ -87,6 +93,37 @@
 </div>
 {% endmacro %}
 
+{# A people list kept as each change is made, through the people search
+   or a CSV (rulings 75, 77): Create dossiers' entries, or a Form's
+   invitees (ruling 84). Its page script is `_process.html`'s, keyed by
+   `data-cand-kind`. #}
+{% macro people_list(kind, listed, list_url, one, many, hint, titles) %}
+  <div data-cand-live data-cand-kind="{{ kind }}" data-cand-url="{{ list_url }}" data-cand-unit="{{ one }}|{{ many }}" data-cand-titles="{{ 'true' if titles else 'false' }}">
+  {# A typeahead (author, 2026-11-27): every match the search returns is
+     listed under the box as the name is typed, whatever field it matched
+     (not the browser's own list, which hides those not holding what was
+     typed: Codex on #4255); Add takes the one picked, beside Upload CSV. #}
+  <div class="pc-cand-add pi-sec">
+    <div class="pc-cand-box">
+      <label class="fc-l">Add someone<input class="fc-in" type="search" data-cand-search role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pc-{{ kind }}-options" placeholder="Search by name or email" autocomplete="off"></label>
+      <ul class="pc-cand-options" id="pc-{{ kind }}-options" role="listbox" aria-label="Matches" data-cand-options hidden></ul>
+    </div>
+    <button type="button" class="btn btn-secondary" data-cand-add disabled title="Pick someone from the list first">Add</button>
+    <button type="button" class="btn btn-secondary" data-cand-csv>Upload CSV…</button><input type="file" accept=".csv,text/csv" data-cand-file hidden aria-label="CSV of people to add">
+  </div>
+  <p class="pc-line muted pc-hint">{{ hint | safe }} Rows that do not read are listed back, not saved.</p>
+  <p class="muted fb-said" data-cand-said role="status"></p>
+  <ul class="pc-issues" data-cand-bad hidden></ul>
+  <table class="pc-cands" data-cand-list>
+    <thead><tr><th scope="col">Name</th><th scope="col">Email</th>{% if titles %}<th scope="col">Title</th>{% endif %}<th scope="col">Added</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
+    <tbody>
+    {% for c in listed %}<tr data-cand-id="{{ c.id }}"><td>{{ c.name or "—" }}</td><td>{{ c.email }}</td>{% if titles %}<td>{{ c.title or "—" }}</td>{% endif %}<td>{{ short(c.added_at) }}</td><td><button type="button" class="btn btn-destructive btn-short" data-cand-remove="{{ c.id }}" aria-label="Remove {{ c.name or c.email }}{% if c.title %} ({{ c.title }}){% endif %}">Remove</button></td></tr>
+    {% else %}<tr data-cand-none><td colspan="{{ 5 if titles else 4 }}" class="muted">No one yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% endmacro %}
+
 {# Ruling 77: Candidates, a list of people kept by hand, through the
    people search or a CSV; the form's roster on an Invitation only
    exercise, or fed to gates as dossiers. At most one stage holds it,
@@ -99,30 +136,7 @@
   <div class="pi-body">
   <p class="pc-line">People added by hand, one dossier each, for the gates that follow. A Form after it writes to these dossiers.</p>
   {{ per_person_field() }}
-  <div data-cand-live>
-  {# A typeahead (author, 2026-11-27): every match the search returns is
-     listed under the box as the name is typed, whatever field it matched
-     (not the browser's own list, which hides those not holding what was
-     typed: Codex on #4255); Add takes the one picked, beside Upload CSV. #}
-  <div class="pc-cand-add pi-sec">
-    <div class="pc-cand-box">
-      <label class="fc-l">Add someone<input class="fc-in" type="search" data-cand-search role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pc-cand-options" placeholder="Search by name or email" autocomplete="off"></label>
-      <ul class="pc-cand-options" id="pc-cand-options" role="listbox" aria-label="Matches" data-cand-options hidden></ul>
-    </div>
-    <button type="button" class="btn btn-secondary" data-cand-add disabled title="Pick someone from the list first">Add</button>
-    <button type="button" class="btn btn-secondary" data-cand-csv>Upload CSV…</button><input type="file" accept=".csv,text/csv" data-cand-file hidden aria-label="CSV of people to add">
-  </div>
-  <p class="pc-line muted pc-hint">A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier. Rows that do not read are listed back, not saved.</p>
-  <p class="muted fb-said" data-cand-said role="status"></p>
-  <ul class="pc-issues" data-cand-bad hidden></ul>
-  <table class="pc-cands" data-cand-list>
-    <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Title</th><th scope="col">Added</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
-    <tbody>
-    {% for c in listed %}<tr data-cand-id="{{ c.id }}"><td>{{ c.name or "—" }}</td><td>{{ c.email }}</td><td>{{ c.title or "—" }}</td><td>{{ short(c.added_at) }}</td><td><button type="button" class="btn btn-destructive btn-short" data-cand-remove="{{ c.id }}" aria-label="Remove {{ c.name or c.email }}{% if c.title %} ({{ c.title }}){% endif %}">Remove</button></td></tr>
-    {% else %}<tr data-cand-none><td colspan="5" class="muted">No one yet.</td></tr>{% endfor %}
-    </tbody>
-  </table>
-  </div>
+  {{ people_list("candidates", listed, url('/operator/exercises/' ~ exercise.public_id ~ '/candidates'), "dossier", "dossiers", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier.", true) }}
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-candidates">Remove Create dossiers</button></div>
   </div>
 </div>

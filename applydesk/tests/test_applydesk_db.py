@@ -42,6 +42,8 @@ TABLES = {
     "application",
     # AD2F: dossiers.
     "dossier",
+    # AD2I: a Form's invitees.
+    "invitee",
     # AD2E: panels, the Panels roster and memberships.
     "panel",
     "roster_entry",
