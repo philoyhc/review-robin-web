@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from applydesk import db, operators, people
+from applydesk import db, directory, operators, people
 from applydesk.models import AuditEvent, Person
 from applydesk.tests._host import host_with
 from cordware.settings import identity_settings
@@ -163,7 +163,6 @@ def test_the_directory_is_asked_off_the_event_loop(
     thread, never on the event loop the other requests share."""
     import asyncio
 
-    from applydesk import routes_admin
     from cordware.graph import DirectoryUser, FakeDirectory
 
     seen: list[bool] = []
@@ -177,7 +176,7 @@ def test_the_directory_is_asked_off_the_event_loop(
                 seen.append(False)  # in a worker thread
             return super().find_users(address)
 
-    monkeypatch.setattr(routes_admin, "directory_for", lambda request: Watched())
+    monkeypatch.setattr(directory, "directory_for", lambda request: Watched())
     client.post(
         "/applydesk/admin/operators/admit",
         data={"object_id": JANE, "address": "jane.tan@example.edu"},

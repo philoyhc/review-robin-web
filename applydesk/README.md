@@ -32,6 +32,10 @@ on the operator allowlist who operates the exercise, and 404 otherwise
 (`gate.py`). With `FAKE_AUTH_SUPER_ADMIN=false` the fake identity is an
 ordinary operator, the Owner the seed made it.
 
+The local people search finds Cordware's fake accounts and every sample
+panel's members (the RA exercise's panels among them), some fifty
+institutional accounts to add, invite or admit (`directory.for_request`).
+
 | Path | Holds |
 |---|---|
 | `main.py`, `routes_*.py`, `lookups.py` | The factory, `/health`, the pages (the super-admin's operator list among them, AD2A), and the path lookups they share |

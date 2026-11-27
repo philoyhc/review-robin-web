@@ -213,3 +213,15 @@ def test_the_invitees_page_says_when_create_dossiers_leaves_it_unused() -> None:
     assert "data-iv-unused" in client.get(f"{base}/invitees").text
     dossiers = client.get(f"{base}/dossiers").text
     assert "<em>Created by hand</em> keeps each change" in dossiers
+
+
+def test_a_local_run_finds_the_sample_panels_members() -> None:
+    """Author, 2026-11-27: the RA exercise's panel members are institutional
+    accounts a localhost check can search for and invite."""
+    from applydesk import sample_data
+
+    member = next(p for p in sample_data.PANELS if p.exercise_id == MODEL).members[0]
+    client = _client()
+    found = client.get(f"{LOBBY}/{MODEL}/invitees/search", params={"q": member.email[:6]})
+    assert found.status_code == 200, found.text
+    assert member.email in found.text

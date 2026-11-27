@@ -59,7 +59,7 @@ from applydesk.web import (
     root_path,
     url_path,
 )
-from cordware.graph import GraphError, directory_for
+from cordware.graph import GraphError
 from cordware.identity import Identity, current_identity
 
 router = APIRouter(prefix="/operator", dependencies=[Depends(gate.require_exercise_operator)])
@@ -652,7 +652,7 @@ def _people_search(request: Request, exercise_id: str, q: str, svc: Any) -> Resp
     session = db.new_session()
     try:
         listed = svc.full(session, exercise.public_id)
-        found = allowlist.search(session, q, lambda: directory_for(request), exclude=listed)
+        found = allowlist.search(session, q, lambda: directory.for_request(request), exclude=listed)
     finally:
         session.close()
     return JSONResponse(
@@ -753,7 +753,11 @@ def _change_list(request: Request, exercise_id: str, sent: Any, svc: Any) -> Res
                 raise candidates.Refused("The directory cannot be searched from this sign-in.")
             address, object_id = got["address"], got["object_id"]
             found = next(
-                (u for u in directory_for(request).find_users(address) if u.id == object_id),
+                (
+                    u
+                    for u in directory.for_request(request).find_users(address)
+                    if u.id == object_id
+                ),
                 None,
             )
             if found is None:
