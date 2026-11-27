@@ -135,6 +135,37 @@
         return hits.length === 1 ? hits[0] : null;
       });
   }
+  // On the Dossiers page the rows are the table's own, so a change that
+  // added anything draws the page again; what is still in the box (pills
+  // not added, entries not found), the line and the rows a CSV could not
+  // read come back with it (Codex on #4267).
+  function stripKey(item) { return "pl-strip:" + window.location.pathname + ":" + item.dataset.candKind; }
+  function reloadIfStrip(item) {
+    if (!item.hasAttribute("data-cand-reload")) return;
+    var kept = {
+      pills: pillsOf(item).map(function (t) { return { name: t.textContent.replace(/×$/, ""), email: t.title, body: JSON.parse(t.dataset.body) }; }),
+      entry: item.querySelector("[data-cand-entry]").value,
+      said: item.querySelector("[data-cand-said]").textContent,
+      bad: Array.prototype.map.call(item.querySelectorAll("[data-cand-bad] li"), function (li) { return li.textContent; })
+    };
+    try { window.sessionStorage.setItem(stripKey(item), JSON.stringify(kept)); } catch (err) { /* nothing kept: the page still redraws */ }
+    window.location.reload();
+  }
+  function restoreStrip(item) {
+    var kept = null;
+    try {
+      kept = JSON.parse(window.sessionStorage.getItem(stripKey(item)) || "null");
+      window.sessionStorage.removeItem(stripKey(item));
+    } catch (err) { kept = null; }
+    if (!kept) return;
+    (kept.pills || []).forEach(function (h) { pill(item, h); });
+    item.querySelector("[data-cand-entry]").value = kept.entry || "";
+    item.querySelector("[data-cand-said]").textContent = kept.said || "";
+    var bad = item.querySelector("[data-cand-bad]");
+    (kept.bad || []).forEach(function (t) { bad.appendChild(el("li", "", t)); });
+    bad.hidden = !(kept.bad || []).length;
+    addable(item);
+  }
   function pillsOf(item) { return Array.prototype.slice.call(item.querySelectorAll("[data-cand-tokens] .token")); }
   // The pills not yet sent: one being saved is never sent again, since a
   // dossier added twice is two dossiers (Codex on #4266).
@@ -208,6 +239,14 @@
     });
     got.directory.forEach(function (u) {
       rows.push({ label: (u.name || u.address) + " (" + u.address + ") · directory", hit: { name: u.name || u.address, email: u.address, body: { action: "add", object_id: u.object_id, address: u.address } } });
+    });
+    // Those already a pill in the box are not offered again (author,
+    // 2026-11-27), by account or by address.
+    var have = {}, mails = {};
+    pillsOf(item).forEach(function (t) { have[t.dataset.key] = true; mails[(t.title || "").toLowerCase()] = true; });
+    rows = rows.filter(function (r) {
+      var b = r.hit.body, key = b.person_id ? "p" + b.person_id : "d" + b.object_id;
+      return !have[key] && !mails[(r.hit.email || "").toLowerCase()];
     });
     rows.forEach(function (r, i) {
       var li = el("li", "", r.label);
@@ -321,6 +360,9 @@
           var now = current(item);
           if (failed.length) now.querySelector("[data-cand-said]").textContent = (item.dataset.candKind === "invitees" ? "Not invited: " : "Not added: ") + failed.join("; ");
           addable(item);
+          // On the Dossiers page the rows are the table's own: it is drawn
+          // again once anything was added (author, 2026-11-27).
+          if (failed.length < pills.length) reloadIfStrip(item);
         });
       });
       return;
@@ -348,11 +390,19 @@
       });
     });
   });
+  root.querySelectorAll("[data-cand-reload]").forEach(restoreStrip);
   root.addEventListener("change", function (e) {
     if (!e.target.matches("[data-cand-file]")) return;
     var item = e.target.closest("[data-cand-live]"), file = e.target.files[0];
     if (!file) return;
-    file.text().then(function (text) { change(item, { action: "csv", text: text }); e.target.value = ""; });
+    file.text().then(function (text) {
+      change(item, { action: "csv", text: text }).then(function (why) {
+        // The rows added show in the table; those that did not read come
+        // back listed under the box (Codex on #4267).
+        if (!why) reloadIfStrip(item);
+      });
+      e.target.value = "";
+    });
   });
 })();
 </script>

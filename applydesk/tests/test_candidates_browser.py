@@ -132,18 +132,20 @@ def test_changes_are_sent_one_at_a_time(page: Page) -> None:
         held.append(route)
 
     page.route("**/candidates", hold)
-    # Removing is the Dossiers page's (segment AD2N), through the same script.
+    # Removing is the Dossiers page's one table's (author, 2026-11-27).
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/dossiers")
-    item = page.locator('.cd-card [data-cand-live][data-cand-kind="candidates"]')
-    item.locator("[data-cand-remove]").first.click()
-    item.locator("[data-cand-remove]").last.click()
+    for row in page.locator("tr[data-entry]").all():
+        row.locator("[data-ap-tick]").check()
+    page.once("dialog", lambda d: d.accept())
+    page.locator("[data-ap-remove]").click()
     page.wait_for_timeout(300)
     assert len(seen) == 1  # the second waits for the first's answer
     held.pop().fallback()
     page.wait_for_timeout(300)
     assert len(seen) == 2
-    held.pop().fallback()
-    item.locator("[data-cand-none]").wait_for()
+    with page.expect_navigation():
+        held.pop().fallback()
+    assert page.locator("tr[data-entry]").count() == 0
 
 
 def _drafts_holding_candidates() -> None:
@@ -406,3 +408,37 @@ def test_a_pill_being_saved_is_not_sent_again(page: Page) -> None:
     assert len(sent) == 1  # the pill being saved is not sent again
     held.pop().fallback()
     item.locator("[data-cand-sum]").filter(has_text="1 dossier for 1 person").wait_for()
+
+
+def test_a_pill_already_in_the_box_is_not_suggested_again(page: Page) -> None:
+    """Author, 2026-11-27: the suggestions leave out whoever is already a
+    pill in the box, by account or by address."""
+    _with_candidates()
+    page.route(
+        "**/candidates/search*",
+        lambda route: route.fulfill(
+            json={
+                "on_record": [],
+                "directory": [
+                    {
+                        "object_id": "o-1",
+                        "name": "Aisha Bello",
+                        "address": "aisha.bello@example.edu",
+                        "upn": "aisha.bello@example.edu",
+                    },
+                    {
+                        "object_id": "o-2",
+                        "name": "Aisha Carter",
+                        "address": "aisha.carter@example.edu",
+                        "upn": "aisha.carter@example.edu",
+                    },
+                ],
+                "directory_failed": False,
+            }
+        ),
+    )
+    item = _open_item(page)
+    _pick(item, "aish", "aisha.bello@example.edu")
+    item.locator("[data-cand-entry]").fill("aish")
+    item.locator("[data-tok-options] li", has_text="aisha.carter@example.edu").wait_for()
+    assert item.locator("[data-tok-options] li", has_text="aisha.bello").count() == 0

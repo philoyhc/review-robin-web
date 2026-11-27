@@ -100,13 +100,15 @@
    or a CSV (rulings 75, 77): Create dossiers' entries, or a Form's
    invitees (ruling 84). Its page script is `_people_list_js.html`, keyed
    by `data-cand-kind`. #}
-{% macro people_list(kind, listed, list_url, one, many, hint, titles, count=false, fold=true, via=false, manage=none, label=none, tally=none) %}
+{% macro people_list(kind, listed, list_url, one, many, hint, titles, count=false, fold=true, via=false, manage=none, label=none, tally=none, strip=false) %}
   {# ``fold``: the list folds under its count (Process); a page of its own
      shows it whole. ``via``: a *How added* column (Invitees, AD2N).
      ``manage``: (page, url, pending) where the list is kept; Process shows a count
      line linking to it in place of the table (segment AD2N). ``tally``: a
-     page's own count, on the left of the add row (author, 2026-11-27). #}
-  <div data-cand-live data-cand-kind="{{ kind }}" data-cand-url="{{ list_url }}" data-cand-unit="{{ one }}|{{ many }}" data-cand-titles="{{ 'true' if titles else 'false' }}" data-cand-via="{{ 'true' if via else 'false' }}">
+     page's own count, on the left of the add row (author, 2026-11-27).
+     ``strip``: the add row alone, the page reloading after a change (the
+     Dossiers page's one table, author 2026-11-27). #}
+  <div data-cand-live data-cand-kind="{{ kind }}" data-cand-url="{{ list_url }}" data-cand-unit="{{ one }}|{{ many }}" data-cand-titles="{{ 'true' if titles else 'false' }}" data-cand-via="{{ 'true' if via else 'false' }}"{% if strip %} data-cand-reload{% endif %}>
   {% if tally %}<div class="pl-top"><div class="pn-readout pl-tally"><span class="pn-rl">{{ tally }}:</span> <span class="chip chip-info" data-cand-tally="{{ kind }}">{{ listed | length }}</span></div><div class="pl-add">{% endif %}
   {# Names or emails, several at once, separated by commas, as a panel's
      members box (author, 2026-11-27, for invitees and then Create
@@ -133,7 +135,8 @@
   <ul class="pc-issues" data-cand-bad hidden></ul>
   {% if tally %}</div></div>{% endif %}
   {# The list folds under its count, open up to ten (author, 2026-11-27). #}
-  {% if manage %}
+  {% if strip %}
+  {% elif manage %}
   {% set n = listed | length %}{% set ppl = listed | map(attribute="person_id") | unique | list | length %}
   <p class="pc-line pc-cand-line" data-cand-line><span data-cand-sum>{% if not n %}No one yet{% elif kind == "candidates" %}{{ n }} {{ one if n == 1 else many }} for {{ ppl }} {{ "person" if ppl == 1 else "people" }}{% else %}{{ n }} {{ one if n == 1 else many }}{% endif %}</span> · <a href="{{ manage[1] }}">{% if manage[2] %}Save, then manage on {{ manage[0] }}{% else %}Manage on {{ manage[0] }}{% endif %} →</a></p>
   {% else %}

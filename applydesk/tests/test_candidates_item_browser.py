@@ -43,8 +43,8 @@ def test_candidates_is_drawn_as_itself_not_an_outcome(page: Page) -> None:
 
 def test_add_makes_as_many_dossiers_as_its_box_says(page: Page) -> None:
     """Author, 2026-11-27: Create dossiers has no Max dossiers per person;
-    beside Add, *Dossiers per person* makes that many for the one picked,
-    each Dossier 1, Dossier 2, listed under the folding count."""
+    beside Add, *Dossiers per person* makes that many for each one picked,
+    each Dossier 1, Dossier 2, rows of the Dossiers page's one table."""
     from applydesk.tests.test_candidates_browser import _pick
 
     _held()
@@ -56,10 +56,12 @@ def test_add_makes_as_many_dossiers_as_its_box_says(page: Page) -> None:
     item.locator("[data-cand-n]").fill("2")
     item.locator("[data-cand-add-all]").click()
     item.locator("[data-cand-sum]").filter(has_text="2 dossiers for 1 person").wait_for()
-    # The list itself is on the Dossiers page (segment AD2N).
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/dossiers")
-    titles = page.locator(".cd-card [data-cand-list] tbody tr td:nth-child(3)")
-    assert [titles.nth(i).inner_text() for i in range(2)] == ["Dossier 1", "Dossier 2"]
+    mine = page.locator("tr[data-entry]")
+    assert [mine.nth(i).locator(".ap-app").inner_text() for i in range(2)] == [
+        "Created by hand · Dossier 1",
+        "Created by hand · Dossier 2",
+    ]
 
 
 def test_the_form_s_box_shows_only_without_create_dossiers(page: Page) -> None:
@@ -77,24 +79,87 @@ def test_the_form_s_box_shows_only_without_create_dossiers(page: Page) -> None:
 
 
 def test_the_dossiers_page_holds_create_dossiers_entries(page: Page) -> None:
-    """Segment AD2N: with Create dossiers in the process, the Dossiers page
-    lists its entries in a card of their own, added and removed there."""
+    """Author, 2026-11-27: one table. With Create dossiers in the process,
+    its entries are rows of the Dossiers grid, added above it (the page
+    drawn again) and removed by ticking them, Remove ticked."""
     from applydesk.tests.test_candidates_browser import _pick
 
     _held()
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/dossiers")
-    card = page.locator(".cd-card")
-    item = card.locator('[data-cand-live][data-cand-kind="candidates"]')
-    _pick(item, "admin@", "admin@example.edu")
-    item.locator("[data-cand-add-all]").click()
-    row = item.locator("[data-cand-list] tr", has_text="admin@example.edu")
+    strip = page.locator('.ap-hand-add [data-cand-live][data-cand-kind="candidates"]')
+    _pick(strip, "admin@", "admin@example.edu")
+    with page.expect_navigation():
+        strip.locator("[data-cand-add-all]").click()
+    row = page.locator("tr[data-entry]", has_text="admin@example.edu")
     row.wait_for()
-    assert "Dossier 1" in row.inner_text()
-    row.locator("[data-cand-remove]").click()
-    item.locator("[data-cand-none]").wait_for()
+    assert "Created by hand · Dossier 1" in row.inner_text()
+    assert row.locator(".ap-stat .chip").text_content() == "By hand"
+    page.locator("[data-ap-status]").select_option("hand")
+    assert (
+        page.locator("[data-row]:not([hidden])").count() == page.locator("tr[data-entry]").count()
+    )
+    row.locator("[data-ap-tick]").check()
+    page.once("dialog", lambda d: d.accept())
+    with page.expect_navigation():
+        page.locator("[data-ap-remove]").click()
+    assert page.locator("tr[data-entry]", has_text="admin@example.edu").count() == 0
 
 
-def test_the_dossiers_page_has_no_card_without_create_dossiers(page: Page) -> None:
+def test_the_dossiers_page_has_no_add_row_without_create_dossiers(page: Page) -> None:
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{DRAFT}/dossiers")
     page.locator("[data-applications]").wait_for()
-    assert page.locator(".cd-card").count() == 0
+    assert page.locator(".ap-hand-add").count() == 0
+    assert page.locator("[data-ap-remove]").count() == 0
+
+
+def test_a_partly_failed_add_keeps_what_failed_across_the_redraw(page: Page) -> None:
+    """Codex on #4267: on the Dossiers page an add that partly fails draws
+    the table again with what was added, and keeps the pill that failed,
+    with the line naming it, to be tried again."""
+    from playwright.sync_api import Route
+
+    from applydesk.tests.test_candidates_browser import _pick
+
+    _held()
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/dossiers")
+    strip = page.locator('.ap-hand-add [data-cand-live][data-cand-kind="candidates"]')
+    _pick(strip, "admin@", "admin@example.edu")
+    strip.locator("[data-cand-entry]").fill("jane.tan@example.edu,")
+    strip.locator("[data-cand-tokens] .token").nth(1).wait_for()
+
+    def refuse_jane(route: Route) -> None:
+        if route.request.method == "POST" and "jane.tan" in (route.request.post_data or ""):
+            route.fulfill(status=400, json={"error": "Not now."})
+        else:
+            route.fallback()
+
+    page.route("**/candidates", refuse_jane)
+    with page.expect_navigation():
+        strip.locator("[data-cand-add-all]").click()
+    page.locator("tr[data-entry]", has_text="admin@example.edu").wait_for()
+    strip = page.locator('.ap-hand-add [data-cand-live][data-cand-kind="candidates"]')
+    tokens = strip.locator("[data-cand-tokens] .token")
+    assert tokens.count() == 1 and "Jane Tan" in tokens.inner_text()
+    assert "Not now." in strip.locator("[data-cand-said]").inner_text()
+
+
+def test_a_csv_with_bad_rows_shows_its_good_rows_and_keeps_the_bad(page: Page) -> None:
+    """Codex on #4267: a CSV with good and bad rows draws the table with the
+    good ones and still lists the bad ones under the box."""
+    _held()
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/dossiers")
+    strip = page.locator('.ap-hand-add [data-cand-live][data-cand-kind="candidates"]')
+    with page.expect_navigation():
+        strip.locator("[data-cand-file]").set_input_files(
+            files=[
+                {
+                    "name": "c.csv",
+                    "mimeType": "text/csv",
+                    "buffer": b"Email\nyan@example.edu\nnope\n",
+                }
+            ]
+        )
+    page.locator("tr[data-entry]", has_text="yan@example.edu").wait_for()
+    strip = page.locator('.ap-hand-add [data-cand-live][data-cand-kind="candidates"]')
+    assert "is not an email address" in strip.locator("[data-cand-bad]").inner_text()
+    assert strip.locator("[data-cand-said]").inner_text() == "1 added."
