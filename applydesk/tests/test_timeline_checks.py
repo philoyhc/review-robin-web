@@ -13,6 +13,7 @@ from applydesk.tests._host import host_with
 from applydesk.timeline_checks import (
     NO_ENTRIES,
     NO_FIRST_ITEM,
+    NO_INVITEES,
     NO_LAST_OUTCOME,
     POPULATE_AFTER_FORM,
 )
@@ -55,6 +56,16 @@ def test_warnings_publish_anyway() -> None:
     assert timeline_checks.check(empty, 0) == timeline_checks.Checked(
         (), (NO_ENTRIES, NO_LAST_OUTCOME)
     )
+
+
+def test_an_empty_invite_list_is_a_warning() -> None:
+    form = _plan(Stage(1, "", None, form=True))
+    assert timeline_checks.check(form, 0, 0) == timeline_checks.Checked((), (NO_INVITEES,))
+    assert timeline_checks.check(form, 0, 2).warnings == ()
+    assert timeline_checks.check(form, 0, None).warnings == ()  # Anyone signed in
+    # After Create dossiers the Form invites from the dossiers: no list.
+    led = _plan(Stage(1, "", None, candidates=True), Stage(2, "", None, form=True))
+    assert NO_INVITEES not in timeline_checks.check(led, 1, 0).warnings
 
 
 def test_the_samples_check_clean() -> None:

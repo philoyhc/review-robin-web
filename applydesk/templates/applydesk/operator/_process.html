@@ -236,7 +236,7 @@
     }
     return true;
   }
-  function items(card, kind) { return Array.prototype.slice.call(card.querySelectorAll('.pc-item[data-item="' + kind + '"]')); }
+  function items(card, kind) { return Array.prototype.slice.call(card.querySelectorAll(kind ? '.pc-item[data-item="' + kind + '"]' : ".pc-item")); }
   function field(card, f) { var i = card.querySelector('[data-pc="' + f + '"]'); return i ? i.value.trim() : ""; }
   function labelOf(card) { return field(card, "name") || "Stage " + (cards().indexOf(card) + 1); }
   // A datetime-local value, "2026-11-09T00:00", as the pages print a day.
@@ -1272,6 +1272,81 @@
     live.textContent = "Moved " + labelOf(card) + " to " + (cards().indexOf(card) + 1) + " of " + cards().length + ".";
   });
 
+  // --- A stage's items reordered within it (ruling 84, segment AD2I):
+  // any drop is let through as it moves, and one breaking a rule is put
+  // back where it began, the reason shown on the stage. The gates between
+  // keep the order they are dropped in, saved as their positions.
+  function orderProblem(card) {
+    var kinds = items(card).map(function (i) { return i.dataset.item; });
+    var cand = kinds.indexOf("candidates"), form = kinds.indexOf("form"), out = kinds.indexOf("outcome");
+    if (cand > -1 && form > -1 && cand > form) return "Create dossiers comes before the Form: the Form writes to its dossiers.";
+    if (cand > -1 && kinds.slice(0, cand).indexOf("gate") > -1) return "Create dossiers comes before the gates: they evaluate its dossiers.";
+    if (out > -1 && out !== kinds.length - 1) return "The outcome comes last in its stage: it decides on the gates before it.";
+    return "";
+  }
+  function moveSaid(card, text) {
+    var said = card.querySelector("[data-pc-move-said]");
+    said.textContent = text;
+    said.hidden = !text;
+    if (text) live.textContent = text;
+  }
+  // Published, a stage's items are fixed, their order with them.
+  function itemsFixed(card) { return card.dataset.status !== "Draft"; }
+  var idrag = null;
+  list.addEventListener("pointerdown", function (e) {
+    var grip = e.target.closest("[data-pi-grip]");
+    if (!grip || grip.disabled || (e.pointerType === "mouse" && e.button !== 0)) return;
+    e.preventDefault();
+    var item = grip.closest(".pc-item"), card = item.closest(".pc");
+    if (itemsFixed(card)) { moveSaid(card, labelOf(card) + " is published: its items keep their order."); return; }
+    idrag = { item: item, card: card, next: item.nextElementSibling };
+    item.classList.add("fc-dragging");
+  });
+  document.addEventListener("pointermove", function (e) {
+    if (!idrag) return;
+    var over = null;
+    items(idrag.card).some(function (i) {
+      if (i === idrag.item) return false;
+      var r = i.getBoundingClientRect();
+      if (e.clientY >= r.top && e.clientY <= r.bottom) { over = i; return true; }
+      return false;
+    });
+    if (!over) return;
+    var box = over.getBoundingClientRect();
+    if (e.clientY < box.top + box.height / 2) over.before(idrag.item); else over.after(idrag.item);
+  });
+  function idrop() {
+    if (!idrag) return;
+    var d = idrag;
+    idrag = null;
+    d.item.classList.remove("fc-dragging");
+    if (d.item.nextElementSibling === d.next) return;  // where it began
+    var why = orderProblem(d.card);
+    if (why) d.next.before(d.item);
+    moveSaid(d.card, why);
+    if (!why) changed();
+  }
+  document.addEventListener("pointerup", idrop);
+  document.addEventListener("pointercancel", idrop);
+  list.addEventListener("keydown", function (e) {
+    var grip = e.target.closest("[data-pi-grip]");
+    if (!grip || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+    e.preventDefault();
+    var item = grip.closest(".pc-item"), card = item.closest(".pc"), all = items(card), at = all.indexOf(item);
+    var to = all[at + (e.key === "ArrowUp" ? -1 : 1)];
+    if (!to) return;
+    if (itemsFixed(card)) { moveSaid(card, labelOf(card) + " is published: its items keep their order."); return; }
+    var next = item.nextElementSibling;
+    if (e.key === "ArrowUp") to.before(item); else to.after(item);
+    var why = orderProblem(card);
+    if (why) next.before(item);
+    grip.focus();
+    moveSaid(card, why);
+    if (why) return;
+    changed();
+    live.textContent = "Moved " + item.querySelector("[data-pc-kicker]").textContent + " to " + (items(card).indexOf(item) + 1) + " of " + all.length + " in " + labelOf(card) + ".";
+  });
+
   list.addEventListener("change", function (e) {
     if (e.target.matches("input[data-rel]")) { heads(e.target.closest(".pc")); return; }
     ruleEvent(e);
@@ -1299,7 +1374,9 @@
     var p = e.target.closest("[data-pc-act]");
     if (p && !p.disabled) {
       if (p.dataset.pcAct === "form") {
-        card.querySelector(".fc-body > .pc-row").after(fresh("pc-new-form"));
+        // After Create dossiers, when the stage holds it (ruling 84).
+        var cand = items(card, "candidates")[0];
+        (cand || card.querySelector(".fc-body > .pc-row")).after(fresh("pc-new-form"));
         changed();
         card.querySelector('[data-pc-act="remove-form"]').focus();
       } else if (p.dataset.pcAct === "add-value") {
@@ -1318,7 +1395,8 @@
         changed();
         outc.querySelector('[data-pc-act="add-value"]').focus();
       } else if (p.dataset.pcAct === "candidates") {
-        card.querySelector(".pc-empty").before(fresh("pc-new-candidates"));
+        // First in its stage: it comes before a Form or a gate (ruling 84).
+        (card.querySelector(".fc-body > .pc-item") || card.querySelector("[data-pc-move-said]")).before(fresh("pc-new-candidates"));
         changed();
         card.querySelector('[data-pc-act="remove-candidates"]').focus();
       } else if (p.dataset.pcAct === "remove-candidates") {
@@ -1336,7 +1414,7 @@
         var kind = p.dataset.pcAct, added = fresh("pc-new-" + kind);
         added.dataset.key = kind[0] + "new" + (++keys);
         var outcome = card.querySelector('.pc-item[data-item="outcome"]');
-        var anchor = kind === "gate" && outcome ? outcome : card.querySelector(".pc-empty");
+        var anchor = kind === "gate" && outcome ? outcome : card.querySelector("[data-pc-move-said]");
         anchor.before(added);
         if (kind === "gate") drawFields(added);  // its first field and result, numbered and shaped (Codex)
         changed();

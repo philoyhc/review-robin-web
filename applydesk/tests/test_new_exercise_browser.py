@@ -325,3 +325,62 @@ def test_invitees_show_with_their_choice_and_are_added(page: Page) -> None:
     _pick(lst, "admin@", "admin@example.edu")
     lst.locator("[data-cand-add]").click()
     lst.locator("[data-cand-list] tr", has_text="admin@example.edu").wait_for()
+
+
+def test_a_stages_items_reorder_within_the_rules(page: Page) -> None:
+    """Ruling 84: a stage's gates swap by their grips and save in that
+    order; a move putting a gate before Create dossiers, or the outcome
+    before a gate, is put back, saying why."""
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Reorder Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    page.goto(page.url + "/process")
+    stage = page.locator("#pc-cards > .fc").first
+    if stage.locator("[data-fc-toggle]").get_attribute("aria-expanded") == "false":
+        stage.locator("[data-fc-toggle]").click()
+    stage.locator('[data-pc-act="candidates"]').click()
+    for name in ("Screen", "Interview"):
+        stage.locator('[data-pc-act="gate"]').click()
+        stage.locator('.pc-item[data-item="gate"] [data-pc="item-name"]').last.fill(name)
+    stage.locator('[data-pc-act="outcome"]').click()
+    stage.locator('.pc-item[data-item="outcome"] [data-pc="item-name"]').fill("Offer")
+    gates = stage.locator('.pc-item[data-item="gate"] [data-pc="item-name"]')
+    said = stage.locator("[data-pc-move-said]")
+
+    def kinds() -> list[str]:
+        found = stage.locator(".pc-item")
+        return [found.nth(i).get_attribute("data-item") or "" for i in range(found.count())]
+
+    assert kinds() == ["candidates", "gate", "gate", "outcome"]
+    stage.locator('.pc-item[data-item="gate"] [data-pi-grip]').nth(1).press("ArrowUp")
+    assert [gates.nth(i).input_value() for i in range(2)] == ["Interview", "Screen"]
+    assert (
+        stage.locator('.pc-item[data-item="gate"] [data-pc-kicker]').first.inner_text() == "Gate 1"
+    )
+    assert said.is_hidden()
+    # Above Create dossiers: put back, the reason on the stage.
+    stage.locator('.pc-item[data-item="gate"] [data-pi-grip]').first.press("ArrowUp")
+    assert kinds() == ["candidates", "gate", "gate", "outcome"]
+    assert "Create dossiers comes before the gates" in said.inner_text()
+    stage.locator('.pc-item[data-item="outcome"] [data-pi-grip]').press("ArrowUp")
+    assert kinds()[-1] == "outcome"
+    assert "The outcome comes last" in said.inner_text()
+    # Dragged by the mouse, the outcome above a gate is put back too.
+    grip = stage.locator('.pc-item[data-item="outcome"] [data-pi-grip]').bounding_box()
+    over = stage.locator('.pc-item[data-item="gate"]').first.bounding_box()
+    assert grip and over
+    said.evaluate("e => { e.textContent = ''; e.hidden = true; }")
+    page.mouse.move(grip["x"] + 4, grip["y"] + 4)
+    page.mouse.down()
+    page.mouse.move(over["x"] + 20, over["y"] + 4, steps=5)
+    page.mouse.up()
+    assert kinds()[-1] == "outcome"
+    assert "The outcome comes last" in said.inner_text()
+    with page.expect_navigation():
+        page.locator("[data-fb-save]").click()
+    page.locator("[data-fb-said]").filter(has_text="Saved").wait_for()
+    stage = page.locator("#pc-cards > .fc").first
+    names = stage.locator('.pc-item[data-item="gate"] [data-pc="item-name"]')
+    assert [names.nth(i).input_value() for i in range(2)] == ["Interview", "Screen"]

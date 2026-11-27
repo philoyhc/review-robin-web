@@ -49,6 +49,16 @@ Taken 2026-11-27 at `d70ab00c3`.
 | Specs and docs naming it | 4 | `grep -rln "Invitation only\|eligibility" applydesk/spec applydesk/docs` |
 | Add buttons a stage shows | 4, in `_process_cards.html` | `grep -n "data-pc-act=" applydesk/templates/applydesk/operator/_process_cards.html` |
 
+## Status
+
+- **Rung 5 stores no `stage.item_order`** (2026-11-27). The rules fix every
+  kind's place: Create dossiers before the Form and the gates, the outcome
+  last, and the Form never beside a gate. Only the gates between stay free,
+  and they already save their order as `gate.position`. So the page draws
+  that order, the grips move items within it, and a move that breaks it is
+  put back with its reason. No migration was needed.
+- **The empty invite list** is a timeline warning (`timeline_checks.NO_INVITEES`), shown on the Outline as saved.
+
 ## PR ladder
 
 1. **Plan** (this file), ruling 84, the series row. Prose only.
@@ -83,6 +93,6 @@ Taken 2026-11-27 at `d70ab00c3`.
 ## Doc impact
 
 - `applydesk/spec/applications.md` — Process's add buttons before the first item, the Form's *Who may apply* and invite list, reordering; Details without *Who may apply*.
-- `applydesk/spec/architecture.md` — the `invitee` table, `stage.item_order`, the migration, `applydesk/invitees.py`.
+- `applydesk/spec/architecture.md` — the `invitee` table, the migration, `applydesk/invitees.py`, `timeline_checks.NO_INVITEES` (no `stage.item_order`: Status).
 - `applydesk/spec/permissions.md` — the Invitee audience read from the Form's list; the invitee audit events.
 - `applydesk/guide/ad2_series.md` — the AD2I row closed (at close).
