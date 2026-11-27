@@ -343,9 +343,10 @@ def test_invitees_show_with_their_choice_and_are_added(page: Page) -> None:
     assert lst.locator("[data-cand-tokens] .token").count() == 1
     assert "nobody.here@nowhere.example" in entry.input_value()
     lst.locator("[data-cand-add-all]").click()
-    # On Process the list is a count line and a link (segment AD2N).
+    # On Process the list is a count line and a link, saying to save first
+    # while the Invitees tab is not shown (segment AD2N).
     lst.locator("[data-cand-sum]").filter(has_text="1 invitee").wait_for()
-    assert "Manage on Invitees" in lst.locator("[data-cand-line]").inner_text()
+    assert "Save, then manage on Invitees" in lst.locator("[data-cand-line]").inner_text()
     assert lst.locator("[data-cand-tokens] .token").count() == 0
 
 

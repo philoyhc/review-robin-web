@@ -77,7 +77,7 @@
      dossiers' list is: people are invited, or taken off, while it is open,
      each change kept as it is made (cold read). #}
   <div class="pi-sec" data-invitees-row{% if from_dossiers or who_may_apply != "invitation" %} hidden{% endif %}>
-    {{ people_list("invitees", invitee_list, url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'), "invitee", "invitees", "A CSV has an <em>Email</em> column; each row is one person.", false, tokens=true, manage=("Invitees", url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'))) }}
+    {{ people_list("invitees", invitee_list, url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'), "invitee", "invitees", "A CSV has an <em>Email</em> column; each row is one person.", false, tokens=true, manage=("Invitees", url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'), new or not invitees_tab)) }}
   </div>
   {{ lock_open(form_lock) }}
   {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
@@ -98,12 +98,12 @@
 
 {# A people list kept as each change is made, through the people search
    or a CSV (rulings 75, 77): Create dossiers' entries, or a Form's
-   invitees (ruling 84). Its page script is `_process.html`'s, keyed by
-   `data-cand-kind`. #}
+   invitees (ruling 84). Its page script is `_people_list_js.html`, keyed
+   by `data-cand-kind`. #}
 {% macro people_list(kind, listed, list_url, one, many, hint, titles, tokens=false, count=false, fold=true, via=false, manage=none) %}
   {# ``fold``: the list folds under its count (Process); a page of its own
      shows it whole. ``via``: a *How added* column (Invitees, AD2N).
-     ``manage``: (page, url) where the list is kept; Process shows a count
+     ``manage``: (page, url, pending) where the list is kept; Process shows a count
      line linking to it in place of the table (segment AD2N). #}
   <div data-cand-live data-cand-kind="{{ kind }}" data-cand-url="{{ list_url }}" data-cand-unit="{{ one }}|{{ many }}" data-cand-titles="{{ 'true' if titles else 'false' }}" data-cand-via="{{ 'true' if via else 'false' }}">
   {# A typeahead (author, 2026-11-27): every match the search returns is
@@ -146,7 +146,7 @@
   {# The list folds under its count, open up to ten (author, 2026-11-27). #}
   {% if manage %}
   {% set n = listed | length %}{% set ppl = listed | map(attribute="person_id") | unique | list | length %}
-  <p class="pc-line pc-cand-line" data-cand-line><span data-cand-sum>{% if not n %}No one yet{% elif kind == "candidates" %}{{ n }} {{ one if n == 1 else many }} for {{ ppl }} {{ "person" if ppl == 1 else "people" }}{% else %}{{ n }} {{ one if n == 1 else many }}{% endif %}</span> · <a href="{{ manage[1] }}">Manage on {{ manage[0] }} →</a></p>
+  <p class="pc-line pc-cand-line" data-cand-line><span data-cand-sum>{% if not n %}No one yet{% elif kind == "candidates" %}{{ n }} {{ one if n == 1 else many }} for {{ ppl }} {{ "person" if ppl == 1 else "people" }}{% else %}{{ n }} {{ one if n == 1 else many }}{% endif %}</span> · <a href="{{ manage[1] }}">{% if manage[2] %}Save, then manage on {{ manage[0] }}{% else %}Manage on {{ manage[0] }}{% endif %} →</a></p>
   {% else %}
   {% if fold %}<details class="pc-cand-fold" data-cand-fold{% if listed | length <= 10 %} open{% endif %}><summary><span data-cand-fold-n>{{ many | capitalize }} ({{ listed | length }})</span></summary>{% endif %}
   <table class="pc-cands" data-cand-list>
@@ -167,13 +167,13 @@
    from them (ruling 84), and the gates read them. At most one stage holds it,
    placed by Process's Save; the list itself is kept as each change is
    made (`applydesk/candidates.py`). #}
-{% macro candidates_item(open=False, listed=()) %}
+{% macro candidates_item(open=False, listed=(), saved=True) %}
 <div class="pc-item" data-item="candidates"{% if open %} data-open{% endif %}>
   {% set chips %}<span class="chip chip-mute" data-cand-count>{{ listed | length if listed else "No one yet" }}{% if listed %} {{ "dossier" if listed | length == 1 else "dossiers" }}{% endif %}</span>{% endset %}
   {{ head("Create dossiers", "Create dossiers", chips, open) }}
   <div class="pi-body">
   <p class="pc-line">People added by hand, with the dossiers each holds, for the gates that follow. A Form after it writes to these dossiers.</p>
-  {{ people_list("candidates", listed, url('/operator/exercises/' ~ exercise.public_id ~ '/candidates'), "dossier", "dossiers", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier.", true, count=true, manage=("Dossiers", url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers'))) }}
+  {{ people_list("candidates", listed, url('/operator/exercises/' ~ exercise.public_id ~ '/candidates'), "dossier", "dossiers", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em> and a <em>Title</em>; each row is one dossier.", true, count=true, manage=("Dossiers", url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers'), not saved)) }}
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-candidates">Remove Create dossiers</button></div>
   </div>
 </div>

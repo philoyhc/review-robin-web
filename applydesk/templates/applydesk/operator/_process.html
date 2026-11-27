@@ -20,7 +20,7 @@
     {# What +Stage and +Form add: the same macros as the server's own. #}
     <template id="pc-new-stage">{{ pc.stage(plan, blank_stage, rule_text, last=False, open=True) }}</template>
     <template id="pc-new-form">{{ pc.form_item(new=True, open=True) }}</template>
-    <template id="pc-new-candidates">{{ pc.candidates_item(open=True, listed=cand_list) }}</template>
+    <template id="pc-new-candidates">{{ pc.candidates_item(open=True, listed=cand_list, saved=False) }}</template>
     <template id="pc-new-gate">{{ pc.gate_item(plan, blank_gate, rule_text, open=True) }}</template>
     <template id="pc-new-outcome">{{ pc.outcome_item(plan, blank_outcome, rule_text, open=True) }}</template>
     <template id="pc-new-source">{{ pc.source_row(blank_source, 0, False) }}</template>

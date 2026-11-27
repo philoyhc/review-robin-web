@@ -108,7 +108,8 @@ answer only for a Published or Closed exercise.
   *super admin* or *admin*. Each lobby's H1 and tab read its name, as Review Robin's
   do (author, 2026-11-13). An exercise's operator pages add Review Robin's chrome
   under a breadcrumb (ruling 14, segment AD1D): *Exercise Home*
-  double-height on the left; a Setup row (Process, Form, Panels, Emails)
+  double-height on the left; a Setup row (Process, Invitees while shown (segment AD2N), Form, Panels,
+  Emails)
   and an Operations row (Dossiers, Evaluations, Extract data); and a
   status row of the exercise, its form, gates, outcomes, emails and
   applications.
@@ -1489,7 +1490,13 @@ row in view, or clears them, and *Set ticked rows* with none ticked says *No
 rows ticked*. *Download CSV* writes the rows in view in the shape *Upload
 CSV* reads, a cell a spreadsheet would run as a formula guarded with `'` (a
 lone `-`, no status, is not), named `<code>_dossiers_<date>.csv`; *Upload
-CSV* undoes the guard. The page has no *Save*; nothing is kept until AD2.
+CSV* undoes the guard. The grid has no *Save*; nothing in it is kept until AD2.
+While Create dossiers is in the process (as saved), a *Created by hand* card
+below the grid lists its entries (Name, Email, Title, Added, *Remove*) with
+its add row, each change kept as made (segment AD2N); the page's placeholder
+line says the grid's changes are not saved and the card's are. Process's
+link to it reads *Save, then manage on Dossiers* on an item not yet saved, as
+the Form's link to Invitees does while the tab is not shown.
 
 - **The header** (ruling 52). Under the stages, an information row holds
   each column's kind, counts, rule, lock and *Released*, top-aligned; under

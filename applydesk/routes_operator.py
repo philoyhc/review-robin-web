@@ -1807,11 +1807,13 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
             key: {"label": q.label, "options": list(q.options)}
             for key, q in sample_data.list_questions(exercise.public_id).items()
         },
-        # Ruling 77: the Candidates list, read only where Process draws it.
+        # Ruling 77: the Candidates list, read where Process or Dossiers
+        # draws it (segment AD2N).
         cand_list=(
             _candidates_of(exercise.public_id) if section in ("process", "dossiers") else ()
         ),
-        # Ruling 84: the Form's invite list, read only where Process draws it.
+        # Ruling 84: the Form's invite list, read where Process or Invitees
+        # draws it (segment AD2N).
         invitee_list=(
             _invitees_of(exercise.public_id) if section in ("process", "invitees") else ()
         ),
@@ -1820,6 +1822,11 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         per_person=_per_person_of(exercise.public_id) if section == "process" else 1,
         # The Form's Who may apply as stored (ruling 84): unset reads open.
         who_may_apply=exercise_store.eligibility_of(exercise.eligibility) or "open",
+        # Segment AD2N: whether the Setup row shows Invitees, so Process
+        # says to save first and Invitees says when the list is unused.
+        invitees_tab=(
+            invitees.tab_shown(exercise.public_id) if section in ("process", "invitees") else False
+        ),
         # The timeline checked as a whole, as saved (segment AD2K).
         checked=timeline_checks.of(exercise.public_id) if section == "process" else None,
         short=clock.short,

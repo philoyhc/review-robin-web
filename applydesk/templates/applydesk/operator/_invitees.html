@@ -1,6 +1,6 @@
 {# Invitees (segment AD2N, author 2026-11-27): the people a Form for
    invitees is for, kept off Process. Modeled on Panels: a roster card, its
-   count and the add row, above a full-width table. The tab shows only while
+   count, the add row and the full-width table. The tab shows only while
    the Form's Who may apply is Invitees as saved; the page answers either
    way. Each change is kept as it is made, through the invitees routes
    (`applydesk/invitees.py`). #}
@@ -8,7 +8,7 @@
 {% set listed = invitee_list %}
 <div class="iv" data-people-root>
   <p class="muted pc-intro">The people the Form is for: only they may submit, each up to the Form's <em>Max dossiers per person</em>. People are added here or on Process; each change is kept as it is made.</p>
-  {% if who_may_apply != "invitation" %}<p class="pc-line muted">The Form's <em>Who may apply</em> is not <em>Invitees</em>: this list is kept, unused, until it is.</p>{% endif %}
+  {% if who_may_apply != "invitation" %}<p class="pc-line muted" data-iv-unused>The Form's <em>Who may apply</em> is not <em>Invitees</em>: this list is kept, unused, until it is.</p>{% elif not invitees_tab %}<p class="pc-line muted" data-iv-unused>Create dossiers makes this exercise's dossiers, so the Form writes to them: this list is kept, unused.</p>{% endif %}
   <section class="card pn-roster iv-roster" aria-label="Invitees roster">
     <div class="pn-readout">
       <span class="pn-rl">Invitees:</span> <span class="chip chip-info" data-cand-tally="invitees">{{ listed | length }}</span>

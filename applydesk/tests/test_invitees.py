@@ -163,3 +163,53 @@ def test_the_invitees_tab_shows_while_the_form_is_for_invitees() -> None:
     led = {"stages": [_stage("People", candidates=True), _stage("Applications", form=form)]}
     assert _post_process(client, made, led).status_code == 200
     assert tab not in client.get(f"{LOBBY}/{made}/process").text
+
+
+def test_process_shows_count_lines_and_links_not_tables() -> None:
+    """Segment AD2N: Process's Form and Create dossiers items keep their
+    add rows and show a count line and a link, which says to save first
+    while the page it names does not yet show the list."""
+    from applydesk.tests.test_new_exercise import _create, _post_process, _stage
+
+    client = _client()
+    made = _create(client)
+    base = f"/applydesk/operator/exercises/{made}"
+    form = {"from": "", "to": "", "receipt": False, "reminder": False}
+    sent = {"stages": [_stage("Applications", form=form)], "who_may_apply": "open"}
+    assert _post_process(client, made, sent).status_code == 200
+    page = client.get(f"{base}/process").text
+    cards = page[page.index('id="pc-cards"') : page.index('<template id="pc-new-stage">')]
+    assert f'<a href="{base}/invitees">Save, then manage on Invitees →</a>' in cards
+    assert _post_process(client, made, {**sent, "who_may_apply": "invitation"}).status_code == 200
+    page = client.get(f"{base}/process").text
+    cards = page[page.index('id="pc-cards"') : page.index('<template id="pc-new-stage">')]
+    assert f'<a href="{base}/invitees">Manage on Invitees →</a>' in cards
+    assert "data-cand-list" not in cards and "data-cand-sum" in cards
+    led = {"stages": [_stage("People", candidates=True), _stage("Applications", form=form)]}
+    assert _post_process(client, made, led).status_code == 200
+    page = client.get(f"{base}/process").text
+    cards = page[page.index('id="pc-cards"') : page.index('<template id="pc-new-stage">')]
+    assert f'<a href="{base}/dossiers">Manage on Dossiers →</a>' in cards
+    assert "data-cand-list" not in cards
+    fresh = page[page.index('<template id="pc-new-candidates">') :]
+    assert "Save, then manage on Dossiers →" in fresh[: fresh.index("</template>")]
+
+
+def test_the_invitees_page_says_when_create_dossiers_leaves_it_unused() -> None:
+    """Cold read (AD2N): with Create dossiers on the timeline the list is
+    unused even while Who may apply is stored as Invitees; and the Dossiers
+    page's placeholder line says the card below keeps its changes."""
+    from applydesk.tests.test_new_exercise import _create, _post_process, _stage
+
+    client = _client()
+    made = _create(client)
+    base = f"/applydesk/operator/exercises/{made}"
+    form = {"from": "", "to": "", "receipt": False, "reminder": False}
+    sent = {"stages": [_stage("Applications", form=form)], "who_may_apply": "invitation"}
+    assert _post_process(client, made, sent).status_code == 200
+    assert "data-iv-unused" not in client.get(f"{base}/invitees").text
+    led = {"stages": [_stage("People", candidates=True), _stage("Applications", form=form)]}
+    assert _post_process(client, made, {**led, "who_may_apply": "invitation"}).status_code == 200
+    assert "data-iv-unused" in client.get(f"{base}/invitees").text
+    dossiers = client.get(f"{base}/dossiers").text
+    assert "<em>Created by hand</em> keeps each change" in dossiers
