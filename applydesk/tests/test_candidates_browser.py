@@ -206,3 +206,40 @@ def test_an_answer_after_a_move_redraws_the_item_on_the_page(page: Page) -> None
     moved = other.locator('.pc-item[data-item="candidates"]')
     moved.locator("[data-cand-list] tr", has_text="zoe.candidate@example.edu").wait_for()
     assert moved.locator("[data-cand-count]").text_content() == "1 dossier"
+
+
+def test_a_directory_match_by_sign_in_name_is_offered(page: Page) -> None:
+    """Codex on #4255: typed by its sign-in name, a directory match whose
+    address differs is still offered, and Add takes it."""
+    _with_candidates()
+    page.route(
+        "**/candidates/search*",
+        lambda route: route.fulfill(
+            json={
+                "on_record": [],
+                "directory": [
+                    {
+                        "object_id": "o-9",
+                        "name": "Jane Tan",
+                        "address": "jane.tan@example.edu",
+                        "upn": "e0123456@u.edu",
+                    }
+                ],
+                "directory_failed": False,
+            }
+        ),
+    )
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
+    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
+    stage = page.locator("#pc-cards .pc").filter(
+        has=page.locator('.pc-item[data-item="candidates"]')
+    )
+    if not stage.locator(".fc-body").first.is_visible():
+        stage.locator("[data-fc-toggle]").first.click()
+    if not item.locator("[data-cand-search]").is_visible():
+        item.locator("[data-pi-toggle]").click()
+    _pick(item, "e0123", "e0123456@u.edu")
+    label = item.locator("[data-cand-search]").input_value()
+    assert label == "Jane Tan (jane.tan@example.edu) · e0123456@u.edu · directory"
+    item.locator("[data-cand-search]").fill("e0123456@u.edu")  # the sign-in name typed whole
+    assert item.locator("[data-cand-add]").is_enabled()

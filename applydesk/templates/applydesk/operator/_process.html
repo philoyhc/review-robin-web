@@ -1779,16 +1779,23 @@
   function found(item, got) {
     var list = item.querySelector("[data-cand-options]"), offers = {};
     list.textContent = "";
-    function offer(label, email, body) {
+    function offer(label, keys, body) {
+      // Two accounts with one name and address keep two picks (as the
+      // Operators box does, Codex on #4122).
+      for (var n = 2, base = label; offers[label.toLowerCase()]; n++) label = base + " (" + n + ")";
       var o = document.createElement("option");
       o.value = label; list.appendChild(o);
-      offers[label.toLowerCase()] = body; offers[email.toLowerCase()] = body;
+      offers[label.toLowerCase()] = body;
+      keys.forEach(function (k) { if (k) offers[k.toLowerCase()] = body; });
     }
     got.on_record.forEach(function (p) {
-      offer(p.name ? p.name + " (" + p.email + ")" : p.email, p.email, { action: "add", person_id: p.id });
+      offer(p.name ? p.name + " (" + p.email + ")" : p.email, [p.email], { action: "add", person_id: p.id });
     });
     got.directory.forEach(function (u) {
-      offer(u.name + " (" + u.address + ") · directory", u.address, { action: "add", object_id: u.object_id, address: u.address });
+      // The sign-in name too, where it is not the address: the browser's
+      // list shows only offers holding what was typed (Codex on #4255).
+      var upn = u.upn && u.upn.toLowerCase() !== u.address.toLowerCase() ? u.upn : "";
+      offer(u.name + " (" + u.address + ")" + (upn ? " · " + upn : "") + " · directory", [u.address, upn], { action: "add", object_id: u.object_id, address: u.address });
     });
     item._candOffers = offers;
     if (!got.on_record.length && !got.directory.length) item.querySelector("[data-cand-said]").textContent = got.directory_failed ? "No one on record; the directory could not be searched." : "No one found.";

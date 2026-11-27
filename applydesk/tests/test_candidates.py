@@ -241,3 +241,28 @@ def test_dossiers_per_person_is_saved_with_process_and_refused_below_what_is_hel
         assert refused.status_code == 400 and "1 to 20" in refused.json()["error"]
     # Left out, it is unchanged.
     assert _post_process(client, MODEL, {"stages": sent["stages"]}).status_code == 200
+
+
+def test_the_search_names_a_directory_match_s_sign_in_too(monkeypatch: Any) -> None:
+    """Codex on #4255: a directory match found by its sign-in name, when
+    its address differs, carries that name so the typeahead can offer it."""
+    from applydesk import allowlist
+    from applydesk.directory import SearchResult
+    from cordware.graph import DirectoryUser
+
+    jane = DirectoryUser(
+        id="o-9",
+        display_name="Jane Tan",
+        mail="jane.tan@example.edu",
+        user_principal_name="e0123456@u.edu",
+    )
+    monkeypatch.setattr(allowlist, "search", lambda *a, **k: SearchResult((), (jane,)))
+    found = _client().get(f"{LOBBY}/{MODEL}/candidates/search", params={"q": "e0123"}).json()
+    assert found["directory"] == [
+        {
+            "object_id": "o-9",
+            "name": "Jane Tan",
+            "address": "jane.tan@example.edu",
+            "upn": "e0123456@u.edu",
+        }
+    ]
