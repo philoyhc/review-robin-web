@@ -55,8 +55,10 @@ def test_add_makes_as_many_dossiers_as_its_box_says(page: Page) -> None:
     _pick(item, "admin@", "admin@example.edu")
     item.locator("[data-cand-n]").fill("2")
     item.locator("[data-cand-add]").click()
-    item.locator("[data-cand-fold-n]").filter(has_text="Dossiers (2)").wait_for()
-    titles = item.locator("[data-cand-list] tbody tr td:nth-child(3)")
+    item.locator("[data-cand-sum]").filter(has_text="2 dossiers for 1 person").wait_for()
+    # The list itself is on the Dossiers page (segment AD2N).
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/dossiers")
+    titles = page.locator(".cd-card [data-cand-list] tbody tr td:nth-child(3)")
     assert [titles.nth(i).inner_text() for i in range(2)] == ["Dossier 1", "Dossier 2"]
 
 

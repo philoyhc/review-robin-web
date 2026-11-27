@@ -55,11 +55,10 @@ def test_the_list_is_kept_as_it_is_changed(page: Page) -> None:
         item.locator("[data-pi-toggle]").click()
     _pick(item, "zoe.cand", "zoe.candidate@example.edu")
     item.locator("[data-cand-add]").click()
-    row = item.locator("[data-cand-list] tr", has_text="zoe.candidate@example.edu")
-    row.wait_for()
+    # On Process the list is a count line (segment AD2N).
+    sum_ = item.locator("[data-cand-sum]")
+    sum_.filter(has_text="1 dossier for 1 person").wait_for()
     assert item.locator("[data-cand-count]").text_content() == "1 dossier"
-    row.locator("[data-cand-remove]").click()
-    item.locator("[data-cand-none]").wait_for()
     item.locator("[data-cand-file]").set_input_files(
         files=[
             {
@@ -69,7 +68,7 @@ def test_the_list_is_kept_as_it_is_changed(page: Page) -> None:
             }
         ]
     )
-    item.locator("[data-cand-list] tr", has_text="yan@example.edu").wait_for()
+    sum_.filter(has_text="2 dossiers for 2 people").wait_for()
     assert "is not an email address" in item.locator("[data-cand-bad]").inner_text()
     assert item.locator("[data-cand-said]").inner_text() == "1 added."
     # Kept as made: Process's own Save has nothing unsaved.
@@ -100,11 +99,11 @@ def test_candidates_moved_to_another_stage_shows_the_list_as_it_stands(page: Pag
         item.locator("[data-pi-toggle]").click()
     _pick(item, "zoe.cand", "zoe.candidate@example.edu")
     item.locator("[data-cand-add]").click()
-    item.locator("[data-cand-list] tr", has_text="zoe.candidate@example.edu").wait_for()
+    item.locator("[data-cand-sum]").filter(has_text="1 dossier for 1 person").wait_for()
     first.locator('[data-pc-act="remove-candidates"]').click()
     other.locator('[data-pc-act="candidates"]').click()
     moved = other.locator('.pc-item[data-item="candidates"]')
-    assert "zoe.candidate@example.edu" in (moved.locator("[data-cand-list]").text_content() or "")
+    assert moved.locator("[data-cand-sum]").inner_text() == "1 dossier for 1 person"
     assert moved.locator("[data-cand-count]").text_content() == "1 dossier"
 
 
@@ -133,13 +132,9 @@ def test_changes_are_sent_one_at_a_time(page: Page) -> None:
         held.append(route)
 
     page.route("**/candidates", hold)
-    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
-    stage = page.locator("#pc-cards .pc").nth(0)
-    if not stage.locator(".fc-body").first.is_visible():
-        stage.locator("[data-fc-toggle]").first.click()
-    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
-    if not item.locator("[data-cand-search]").is_visible():
-        item.locator("[data-pi-toggle]").click()
+    # Removing is the Dossiers page's (segment AD2N), through the same script.
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/dossiers")
+    item = page.locator('.cd-card [data-cand-live][data-cand-kind="candidates"]')
     item.locator("[data-cand-remove]").first.click()
     item.locator("[data-cand-remove]").last.click()
     page.wait_for_timeout(300)
@@ -209,7 +204,7 @@ def test_an_answer_after_a_move_redraws_the_item_on_the_page(page: Page) -> None
     other.locator('[data-pc-act="candidates"]').click()
     held.pop().fallback()
     moved = other.locator('.pc-item[data-item="candidates"]')
-    moved.locator("[data-cand-list] tr", has_text="zoe.candidate@example.edu").wait_for()
+    moved.locator("[data-cand-sum]").filter(has_text="1 dossier for 1 person").wait_for()
     assert moved.locator("[data-cand-count]").text_content() == "1 dossier"
 
 

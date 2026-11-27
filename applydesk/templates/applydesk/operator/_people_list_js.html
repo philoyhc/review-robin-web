@@ -16,12 +16,23 @@
   function draw(item, got) {
     var body = item.querySelector("[data-cand-list] tbody"), titles = item.dataset.candTitles === "true";
     var via = item.dataset.candVia === "true";
-    body.textContent = "";
-    if (!got.candidates.length) {
+    // On Process the list is a count line, the table kept on its own page
+    // (segment AD2N).
+    var sum = item.querySelector("[data-cand-sum]");
+    if (sum) {
+      var u = (item.dataset.candUnit || "|").split("|"), cn = got.candidates.length, who = {};
+      got.candidates.forEach(function (c) { who[c.person_id] = true; });
+      var ppl = Object.keys(who).length;
+      sum.textContent = !cn ? "No one yet"
+        : item.dataset.candKind === "candidates" ? cn + " " + (cn === 1 ? u[0] : u[1]) + " for " + ppl + (ppl === 1 ? " person" : " people")
+        : cn + " " + (cn === 1 ? u[0] : u[1]);
+    }
+    if (body) body.textContent = "";
+    if (body && !got.candidates.length) {
       var none = el("tr"), td = el("td", "muted", "No one yet.");
       none.setAttribute("data-cand-none", ""); td.colSpan = 4 + (titles ? 1 : 0) + (via ? 1 : 0); none.appendChild(td); body.appendChild(none);
     }
-    got.candidates.forEach(function (c) {
+    if (body) got.candidates.forEach(function (c) {
       var tr = el("tr"), b = el("button", "btn btn-destructive btn-short", "Remove");
       tr.dataset.candId = c.id;
       tr.appendChild(el("td", "", c.name || "—")); tr.appendChild(el("td", "", c.email));

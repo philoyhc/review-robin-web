@@ -148,7 +148,7 @@ def test_the_invitees_tab_shows_while_the_form_is_for_invitees() -> None:
 
     client = _client()
     made = _create(client)
-    tab = f'href="/applydesk/operator/exercises/{made}/invitees"'
+    tab = f'class="xnav-tab" href="/applydesk/operator/exercises/{made}/invitees"'
     form = {"from": "", "to": "", "receipt": False, "reminder": False}
     sent = {"stages": [_stage("Applications", form=form)], "who_may_apply": "open"}
     assert _post_process(client, made, sent).status_code == 200

@@ -343,8 +343,9 @@ def test_invitees_show_with_their_choice_and_are_added(page: Page) -> None:
     assert lst.locator("[data-cand-tokens] .token").count() == 1
     assert "nobody.here@nowhere.example" in entry.input_value()
     lst.locator("[data-cand-add-all]").click()
-    lst.locator("[data-cand-list] tr", has_text="admin@example.edu").wait_for()
-    assert lst.locator("[data-cand-fold-n]").inner_text() == "Invitees (1)"
+    # On Process the list is a count line and a link (segment AD2N).
+    lst.locator("[data-cand-sum]").filter(has_text="1 invitee").wait_for()
+    assert "Manage on Invitees" in lst.locator("[data-cand-line]").inner_text()
     assert lst.locator("[data-cand-tokens] .token").count() == 0
 
 
@@ -397,7 +398,7 @@ def test_an_invite_that_fails_keeps_its_pill(page: Page) -> None:
     lst.locator("[data-cand-said]").filter(has_text="Not invited").wait_for()
     assert pills.count() == 1
     assert "Refused for the test." in lst.locator("[data-cand-said]").inner_text()
-    assert lst.locator("[data-cand-list] tbody tr").count() == 1
+    assert lst.locator("[data-cand-sum]").inner_text() == "1 invitee"
 
 
 def test_a_name_waits_when_the_directory_is_down(page: Page) -> None:
@@ -498,7 +499,7 @@ def test_invitees_are_suggested_as_a_name_is_typed(page: Page) -> None:
     entry.press("Enter")
     assert pills.count() == 2
     lst.locator("[data-cand-add-all]").click()
-    lst.locator("[data-cand-fold-n]").filter(has_text="Invitees (2)").wait_for()
+    lst.locator("[data-cand-sum]").filter(has_text="2 invitees").wait_for()
 
 
 def test_the_invitees_tab_adds_and_removes(page: Page) -> None:

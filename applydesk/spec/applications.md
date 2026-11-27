@@ -955,19 +955,19 @@ but the lobby's *Stage* column reads:
     returns the menu to the stored value. Under the Form's lock, a changed
     value is refused by the server while its stage is published.
   - **Invitees** (`applydesk/invitees.py`): while *Invitees* is chosen the
-    item shows the invite list. *Add invitees* takes names or emails
-    separated by commas, as a panel's members box (author, 2026-11-27):
-    each that names one person (by address, or the only match) becomes a
-    pill, its name the record's or the directory's; one not found, already
-    invited or matching several stays in the box as typed, and the line
-    says so. Suggestions list under the box as a name is typed, the
-    people search's matches; a pick is that account's pill. The box grows
-    with its pills to five rows, then scrolls. *Add* invites each pill;
-    *Upload CSV…* takes an *Email*
-    column. The list folds under *Invitees (n)*, open up to ten, with
-    *Remove* per row and a row per person. Each add and removal is made at once,
-    audited (`invitee.added`, `invitee.removed`), outside the Form's lock and
-    not waiting for *Save*. Routes: `GET …/invitees/search`, `POST
+    item shows *Add invitees* and *Upload CSV…* and a count line, *4
+    invitees · Manage on Invitees →*; the list itself is the Invitees tab's
+    (segment AD2N). *Add invitees* takes names or emails separated by
+    commas, as a panel's members box (author, 2026-11-27): each that names
+    one person (by address, or the only match) becomes a pill, its name the
+    record's or the directory's; one not found, already invited or matching
+    several stays in the box as typed, and the line says so. Suggestions
+    list under the box as a name is typed, the people search's matches; a
+    pick is that account's pill. The box grows with its pills to five
+    rows, then scrolls. *Add* invites each pill; *Upload CSV…* takes an
+    *Email* column. Each add and removal is made at once, audited
+    (`invitee.added`, `invitee.removed`), outside the Form's lock and not
+    waiting for *Save*. Routes: `GET …/invitees/search`, `POST
     …/invitees` (`search`, `remove` and `csv` changes, as Create dossiers').
     A person is listed once; *Remove* retires the row and adding them again
     revives it. The list stays when another choice is picked, unused. An
@@ -975,6 +975,13 @@ but the lobby's *Stage* column reads:
     only as they submit. Checking the list when someone applies is not
     built (AD4). *Invitees* with no one on the list is an Outline warning
     (`timeline_checks.NO_INVITEES`), not an error.
+- **The Invitees tab** (segment AD2N, author 2026-11-27), `…/invitees`: in
+  the Setup row after *Process* and before *Form*, shown only while the
+  Form's *Who may apply* is *Invitees* as saved and no Create dossiers is on
+  the timeline (`invitees.tab_shown`); the page answers either way, saying
+  when the list is kept unused. Modeled on Panels: a roster card with the
+  count, *Add invitees* and *Upload CSV…*, and the full list (Name, Email,
+  *How added*: Search or CSV, Added, *Remove*), each change kept as made.
 - **A gate** is one Review Robin run (ruling 28), in four parts, in this
   order. The *Gate* and *Evaluators* cards are collapsible, start shut and
   say what they hold on their summary line (`stages.gate_summary`,
@@ -1292,8 +1299,11 @@ but the lobby's *Stage* column reads:
 - **The *Create dossiers* item** (rulings 77 and 83, `applydesk/candidates.py`; *Candidates* in code): people
   kept by hand, each holding the dossiers added for them, shown as a stage
   item with a count, one row of *Add someone*, *Dossiers per person*, *Add*
-  and *Upload CSV…*, and a list folding under *Dossiers (n)*, open up to
-  ten (name, email, title, when added, *Remove*). A Form after it invites
+  and *Upload CSV…*, and a count line, *34 dossiers for 12 people · Manage
+  on Dossiers →*. The list (name, email, title, when added, *Remove*),
+  folding under *Dossiers (n)*, open up to ten, is the Dossiers page's
+  *Created by hand* card, while Create dossiers is in the process, before
+  and after publishing (segment AD2N). A Form after it invites
   from its dossiers (the Form's *Who may apply*); feeding gates as dossiers
   is not built. At most one stage holds it, with the form, with gates or
   alone (`stages.problems`): *+Create dossiers* is disabled with its reason

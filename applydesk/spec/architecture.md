@@ -35,7 +35,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/process_store.py` | An exercise's timeline in the database ("Process"): `load` and `stored_stages` build the dataclasses the pages read, `save` keeps a page's snapshot whole (the revision guard, keys, the references check, the audit), `move_form` is Home's *Open form* and *Close form*. Flushes, never commits; refuses with `Refused` and its `key` |
 | `applydesk/rules.py` | The rule engine, the only rule evaluator: `propose` answers what each rule would change in a table of dossiers (Dossiers' *Apply rules…*), over `Dossier`, `Column` and `Cell` rows built by `columns_of` and `rows_of`. Pure: reads no database |
 | `applydesk/candidates.py` | An exercise's Candidates ("Candidates"): `listing`, `add`, `remove` and `import_csv`. Flushes, never commits |
-| `applydesk/invitees.py` | A Form's invite list ("Invitees"): `listing`, `full`, `add`, `remove` and `import_csv`, sharing `candidates.read_csv`. Flushes, never commits |
+| `applydesk/invitees.py` | A Form's invite list ("Invitees"): `listing`, `full`, `add`, `remove` and `import_csv`, sharing `candidates.read_csv`; `tab_shown`, whether the Setup row shows the Invitees tab. Flushes, never commits |
 | `applydesk/timeline_checks.py` | The timeline checked as saved, whole: the errors and warnings Process's Outline shows (`NO_FIRST_ITEM`, `POPULATE_AFTER_FORM`, `NO_ENTRIES`, `NO_INVITEES`, `NO_LAST_OUTCOME`) |
 | `applydesk/workflow.py` | Each item's state, the status row, the emails owed, the counts and the steps. Its email readers read `email_store`, else the sample's: `sends` (the stored ticks), `template_text` (subject, body and version from one read) and `emails` |
 | `applydesk/locks.py` | A stage's status and what a published stage fixes (ruling 35); `status_tally`, the exercises counted by status |
@@ -323,6 +323,16 @@ reads as Create dossiers' does. The list is kept as each change is made, not by
 Process's save, through `GET …/invitees/search` and `POST …/invitees`. An
 archived or deleted exercise refuses every change. `timeline_checks` warns when
 the Form is for invitees and none is listed.
+
+The list has a page, the Invitees tab (`…/invitees`, segment AD2N), in the
+Setup row after Process while `tab_shown` holds: *Invitees* saved and no
+Create dossiers on the timeline. `web.exercise_nav` drops the tab otherwise;
+the route answers either way. Process, Invitees and the Dossiers page's
+*Created by hand* card draw their lists with one macro
+(`_process_cards.html` `people_list`) and one script
+(`templates/applydesk/operator/_people_list_js.html`), keyed by
+`data-cand-kind`; Process shows a count line and a link in place of the
+table.
 
 ### Candidates
 

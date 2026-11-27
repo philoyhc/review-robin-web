@@ -3,6 +3,6 @@
    are built from the sample, not from edits made on other pages; the /me
    pages and a dossier's operator page, whose controls are all off, say
    so (cold read). #}
-{# `saves` (AD1U Item 3): a page that saves (the Lobby, Home, Form, Process, Panels, Emails)
+{# `saves` (AD1U Item 3): a page that saves (the Lobby, Home, Form, Process, Invitees, Panels, Emails)
    shows no placeholder line. #}
 {% if not saves %}<p class="placeholder"><strong>Placeholder.</strong> {% if section == "extract" %}Sample data: the files are built from the sample, not from edits made on other pages.{% elif read_only %}Sample data, shown as it will look: nothing here can be changed yet.{% else %}Sample data: what you do here works on screen, but nothing is saved, and a reload restores the sample.{% endif %}</p>{% endif %}
