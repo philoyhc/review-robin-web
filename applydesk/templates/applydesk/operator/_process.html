@@ -1882,6 +1882,8 @@
   function current(item) {
     return root.querySelector('#pc-cards [data-cand-live][data-cand-kind="' + item.dataset.candKind + '"]') || item;
   }
+  // Each change answers with its outcome, "" when saved or why not, so a
+  // batch can keep what failed (Codex on #4264).
   function change(item, body) {
     var said = item.querySelector("[data-cand-said]");
     said.textContent = "Saving…";
@@ -1893,12 +1895,19 @@
           // this change was waiting (Codex on #4161).
           var now = current(item);
           var nowSaid = now.querySelector("[data-cand-said]");
-          if (!got[0]) { nowSaid.textContent = (got[1] && (got[1].error || got[1].detail)) || "Not saved: try again."; return; }
+          if (!got[0]) {
+            var why = (got[1] && (got[1].error || got[1].detail)) || "Not saved: try again.";
+            nowSaid.textContent = why;
+            return why;
+          }
           draw(now, got[1]);
+          return "";
         }, function () {
           current(item).querySelector("[data-cand-said]").textContent = "Not saved: try again.";
+          return "Not saved: try again.";
         });
     });
+    return queue;
   }
   // The typeahead's offers (author, 2026-11-27): every match the search
   // returns, listed under the box (Codex on #4255: the browser's own list
@@ -2124,9 +2133,23 @@
     if (x) { x.closest(".token").remove(); addable(item); item.querySelector("[data-cand-entry]").focus(); return; }
     if (e.target.closest("[data-cand-add-all]")) {
       // What is still typed is looked up first; what is not found stays.
+      // Each pill goes once saved; one that fails stays to be tried again,
+      // and the line names it once the batch is done (Codex on #4264).
       settle(item, true).then(function () {
-        pillsOf(item).forEach(function (t) { change(item, JSON.parse(t.dataset.body)); t.remove(); });
-        addable(item);
+        var pills = pillsOf(item);
+        if (!pills.length) return;
+        item.querySelector("[data-cand-add-all]").disabled = true;
+        Promise.all(pills.map(function (t) {
+          return change(item, JSON.parse(t.dataset.body)).then(function (why) {
+            if (!why) t.remove();
+            return why ? t.textContent.replace(/×$/, "") + " (" + why + ")" : "";
+          });
+        })).then(function (failed) {
+          failed = failed.filter(Boolean);
+          var now = current(item);
+          if (failed.length) now.querySelector("[data-cand-said]").textContent = "Not invited: " + failed.join("; ");
+          addable(item);
+        });
       });
       return;
     }

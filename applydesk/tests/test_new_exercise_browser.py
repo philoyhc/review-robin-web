@@ -348,6 +348,58 @@ def test_invitees_show_with_their_choice_and_are_added(page: Page) -> None:
     assert lst.locator("[data-cand-tokens] .token").count() == 0
 
 
+def test_an_invite_that_fails_keeps_its_pill(page: Page) -> None:
+    """Codex on #4264: of a batch, a pill whose invite fails stays to be
+    tried again and the line names it; the rest are invited."""
+    import json
+
+    from applydesk import db, people
+
+    session = db.new_session()
+    try:
+        people.pending(session, "zed.pill@example.edu", None)
+        session.commit()
+    finally:
+        session.close()
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Failed Invite Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    page.goto(page.url + "/process")
+    stage = page.locator("#pc-cards > .fc").first
+    stage.locator('[data-pc-act="form"]').click()
+    stage.locator('[data-rel="who-may-apply"]').select_option("invitation")
+    lst = stage.locator('[data-cand-live][data-cand-kind="invitees"]')
+    lst.locator("[data-cand-entry]").fill("admin@example.edu, zed.pill@example.edu,")
+    pills = lst.locator("[data-cand-tokens] .token")
+    pills.nth(1).wait_for()
+
+    adds: list[str] = []
+
+    def refuse_one(route: Route) -> None:
+        # The first invite sent is refused; every other request goes on.
+        if route.request.method == "POST":
+            sent = json.loads(route.request.post_data or "{}")
+            if sent.get("action") == "add":
+                adds.append(str(sent))
+                if len(adds) == 1:
+                    route.fulfill(
+                        status=400,
+                        body=json.dumps({"error": "Refused for the test."}),
+                        headers={"content-type": "application/json"},
+                    )
+                    return
+        route.fallback()
+
+    page.route("**/invitees", refuse_one)
+    lst.locator("[data-cand-add-all]").click()
+    lst.locator("[data-cand-said]").filter(has_text="Not invited").wait_for()
+    assert pills.count() == 1
+    assert "Refused for the test." in lst.locator("[data-cand-said]").inner_text()
+    assert lst.locator("[data-cand-list] tbody tr").count() == 1
+
+
 def test_a_stages_items_reorder_within_the_rules(page: Page) -> None:
     """Ruling 84: a stage's gates swap by their grips and save in that
     order; a move putting a gate before Create dossiers, or the outcome
