@@ -70,12 +70,16 @@
       <option value="dossiers"{% if from_dossiers %} selected{% else %} disabled{% endif %}>Dossiers</option>
     </select></label>
   </div>
+  </fieldset>
   {# The invite list, shown while Invitees is chosen; kept when another
-     choice is picked (segment AD2I). #}
+     choice is picked (segment AD2I). Outside the Form's lock, as Create
+     dossiers' list is: people are invited, or taken off, while it is open,
+     each change kept as it is made (cold read). #}
   <div class="pi-sec" data-invitees-row{% if from_dossiers or who_may_apply != "invitation" %} hidden{% endif %}>
     <p class="pc-line">Invitees may submit up to the dossiers per person; their dossiers are made only as they submit.</p>
     {{ people_list("invitees", invitee_list, url('/operator/exercises/' ~ exercise.public_id ~ '/invitees'), "invitee", "invitees", "A CSV has an <em>Email</em> column and, if you like, a <em>Name</em>; each row is one person.", false) }}
   </div>
+  {{ lock_open(form_lock) }}
   {{ per_person_field(hidden=plan.stages | selectattr("candidates") | list | length > 0) }}
   {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
   <div class="pc-release pi-sec" data-pc-release>
@@ -125,8 +129,8 @@
 {% endmacro %}
 
 {# Ruling 77: Candidates, a list of people kept by hand, through the
-   people search or a CSV; the form's roster on an Invitation only
-   exercise, or fed to gates as dossiers. At most one stage holds it,
+   people search or a CSV, one dossier each: a Form after it invites
+   from them (ruling 84), and the gates read them. At most one stage holds it,
    placed by Process's Save; the list itself is kept as each change is
    made (`applydesk/candidates.py`). #}
 {% macro candidates_item(open=False, listed=()) %}

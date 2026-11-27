@@ -43,22 +43,27 @@ def upgrade() -> None:
     with op.batch_alter_table("invitee", schema=None) as batch_op:
         batch_op.create_index(batch_op.f("ix_invitee_exercise_id"), ["exercise_id"], unique=False)
     # The roster an Invitation only exercise kept on its Form's stage, as
-    # invitees: each person once, the earliest entry's via and time.
+    # invitees: each person once, from their earliest live entry (the
+    # lowest id), its via, actor and time together.
     op.execute(
         sa.text(
             """
             INSERT INTO invitee (exercise_id, person_id, via, added_by_id, added_at)
-            SELECT c.exercise_id, c.person_id, MIN(c.via), MIN(c.added_by_id), MIN(c.added_at)
+            SELECT c.exercise_id, c.person_id, c.via, c.added_by_id, c.added_at
             FROM candidate c
-            JOIN exercise e ON e.id = c.exercise_id
-            WHERE e.eligibility = 'invitation'
-              AND c.removed_at IS NULL
-              AND EXISTS (
-                SELECT 1 FROM stage s
-                WHERE s.exercise_id = c.exercise_id AND s.retired_at IS NULL
-                  AND s.holds_form IS TRUE AND s.holds_candidates IS TRUE
-              )
-            GROUP BY c.exercise_id, c.person_id
+            WHERE c.id IN (
+              SELECT MIN(c2.id)
+              FROM candidate c2
+              JOIN exercise e ON e.id = c2.exercise_id
+              WHERE e.eligibility = 'invitation'
+                AND c2.removed_at IS NULL
+                AND EXISTS (
+                  SELECT 1 FROM stage s
+                  WHERE s.exercise_id = c2.exercise_id AND s.retired_at IS NULL
+                    AND s.holds_form IS TRUE AND s.holds_candidates IS TRUE
+                )
+              GROUP BY c2.exercise_id, c2.person_id
+            )
             """
         )
     )
