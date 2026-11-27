@@ -281,3 +281,24 @@ def test_gates_and_outcomes_appear_once_a_first_item_is_added(page: Page) -> Non
     adds.locator('[data-pc-act="candidates"]').click()
     assert adds.locator('[data-pc-act="gate"]').is_visible()
     assert adds.locator('[data-pc-act="outcome"]').is_visible()
+
+
+def test_who_may_apply_follows_create_dossiers(page: Page) -> None:
+    """Ruling 84: a Form after Create dossiers shows Dossiers, locked;
+    removing Create dossiers gives the choice back, Dossiers greyed out."""
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Who May Apply Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    page.goto(page.url + "/process")
+    stage = page.locator("#pc-cards > .fc").first
+    stage.locator('[data-pc-act="candidates"]').click()
+    stage.locator('[data-pc-act="form"]').click()
+    who = stage.locator('[data-rel="who-may-apply"]')
+    assert who.input_value() == "dossiers" and who.is_disabled()
+    stage.locator('[data-pc-act="remove-candidates"]').click()
+    assert who.is_enabled() and who.input_value() == "open"
+    assert who.evaluate("s => s.querySelector('option[value=dossiers]').disabled")
+    who.select_option("invitation")
+    assert who.input_value() == "invitation"

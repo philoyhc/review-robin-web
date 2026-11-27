@@ -234,13 +234,12 @@ def test_home_names_the_revision_of_the_settings_it_shows() -> None:
     [
         ({"blind": True}, "blind"),
         ({"code": "RA-28"}, "code"),
-        ({"eligibility": "Invitation only"}, "eligibility"),
     ],
 )
 def test_what_the_page_locks_the_server_refuses(change: dict[str, Any], field: str) -> None:
     """Cold read: RA-2027 is published with a gate's stage published, so
-    its code, who may apply and blind review are fixed on the server too,
-    not only by the page's disabled inputs."""
+    its code and blind review are fixed on the server too, not only by the
+    page's disabled inputs. (Who may apply is the Form's: ruling 84.)"""
     reply = _client().post(DETAILS, json=_good(**change))
     assert reply.status_code == 400 and reply.json()["field"] == field
     assert _row().revision == 1

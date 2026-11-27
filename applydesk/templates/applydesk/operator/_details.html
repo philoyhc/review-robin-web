@@ -20,8 +20,6 @@
       <dt>Help contact</dt><dd data-dt-show="contact">{{ help_contact(exercise) }}{% if not exercise.help_contact %} <span class="muted">· the default</span>{% endif %}</dd>
       <dt>Timezone</dt><dd data-dt-show="timezone">{{ timezone(exercise) }}{% if timezone(exercise) == timezones[0] %} <span class="muted">· the default</span>{% endif %}</dd>
     </dl>
-    <p class="dt-sec">Who may apply</p>
-    <p class="dt-val" data-dt-show="eligibility">{% if exercise.eligibility == "Not set" %}<span class="muted">Not set</span>{% else %}{{ exercise.eligibility }}{% endif %}</p>
     <p class="dt-sec">Review</p>
     <p class="dt-val">Blind review: <strong data-dt-show="blind">{{ "On" if exercise.blind else "Off" }}</strong></p>
   </div>
@@ -31,7 +29,6 @@
     <label class="fc-l">Description <span class="dt-why">· shown to applicants</span><textarea class="fc-in" rows="3" maxlength="2000" data-dt="description">{{ exercise.summary }}</textarea></label>
     <label class="fc-l">Help contact <span class="dt-why">· on every gate in Review Robin; empty, the default</span><input class="fc-in" type="email" data-dt="contact" value="{{ exercise.help_contact }}" placeholder="{{ default_contact }}"></label>
     <label class="fc-l">Timezone <span class="dt-why">· the timeline's and every gate's</span><select class="fc-in" data-dt="timezone">{% for z in timezones %}<option value="{{ z }}"{% if z == timezone(exercise) %} selected{% endif %}>{{ z }}{{ " (the default)" if loop.first }}</option>{% endfor %}{% if timezone(exercise) not in timezones %}<option value="{{ timezone(exercise) }}" selected>{{ timezone(exercise) }}</option>{% endif %}</select></label>
-    <label class="fc-l">Who may apply{% if live %} <span class="dt-why">· fixed once published</span>{% endif %}<select class="fc-in" data-dt="eligibility"{% if live %} disabled title="Fixed once published: a change waits for re-publishing"{% endif %}>{% for v in ("Open to all signed in", "Invitation only") %}<option{% if v == exercise.eligibility %} selected{% endif %}>{{ v }}</option>{% endfor %}{% if exercise.eligibility == "Not set" %}<option value="Not set" selected>Not set</option>{% endif %}</select></label>
     <label class="dt-check"{% if blind_lock.fixed %} title="{{ blind_lock.reason }}"{% endif %}><input type="checkbox" data-dt="blind"{% if exercise.blind %} checked{% endif %}{% if blind_lock.fixed %} disabled{% endif %}> <span><strong>Blind review</strong> <span class="dt-why">· {{ "fixed: a stage holding a gate is published" if blind_lock.fixed else "dossiers redact the applicant" }}</span></span></label>
     <p class="dt-why" id="dt-why" data-dt-why role="alert"></p>
     <div class="btnrow dt-foot"><button class="btn btn-secondary" type="button" data-dt-act="discard">Discard changes</button><button class="btn btn-primary" type="button" data-dt-act="lock">Lock</button></div>
@@ -79,7 +76,6 @@
     var zone = card.querySelector('[data-dt-show="timezone"]');
     zone.textContent = v.timezone;
     if (v.timezone === defZone) { var z = document.createElement("span"); z.className = "muted"; z.textContent = " · the default"; zone.appendChild(z); }
-    text(card.querySelector('[data-dt-show="eligibility"]'), v.eligibility === "Not set" ? "" : v.eligibility, "Not set");
     card.querySelector('[data-dt-show="blind"]').textContent = v.blind ? "On" : "Off";
   }
   function open(on) {

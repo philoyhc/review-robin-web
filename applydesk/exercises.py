@@ -390,6 +390,44 @@ def save_details(
     return exercise.revision
 
 
+def set_eligibility(
+    session: Session,
+    sample: sample_data.Exercise,
+    eligibility: str,
+    actor: Person | None,
+) -> bool:
+    """Who may apply, set on the Form (ruling 84, segment AD2I): `open` or
+    `invitation`, saved with Process; True if it changed. A sample's
+    settings are recorded first, as Details' *Lock* does. Audited as a
+    details change. Flushes; the caller commits."""
+    if eligibility not in ELIGIBILITY:
+        raise Refused("Who may apply is not one of the choices.", key="eligibility")
+    exercise = session.scalar(
+        select(Exercise)
+        .where(Exercise.public_id == sample.public_id, Exercise.deleted_at.is_(None))
+        .with_for_update()
+    )
+    if exercise is None:
+        raise Refused("This exercise is no longer on record.", key="gone")
+    if exercise.revision < 1:
+        record_sample(session, exercise, sample, actor)
+    was = exercise.eligibility
+    if was == eligibility:
+        return False
+    exercise.eligibility = eligibility
+    exercise.revision += 1
+    session.flush()
+    audit.write_event(
+        session,
+        event_type="exercise.details_changed",
+        actor=actor,
+        exercise=exercise,
+        payload=audit.changes({"eligibility": [was, eligibility]}),
+        context={"revision": exercise.revision},
+    )
+    return True
+
+
 def archived_at() -> dict[str, datetime]:
     """When each archived (not deleted) exercise was archived, by its
     public ID: the Archive page's rows (segment AD2B rung 5)."""

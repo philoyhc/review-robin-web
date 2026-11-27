@@ -378,7 +378,6 @@ async def exercise_new(request: Request) -> Response:
     return RedirectResponse(url_path(request, f"/operator/exercises/{made}"), status_code=303)
 
 
-_ELIGIBILITY = ("Open to all signed in", "Invitation only", "Not set")
 _EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 
@@ -395,9 +394,7 @@ def _details(v: dict[str, Any]) -> dict[str, Any]:
     """Details as Lock sends them, checked as the card checks them; the
     reason for the first fault, else the fields in the sample's words (a
     clashing code is the database's to refuse, `exercises.save_details`)."""
-    text = {
-        k: v.get(k) for k in ("name", "code", "description", "contact", "timezone", "eligibility")
-    }
+    text = {k: v.get(k) for k in ("name", "code", "description", "contact", "timezone")}
     if not all(isinstance(x, str) for x in text.values()) or not isinstance(v.get("blind"), bool):
         raise _Refusal("name", "The details are malformed.")
     name, code = str(text["name"]).strip(), str(text["code"]).strip()
@@ -413,15 +410,12 @@ def _details(v: dict[str, Any]) -> dict[str, Any]:
     zone = str(text["timezone"])
     if zone not in sample_data.TIMEZONES:
         raise _Refusal("timezone", "That timezone is not offered.")
-    if text["eligibility"] not in _ELIGIBILITY:
-        raise _Refusal("eligibility", "Who may apply is not one of the choices.")
     return {
         "name": name,
         "code": code,
         "summary": str(text["description"]).strip(),
         "help_contact": contact,
         "timezone": "" if zone == sample_data.DEFAULT_TIMEZONE else zone,
-        "eligibility": text["eligibility"],
         "blind": v["blind"],
     }
 
@@ -579,10 +573,19 @@ def _save_process(request: Request, exercise_id: str, sent: object) -> Response:
         most = process_save.per_person(sent)
         if most is not None:
             candidates.set_per_person(session, exercise.public_id, most, actor)
+        # The Form's Who may apply (ruling 84, segment AD2I).
+        who = process_save.who_may_apply(sent)
+        if who is not None:
+            exercise_store.set_eligibility(session, exercise, who, actor)
         # The emails each item ticks, kept with the timeline (segment AD2L).
         email_store.save_sends(session, exercise.public_id, ticks)
         session.commit()
-    except (process_save.Refused, panels_store.Refused, candidates.Refused) as why:
+    except (
+        process_save.Refused,
+        panels_store.Refused,
+        candidates.Refused,
+        exercise_store.Refused,
+    ) as why:
         session.rollback()
         return JSONResponse({"error": str(why)}, status_code=400)
     except process_store.Refused as why:
@@ -1021,11 +1024,9 @@ def _locks_hold(exercise: sample_data.Exercise, values: dict[str, Any]) -> None:
     holding a gate is published (`locks.blind_lock`)."""
     if values["blind"] != exercise.blind and locks.blind_lock(exercise).fixed:
         raise _Refusal("blind", locks.blind_lock(exercise).reason)
-    if not locks.is_draft(exercise):  # by its state or its stages (Codex on cordware#230)
-        if values["code"] != (exercise.code or None):
-            raise _Refusal("code", "Fixed once published: a change waits for re-publishing.")
-        if values["eligibility"] != exercise_store.eligibility_of(exercise.eligibility):
-            raise _Refusal("eligibility", "Fixed once published: a change waits for re-publishing.")
+    # By its state or its stages (Codex on cordware#230).
+    if not locks.is_draft(exercise) and values["code"] != (exercise.code or None):
+        raise _Refusal("code", "Fixed once published: a change waits for re-publishing.")
 
 
 def _save_details(request: Request, exercise_id: str, sent: object) -> Response:
@@ -1041,7 +1042,10 @@ def _save_details(request: Request, exercise_id: str, sent: object) -> Response:
         opened = got.get("revision")
         if not isinstance(opened, int) or isinstance(opened, bool):
             raise _Refusal("name", "The details are malformed.")
-        values = exercise_store.details_from_page(_details(got))
+        # Who may apply is the Form's now (ruling 84): Details keeps it.
+        values = exercise_store.details_from_page(
+            {**_details(got), "eligibility": exercise.eligibility}
+        )
         _locks_hold(exercise, values)
     except _Refusal as why:
         return JSONResponse({"error": str(why), "field": why.field}, status_code=400)
@@ -1773,6 +1777,8 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         # Segment AD2K: how many dossiers one person may hold, on the
         # populating item.
         per_person=_per_person_of(exercise.public_id) if section == "process" else 1,
+        # The Form's Who may apply as stored (ruling 84): unset reads open.
+        who_may_apply=exercise_store.eligibility_of(exercise.eligibility) or "open",
         # The timeline checked as a whole, as saved (segment AD2K).
         checked=timeline_checks.of(exercise.public_id) if section == "process" else None,
         short=clock.short,
