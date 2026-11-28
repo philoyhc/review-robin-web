@@ -34,7 +34,8 @@
   <td class="pn-x"><button type="button" class="pn-save" data-pn-act="save" aria-label="Keep {{ (m.name or m.email) if m else 'this person' }}" title="Keep this row's changes on the page">✓</button><button type="button" class="pn-remove" data-pn-act="remove" aria-label="Remove {{ (m.name or m.email) if m else 'this person' }}" title="Remove">×</button></td>
 </tr>
 {% endmacro %}
-{% set directory = people.institution.members | map(attribute=1) | map("lower") | list %}
+{# Bound to a directory account (segment AD2Y): a pill on load. #}
+{% set directory = panel_bound %}
 {% macro sort(field, label) %}<button type="button" class="pn-sort" data-pn-sort="{{ field }}" aria-label="Sort by {{ label }}">{{ label }}<span aria-hidden="true">↕</span></button>{% endmacro %}
 <div class="pn" data-panels data-unsaved-root data-exercise="{{ exercise.public_id }}" data-pn-opened="{{ panels_sent | list | tojson | forceescape }}">
   <p class="muted pc-intro">Everyone on this exercise's panels, a column for each panel. Tick a row, or several, to edit them; ✓ keeps a row's changes, and unticking it without ✓ puts the row back as it was. A panel is picked where it is needed: a <em>Select people</em> question on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>, a gate's evaluators on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</p>
@@ -103,7 +104,7 @@
       </section>
       <section class="card">
         <h2>Upload</h2>
-        <p class="muted pn-csv-note">A CSV has <code>Name</code>, <code>Email</code> and <code>Note</code>, and a column per panel by its name, marked for each member. People not found in the directory are left out and named.</p>
+        <p class="muted pn-csv-note">A CSV has <code>Name</code>, <code>Email</code> and <code>Note</code>, and a column per panel by its name, marked for each member. Each address is looked up in the directory; people not found are added unverified and named.</p>
         <div class="btnrow">
           <label class="btn btn-secondary pn-file">Upload CSV<input type="file" accept=".csv,text/csv" data-pn-import class="visually-hidden"></label>
           <button class="btn btn-secondary" type="button" data-pn-act="export">Download CSV</button>
@@ -174,9 +175,8 @@
   </section>
 </div>
 <template id="pn-new-row">{{ row(none, (), panels, directory, sel=True) }}</template>
-<datalist id="pn-directory">{% for n, e in people.institution.members %}<option value="{{ e }}">{{ n }}</option>{% endfor %}</datalist>
-<script type="application/json" id="pn-people">{{ people.institution.members | tojson }}</script>
-{% include "applydesk/operator/_directory_js.html" %}
+{# Filled as the operator types, from the directory (segment AD2Y). #}
+<datalist id="pn-directory"></datalist>
 <script>
 // Segment AD1F rung 4e: the Panels page's moves, in the browser until
 // Save keeps them (AD2E). Text goes in by textContent only.
@@ -190,8 +190,49 @@
   var newName = root.querySelector("[data-pn-newname]"), newErr = root.querySelector("[data-pn-newerr]");
   var showRow = root.querySelector("[data-pn-showcols]"), off = {};  // panels whose column is hidden
   var EMAIL = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
-  // The directory (Graph; the sample institution until AD4), as [name, email].
-  var DIRECTORY = JSON.parse(document.getElementById("pn-people").textContent);
+  // The directory (segment AD2Y): a name or address typed is asked of the
+  // server, which searches it (typeahead) or looks the address up.
+  var SEARCH = {{ url('/operator/exercises/' ~ exercise.public_id ~ '/panels/search') | tojson }};
+  var LOOKUP = {{ url('/operator/exercises/' ~ exercise.public_id ~ '/panels/lookup') | tojson }};
+  // How many asks are in flight: the page's tests wait on it.
+  window.applydeskPanelsBusy = 0;
+  function ask(u, body) {
+    window.applydeskPanelsBusy += 1;
+    var done = function () { window.applydeskPanelsBusy -= 1; };
+    return fetch(u, body ? { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(body) } : { credentials: "same-origin" })
+      .then(function (r) { return r.json().then(function (got) { if (!r.ok) throw new Error(got.error || "The directory could not be reached; try again."); return got; }); })
+      .then(function (got) { setTimeout(done); return got; }, function (e) { setTimeout(done); throw e; });
+  }
+  // One entry, a name or an email, found: {person: [name, email]}, {twice:
+  // true} for a name two people share, {} for no one, {error} when the
+  // directory could not be asked.
+  function find(entry) {
+    var t = (entry || "").trim();
+    if (!t) return Promise.resolve({});
+    if (EMAIL.test(t)) {
+      return ask(LOOKUP, { addresses: [t] }).then(function (got) { return got.found[t] ? { person: got.found[t] } : {}; }, function (e) { return { error: e.message }; });
+    }
+    return ask(SEARCH + "?q=" + encodeURIComponent(t)).then(function (got) {
+      var low = t.toLowerCase(), hits = (got.people || []).filter(function (p) { return p[0].toLowerCase() === low; });
+      return hits.length > 1 ? { twice: true } : hits.length ? { person: hits[0] } : {};
+    }, function (e) { return { error: e.message }; });
+  }
+  // The typeahead: the box's last entry searched as it is typed, the
+  // people it finds offered under it.
+  var offered = document.getElementById("pn-directory"), typing = null;
+  function suggest(box) {
+    clearTimeout(typing);
+    var q = box.value.split(",").pop().trim();
+    if (q.length < 2) return;
+    typing = setTimeout(function () {
+      ask(SEARCH + "?q=" + encodeURIComponent(q)).then(function (got) {
+        // Only the search for what the box still holds fills the list.
+        if (box.value.split(",").pop().trim() !== q) return;
+        offered.textContent = "";
+        (got.people || []).forEach(function (p) { var o = document.createElement("option"); o.value = p[1]; o.textContent = p[0]; offered.appendChild(o); });
+      }, function () {});
+    }, 250);
+  }
   // A CSV's own columns: no panel may take their names.
   var RESERVED = /^\s*(name|email|note)\s*$/i;
   var seq = 0;
@@ -311,6 +352,9 @@
   // `how` is "save" to keep what the row holds; otherwise unticking puts
   // it back, and a row added and never saved goes.
   function select(r, on, how) {
+    // A lookup still out for this row answers an edit that is now closed
+    // (Codex on #4288): its answer is dropped.
+    if (!on) r.pnGen = (r.pnGen || 0) + 1;
     if (on && !r.hasAttribute("data-sel")) r.pnSnap = snap(r);
     if (!on && r.hasAttribute("data-sel") && how !== "save") {
       var who = val(r, "name") || val(r, "email") || "The new row";
@@ -372,33 +416,55 @@
     r.querySelector('[data-pn-act="remove"]').setAttribute("aria-label", "Remove " + who);
     r.querySelector('[data-pn-act="save"]').setAttribute("aria-label", "Keep " + who);
   }
-  // An email typed into a selected row, looked up in the directory: one
-  // found becomes the pill (and the name, if none is typed); one not found
-  // stays, said why.
-  function setEmail(r, entry) {
+  // A row's email as the directory answered for it: one found is the pill
+  // (and the name, if none is typed); one not found stays, said why.
+  function markEmail(r, entry, person) {
     var cell = r.querySelector(".pn-email-cell"), box = r.querySelector("[data-pn-entry]");
-    // Enter clears the box it found a pill from; the blur after it fires a
-    // change on that empty box, which is not an edit.
-    if (!entry.trim() && cell.hasAttribute("data-verified")) return;
     var focused = document.activeElement === box;
     delete box.dataset.was;
-    var found = window.applydeskFind(entry, DIRECTORY);
     var hidden = r.querySelector('[data-pn="email"]'), pill = r.querySelector("[data-pn-pill]");
-    if (found.person) {
-      hidden.value = found.person[1];
-      pill.textContent = found.person[1];
+    if (person) {
+      hidden.value = person[1];
+      pill.textContent = person[1];
       cell.setAttribute("data-verified", "");
-      r.querySelector("[data-pn-entry]").value = "";
+      box.value = "";
       var name = r.querySelector('[data-pn="name"]');
-      if (!name.value.trim()) name.value = found.person[0];
+      if (!name.value.trim()) name.value = person[0];
       // The box goes as the pill comes: the keyboard stays in the row.
       if (focused) pill.focus();
     } else {
       hidden.value = entry.trim();
+      // The editor shows the address too, to be checked or corrected
+      // (Codex on #4288).
+      box.value = entry.trim();
       cell.removeAttribute("data-verified");
     }
     label(r);
     check();
+  }
+  // An email typed into a selected row, looked up in the directory.
+  function setEmail(r, entry) {
+    var cell = r.querySelector(".pn-email-cell"), box = r.querySelector("[data-pn-entry]");
+    // Enter clears the box it found a pill from; the blur after it fires a
+    // change on that empty box, which is not an edit.
+    if (!entry.trim() && cell.hasAttribute("data-verified")) return Promise.resolve();
+    // The pill put back to be changed and left as it was keeps its pill
+    // without asking again.
+    if (box.dataset.was && box.dataset.was.toLowerCase() === entry.trim().toLowerCase()) {
+      var name0 = r.querySelector('[data-pn="name"]').value;
+      markEmail(r, entry, [name0, box.dataset.was]);
+      return Promise.resolve();
+    }
+    // Only the latest lookup for an open row is applied (Codex on #4288).
+    var gen = r.pnGen = (r.pnGen || 0) + 1;
+    // ✓ waits for it (Codex on #4288).
+    var pending = r.pnPending = find(entry).then(function (found) {
+      if (r.pnPending === pending) delete r.pnPending;
+      if (r.pnGen !== gen || !r.isConnected) return;
+      if (found.error) said.textContent = found.error;
+      markEmail(r, entry, found.person || null);
+    });
+    return pending;
   }
   function addRow(m) {
     var r = document.getElementById("pn-new-row").content.firstElementChild.cloneNode(true);
@@ -413,7 +479,7 @@
     if (m) {
       r.querySelector('[data-pn="name"]').value = m.name || "";
       r.querySelector('[data-pn="note"]').value = m.note || "";
-      setEmail(r, m.email || "");
+      markEmail(r, m.email || "", m.person || null);
       (m.panels || []).forEach(function (k) { var c = r.querySelector('input[data-pn-panel="' + k + '"]'); if (c) c.checked = true; });
       select(r, false, "save");  // an imported row arrives as the others are: inert
     } else {
@@ -587,6 +653,7 @@
   // Cancel: the names typed put back, the panels added taken back with
   // the rows they brought.
   function dropAll(quiet) {
+    creating += 1;  // a +Panel still waiting on its Members is called off (Codex on #4288)
     var n = renames().length, m = added.length + retiring.length;
     renames().forEach(function (box) { box.value = nameOf(box.closest("li[data-panel]").dataset.panel); });
     retiring.forEach(function (key) {
@@ -697,38 +764,59 @@
     if (at.email < 0) { said.textContent = "No Email column: nothing imported."; return; }
     var byName = {};
     cols().forEach(function (h) { byName[nameOf(h.dataset.panel).toLowerCase()] = h.dataset.panel; });
-    var seen = {}, took = 0, skipped = [], bad = [], unknown = [], missing = [];
+    // Segment AD2Y: the file's addresses asked of the directory first, as
+    // Review Robin's rosters are; one not found is added, unverified.
+    var asked = table.slice(1).map(function (cells) { return ((cells[at.email] || "") + "").trim(); }).filter(function (e) { return EMAIL.test(e); });
+    said.textContent = "Looking the file's addresses up in the directory…";
+    ask(LOOKUP, { addresses: asked }).then(function (got) { take(table, hdr, at, byName, got); }, function (e) { said.textContent = e.message + " Nothing imported."; });
+  };
+  function take(table, hdr, at, byName, got) {
+    // Rows are one per person by the address they will hold: a UPN the
+    // directory resolves to its mail meets that mail (Codex on #4288).
+    var seen = {}, added = {}, took = 0, skipped = [], bad = [], unknown = [], missing = [];
     rows().forEach(function (r) { seen[val(r, "email").toLowerCase()] = true; });
     hdr.forEach(function (h, i) { if (i !== at.name && i !== at.email && i !== at.note && h && !byName[h]) unknown.push(table[0][i].trim()); });
     table.slice(1).forEach(function (cells) {
       function get(i) { return i < 0 ? "" : (cells[i] || "").trim(); }
       var email = get(at.email);
       if (!EMAIL.test(email)) { bad.push(email || "(blank)"); return; }
-      if (!window.applydeskFind(email, DIRECTORY).person) { missing.push(email); return; }
-      if (seen[email.toLowerCase()]) { skipped.push(email); return; }
-      seen[email.toLowerCase()] = true;
+      var person = got.found[email] || null;
+      var key = (person ? person[1] : email).toLowerCase();
       var on = [];
       hdr.forEach(function (h, i) {
         if (i === at.name || i === at.email || i === at.note) return;  // never a panel's column
         var v = (cells[i] || "").trim().toLowerCase();
         if (byName[h] && v && v !== "0" && v !== "no" && v !== "false") on.push(byName[h]);
       });
-      addRow({ name: get(at.name), email: email, note: get(at.note), panels: on });
+      // The same person again in this file: their panels join the row.
+      if (added[key]) {
+        on.forEach(function (k) { var c = added[key].querySelector('input[data-pn-panel="' + k + '"]'); if (c) c.checked = true; });
+        return;
+      }
+      if (seen[key] || seen[email.toLowerCase()]) { skipped.push(email); return; }
+      if (!person) missing.push(email);
+      seen[key] = seen[email.toLowerCase()] = true;
+      added[key] = addRow({ name: get(at.name), email: email, note: get(at.note), panels: on, person: person });
       took += 1;
     });
     var parts = [people(took) + " added."];
     if (skipped.length) parts.push("Already listed, not added: " + skipped.join(", ") + ".");
     if (bad.length) parts.push("Not an email, not added: " + bad.join(", ") + ".");
-    if (missing.length) parts.push("Not found in the directory, not added: " + missing.join(", ") + ".");
+    if (missing.length) parts.push("Not found in the directory, added unverified: " + missing.join(", ") + ".");
     if (unknown.length) parts.push("No panel called: " + unknown.join(", ") + ".");
+    // The directory's own line only when it could not answer for some.
+    if (got.not_checked) parts.push(got.said);
     said.textContent = parts.join(" ");
     if (took) kept();
     check();
     filter();
     selected();
-  };
+  }
 
-  root.addEventListener("input", function (e) { if (e.target.closest("[data-pn-row]") && !e.target.matches("[data-pn-entry]")) check(); });
+  root.addEventListener("input", function (e) {
+    if (e.target.matches("[data-pn-entry], [data-pn-members]")) suggest(e.target);
+    if (e.target.closest("[data-pn-row]") && !e.target.matches("[data-pn-entry]")) check();
+  });
   root.addEventListener("change", function (e) {
     if (e.target.matches("[data-pn-select]")) { select(e.target.closest("[data-pn-row]"), e.target.checked); return; }
     if (e.target.matches("[data-pn-from]")) return;
@@ -764,24 +852,44 @@
     mBox.insertBefore(t, mIn);
     return true;
   }
+  // Each finished entry asked of the directory (segment AD2Y); resolves
+  // true when every one was found.
+  // One take at a time, each reading the box as it starts, so an older
+  // answer never rewrites the box or its message over a newer one.
+  var mQueue = Promise.resolve(true), creating = 0;
   function mTake(all) {
-    var parts = mIn.value.split(","), rest = all ? "" : parts.pop().replace(/^\s+/, "");
-    var missed = [], twice = [], again = [];
-    parts.forEach(function (raw) {
-      var entry = raw.trim();
-      if (!entry) return;
-      var found = window.applydeskFind(entry, DIRECTORY);
-      if (found.person) { if (!mPill(found.person)) again.push(found.person[0]); }
-      else (found.twice ? twice : missed).push(entry);
+    mQueue = mQueue.then(function () { return mTakeNow(all); });
+    return mQueue;
+  }
+  function mTakeNow(all) {
+    var parts = mIn.value.split(","); if (!all) parts.pop();
+    var taken = parts.length;  // the box's first entries, those asked about
+    var asked = parts.join(",");
+    var entries = parts.map(function (raw) { return raw.trim(); }).filter(Boolean);
+    return Promise.all(entries.map(find)).then(function (answers) {
+      // The entries were changed while the directory answered: the answer
+      // is for words no longer there, so nothing is taken (Codex on #4288).
+      if (mIn.value.split(",").slice(0, taken).join(",") !== asked) return false;
+      var missed = [], twice = [], again = [], failed = "";
+      answers.forEach(function (found, i) {
+        if (found.person) { if (!mPill(found.person)) again.push(found.person[0]); }
+        else if (found.error) { failed = found.error; missed.push(entries[i]); }
+        else (found.twice ? twice : missed).push(entries[i]);
+      });
+      // The entries taken leave the box; what was typed after them while
+      // the directory answered stays (Codex on #4288).
+      var after = mIn.value.split(",").slice(taken).map(function (t) { return t.replace(/^\s+/, ""); });
+      if (all) after = after.filter(function (t) { return t.trim(); });
+      var left = missed.concat(twice), value = left.concat(after).join(", ");
+      if (mIn.value !== value) mIn.value = value;
+      var told = [];
+      if (failed) told.push(failed);
+      else if (missed.length) told.push("Not found in the directory: " + missed.join(", ") + ".");
+      if (twice.length) told.push("Two people share the name " + twice.join(", ") + ": use the email.");
+      if (again.length) told.push("Already chosen: " + again.join(", ") + ".");
+      newErr.textContent = told.join(" ");
+      return left.length === 0;
     });
-    var left = missed.concat(twice), value = all ? left.join(", ") : left.concat([rest]).join(", ");
-    if (mIn.value !== value) mIn.value = value;
-    var told = [];
-    if (missed.length) told.push("Not found in the directory: " + missed.join(", ") + ".");
-    if (twice.length) told.push("Two people share the name " + twice.join(", ") + ": use the email.");
-    if (again.length) told.push("Already chosen: " + again.join(", ") + ".");
-    newErr.textContent = told.join(" ");
-    return left.length === 0;
   }
   function mPeople() {
     return Array.prototype.map.call(mBox.querySelectorAll(".token"), function (t) { return [t.dataset.name, t.title]; });
@@ -806,8 +914,16 @@
   fromSel.addEventListener("change", function () { mWrap.hidden = !!fromSel.value; });
   // ✓ keeps a row: refused while the row has a problem.
   function save(r) {
+    // An email still being looked up is kept once the directory answers
+    // (Codex on #4288).
+    if (r.pnPending) { r.pnPending.then(function () { if (r.isConnected && r.hasAttribute("data-sel")) save(r); }); return; }
     check();
     var why = r.querySelector("[data-pn-why]").textContent;
+    // Segment AD2Y: an address already on the roster and not changed may
+    // stay unverified (an upload keeps one so, and Save asks again); only
+    // a new or changed one must be found.
+    if (why === "Not found in the directory." && r.pnSnap && !r.dataset.fresh &&
+        (r.pnSnap.email || "").toLowerCase() === val(r, "email").toLowerCase()) why = "";
     var who = val(r, "name") || val(r, "email") || "This row";
     if (why) { said.textContent = who + " is not saved: " + why.toLowerCase(); return; }
     // Kept only when something changed: a new row, one a panel brought
@@ -861,34 +977,47 @@
       var name = newName.value.trim(), from = fromSel.value, bad = badName(name);
       newErr.textContent = bad;
       if (bad) return;
-      if (!from && !mTake(true)) return;  // an entry not found: said why, nothing added
-      var who = from ? [] : mPeople();
-      var key = addPanel(name, from || null);
-      // A blank panel's members: ticked where they have a row, added
-      // (as saved) where they have none.
-      who.forEach(function (p) {
-        // By the email a row holds as saved: an open row's typing, or a
-        // new row not yet kept, is not yet anyone.
-        var r = rows().filter(function (x) {
-          if (x.dataset.fresh) return false;
-          var saved = x.hasAttribute("data-sel") && x.pnSnap ? x.pnSnap.email : val(x, "email");
-          return saved.toLowerCase() === p[1].toLowerCase();
-        })[0];
-        // A row it brings goes too if the panel is taken back unsaved.
-        if (!r) { addRow({ name: p[0], email: p[1], note: "", panels: [key] }).dataset.newWith = key; return; }
-        r.querySelector('input[data-pn-panel="' + key + '"]').checked = true;
-        if (r.hasAttribute("data-sel") && r.pnSnap) r.pnSnap.panels[key] = true;
-      });
-      mBox.querySelectorAll(".token").forEach(function (t) { t.remove(); });
-      mIn.value = ""; newName.value = ""; fromSel.value = ""; mWrap.hidden = false;
-      // Not kept until Save; Cancel takes it back.
-      added.push(key);
-      var mark = el("span", "fb-unsaved pn-unsaved", "Added: not saved yet"); mark.setAttribute("data-pn-unsaved", "");
-      list.querySelector('li[data-panel="' + key + '"]').appendChild(mark);
-      check(); filter(); namesPending();
-      said.textContent = (from ? name + " added, with the people of " + nameOf(from) + "."
-        : who.length ? name + " added, with " + people(who.length) + "." : name + " added: tick who sits on it.") +
-        " Save keeps it; Cancel takes it back.";
+      // An entry not found: said why, nothing added (segment AD2Y: the
+      // entries are asked of the directory first).
+      var go = function () {
+        // Checked again as it lands: a second click while the Members
+        // were looked up may have made it already (Codex on #4288).
+        var late = badName(name);
+        if (late) { newErr.textContent = late; return; }
+        var who = from ? [] : mPeople();
+        var key = addPanel(name, from || null);
+        // A blank panel's members: ticked where they have a row, added
+        // (as saved) where they have none.
+        who.forEach(function (p) {
+          // By the email a row holds as saved: an open row's typing, or a
+          // new row not yet kept, is not yet anyone.
+          var r = rows().filter(function (x) {
+            if (x.dataset.fresh) return false;
+            var saved = x.hasAttribute("data-sel") && x.pnSnap ? x.pnSnap.email : val(x, "email");
+            return saved.toLowerCase() === p[1].toLowerCase();
+          })[0];
+          // A row it brings goes too if the panel is taken back unsaved.
+          if (!r) { addRow({ name: p[0], email: p[1], note: "", panels: [key], person: p }).dataset.newWith = key; return; }
+          r.querySelector('input[data-pn-panel="' + key + '"]').checked = true;
+          if (r.hasAttribute("data-sel") && r.pnSnap) r.pnSnap.panels[key] = true;
+        });
+        mBox.querySelectorAll(".token").forEach(function (t) { t.remove(); });
+        mIn.value = ""; newName.value = ""; fromSel.value = ""; mWrap.hidden = false;
+        // Not kept until Save; Cancel takes it back.
+        added.push(key);
+        var mark = el("span", "fb-unsaved pn-unsaved", "Added: not saved yet"); mark.setAttribute("data-pn-unsaved", "");
+        list.querySelector('li[data-panel="' + key + '"]').appendChild(mark);
+        check(); filter(); namesPending();
+        said.textContent = (from ? name + " added, with the people of " + nameOf(from) + "."
+          : who.length ? name + " added, with " + people(who.length) + "." : name + " added: tick who sits on it.") +
+          " Save keeps it; Cancel takes it back.";
+      };
+      if (from) { go(); return; }
+      // One +Panel at a time while its Members are looked up.
+      if (a.dataset.busy) return;
+      a.dataset.busy = "1";
+      var mine = creating += 1;
+      mTake(true).then(function (ok) { delete a.dataset.busy; if (ok && creating === mine) go(); });
     } else if (what === "save-names") {
       keepAll();
     } else if (what === "cancel-names") {
