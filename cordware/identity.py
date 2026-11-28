@@ -310,7 +310,7 @@ FAKE_AS_COOKIE = "cordware_fake_as"
 SWITCH_PATH = "/.cordware/switch-identity"
 
 
-def _alternate_identity(settings: IdentitySettings) -> Identity | None:
+def alternate_identity(settings: IdentitySettings) -> Identity | None:
     """The second fake account, or None when none is set."""
     email = settings.fake_auth_alt_email.strip()
     if not email:
@@ -372,7 +372,7 @@ def fake_switch(request: Request, settings: IdentitySettings | None = None) -> F
     signed_in = current_identity(request, settings)
     if signed_in is None or not signed_in.is_fake:
         return None
-    alternate = _alternate_identity(cfg)
+    alternate = alternate_identity(cfg)
     assert alternate is not None  # switch_allowed holds
     on_alternate = request.cookies.get(FAKE_AS_COOKIE) == "alt"
     other = cfg.fake_auth_name if on_alternate else alternate.name
@@ -438,7 +438,7 @@ def current_identity(request: Request, settings: IdentitySettings | None = None)
         identity = _fake_identity(cfg)
         # The second fake account, picked from the account menu (AD2X).
         if request.cookies.get(FAKE_AS_COOKIE) == "alt" and switch_allowed(cfg):
-            identity = _alternate_identity(cfg)
+            identity = alternate_identity(cfg)
     if identity is None or settings is None:
         return identity
     return replace(identity, resolved_with=settings)
