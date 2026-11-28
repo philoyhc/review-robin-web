@@ -84,6 +84,10 @@ def application(request: Request, exercise_id: str, application_id: str) -> Resp
     if not _on_me(found):  # closed with its exercise (author, 2026-11-18)
         raise HTTPException(status_code=404)
     app = application_or_404(found, application_id)
+    # Only its own applicant reaches an application (segment AD4A):
+    # anyone else, the super-admin included, has a 404, as for none.
+    if not participant.owns(participant.signed_in(current_identity(request)), app.public_id):
+        raise HTTPException(status_code=404)
     return render(
         request,
         "applydesk/me/application.html",
@@ -93,10 +97,7 @@ def application(request: Request, exercise_id: str, application_id: str) -> Resp
         answered=extract.form_answers(found, app),
         form_state=workflow.form_state(found),
         withdrawal_closed_by=workflow.withdrawal_closed_by(found.public_id, app.public_id),
-        # Only the applicant's own (cold read): another's page names none.
-        results=stages.released_results(found.public_id, app.public_id)
-        if app.public_id in sample_data.MINE
-        else (),
+        results=stages.released_results(found.public_id, app.public_id),
     )
 
 

@@ -88,9 +88,51 @@ def client() -> TestClient:
     return TestClient(host_with(("applydesk",))[0])
 
 
+def _get_as_owner(client: TestClient, path: str) -> Any:
+    """GET ``path``; an application page as its own applicant, who alone
+    reaches it (segment AD4A): signed in for that request only as the
+    person the application belongs to, then back to the fake operator."""
+    from sqlalchemy import select
+
+    from applydesk import db
+    from applydesk.models import Application, Person
+    from cordware.settings import identity_settings
+
+    if "/applications/" not in path:
+        return client.get(path)
+    app_id = path.split("/applications/", 1)[1].split("/")[0]
+    session = db.new_session()
+    try:
+        email = session.scalar(
+            select(Person.email)
+            .join(Application, Application.person_id == Person.id)
+            .where(Application.public_id == app_id)
+        )
+    finally:
+        session.close()
+    if email is None:
+        return client.get(path)
+    saved = (
+        identity_settings.fake_auth_email,
+        identity_settings.fake_auth_principal_id,
+        identity_settings.fake_auth_super_admin,
+    )
+    identity_settings.fake_auth_email = email
+    identity_settings.fake_auth_principal_id = f"applicant-{app_id}"
+    identity_settings.fake_auth_super_admin = False
+    try:
+        return client.get(path)
+    finally:
+        (
+            identity_settings.fake_auth_email,
+            identity_settings.fake_auth_principal_id,
+            identity_settings.fake_auth_super_admin,
+        ) = saved
+
+
 @pytest.mark.parametrize("path", PAGES)
 def test_every_page_of_the_map_answers_locally(client: TestClient, path: str) -> None:
-    response = client.get(path)
+    response = _get_as_owner(client, path)
     assert response.status_code == 200, path
     if path in _SAVES:
         assert "Placeholder." not in response.text, path
@@ -231,7 +273,7 @@ def test_a_dossier_shows_only_the_part_shown_to_reviewers(client: TestClient, do
 def test_the_application_reads_its_form_and_answers(client: TestClient) -> None:
     """AD-26: the Form's questions in order with the seeded answers, "—"
     where none; no hand-kept list, no title against the first field."""
-    page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
+    page = _get_as_owner(client, "/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
     # Seeded by the question's key (segment AD2D).
     year = next(
         k for k, q in sample_data.list_questions("wa9juxbc2t").items() if q.label == "Year of study"
@@ -353,7 +395,7 @@ def test_withdraw_is_outline_amber(client: TestClient, monkeypatch: pytest.Monke
     """Ruling 45 (2026-11-18, over the 2026-11-12 Destructive): Withdraw is
     Outline-amber, with a confirm once AD4 builds it."""
     monkeypatch.setattr(workflow, "gate_sent", lambda _e, _k: ("Ready", ""))
-    page = client.get(f"/applydesk/me/exercises/{EX}/applications/h6zr2tdw9p").text
+    page = _get_as_owner(client, f"/applydesk/me/exercises/{EX}/applications/h6zr2tdw9p").text
     assert 'class="btn btn-destructive"' not in page and 'class="btn btn-alert"' in page
 
 
@@ -1850,7 +1892,7 @@ def test_pages_say_what_works_and_what_is_not_built(client: TestClient) -> None:
     assert 'data-nx-open aria-expanded="false" aria-controls="nx-form">New exercise<' in lobby
     assert "A blank draft, with you its Owner; at most 50" in lobby
     # A draft on an exercise whose form has closed says so (AD-29).
-    draft = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/f2ps7nyh4k").text
+    draft = _get_as_owner(client, "/applydesk/me/exercises/wa9juxbc2t/applications/f2ps7nyh4k").text
     assert "Applications closed on 30 Sep 2026, 23:59." in draft and ">Submit<" not in draft
 
 
@@ -1859,7 +1901,7 @@ def test_crumbs_and_headings_after_the_register(client: TestClient) -> None:
     just under the bar; card and section titles are h2."""
     me = "/applydesk/me/exercises/wa9juxbc2t"
     for path, current in ((me, ""), (f"{me}/applications/f2ps7nyh4k", "Your application")):
-        page = client.get(path).text
+        page = _get_as_owner(client, path).text
         assert 'class="crumbs" aria-label="Breadcrumb"' in page and 'class=" crumbed"' in page
         assert '<a href="/applydesk/me">User Lobby</a>' in page
         # The separator is drawn before each later crumb, so a wrapped
@@ -1867,7 +1909,7 @@ def test_crumbs_and_headings_after_the_register(client: TestClient) -> None:
         assert '<span class="crumb"><a href="/applydesk/me">User Lobby</a></span>' in page
         assert 'aria-hidden="true">/</span>' not in page
         assert f'aria-current="page">{current}' in page
-    app = client.get(f"{me}/applications/f2ps7nyh4k").text
+    app = _get_as_owner(client, f"{me}/applications/f2ps7nyh4k").text
     assert "<h3" not in app.split('class="page"', 1)[-1].split("<footer", 1)[0]
     gate = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/g1").text
     crumb = gate[gate.index('class="crumbs"') : gate.index("</nav>", gate.index('class="crumbs"'))]
@@ -2015,9 +2057,10 @@ def test_blind_review_starts_outcomes_csv_with_dossier_ids() -> None:
 
 
 def test_another_application_s_page_shows_no_results(client: TestClient) -> None:
-    """Cold read: Your results is the applicant's own, never another's."""
-    other = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/h6zr2tdw9p").text
-    assert "Your results" not in other
+    """Cold read: Your results is the applicant's own, never another's; and
+    since segment AD4A another's application page is not there at all."""
+    other = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/h6zr2tdw9p")
+    assert other.status_code == 404 and "Your results" not in other.text
 
 
 def test_archived_closes_the_application_and_dossier_pages(
@@ -2033,7 +2076,7 @@ def test_archived_closes_the_application_and_dossier_pages(
     for state, code in (("Archived", 404), ("Draft", 404), ("Closed", 200)):
         moved = dataclasses.replace(ex, state=state)
         monkeypatch.setattr(sample_data, "exercise", lambda i, m=moved: m)
-        assert client.get(f"{me}/applications/m3qx8vkt2n").status_code == code, state
+        assert _get_as_owner(client, f"{me}/applications/m3qx8vkt2n").status_code == code, state
         assert client.get(f"{me}/dossiers/p3bd7kq2wx").status_code == code, state
 
 
@@ -2083,12 +2126,14 @@ def test_withdrawal_closes_once_a_gate_holding_the_dossier_completes(
     """Rulings 45, 49: an applicant may withdraw (Outline-amber, AD4) until
     a gate holding their dossier completes, Sent included; then the page
     says which."""
-    page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
+    page = _get_as_owner(client, "/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
     assert workflow.withdrawal_closed_by("wa9juxbc2t", "m3qx8vkt2n") == "Peer review"
     assert "your application has gone to Peer review" in page and ">Withdraw</button>" not in page
     for state in ("Ready", "Sent"):
         monkeypatch.setattr(workflow, "gate_sent", lambda _e, _k, s=state: (s, ""))
-        open_page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
+        open_page = _get_as_owner(
+            client, "/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n"
+        ).text
         withdraw = 'disabled title="Withdrawing is not built yet">Withdraw'
         assert f'class="btn btn-alert" type="button" {withdraw}' in open_page, state
 
@@ -2316,7 +2361,7 @@ def test_no_page_cites_a_ruling_a_segment_or_an_ad_number(client: TestClient) ->
     pages = _swept_pages(client)
     assert len(pages) > len(PAGES)
     for path in pages:
-        response = client.get(path)
+        response = _get_as_owner(client, path)
         assert response.status_code == 200, path
         seen = _Visible()
         seen.feed(response.text)
