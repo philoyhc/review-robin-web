@@ -19,7 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from applydesk import audit, candidates, db
+from applydesk import audit, candidates, db, directory_check
 from applydesk.candidates import Imported, Listed, Refused
 from applydesk.models import Exercise, Invitee, Person
 
@@ -134,10 +134,19 @@ def remove(session: Session, public_id: str, entry_id: int, actor: Person | None
     return True
 
 
-def import_csv(session: Session, public_id: str, text: str, actor: Person | None) -> Imported:
+def import_csv(
+    session: Session,
+    public_id: str,
+    text: str,
+    actor: Person | None,
+    *,
+    lookup: directory_check.Lookup | None = None,
+    tenant_id: str = "",
+) -> Imported:
     """Invite each good row of a CSV with an *Email* column and, if given,
     a *Name* one; the rest are listed back by row number. A person twice in
-    the file is listed back. Flushes; the caller commits."""
+    the file is listed back. Each address ``lookup`` resolved is its
+    directory account's person (segment AD2Y). Flushes; the caller commits."""
     return candidates.read_csv(
         session,
         public_id,
@@ -145,6 +154,9 @@ def import_csv(session: Session, public_id: str, text: str, actor: Person | None
         actor,
         most=1,
         add=lambda person, title: add(session, public_id, person, "csv", actor),
+        lookup=lookup,
+        tenant_id=tenant_id,
+        event_type="invitee.imported",
     )
 
 

@@ -22,6 +22,7 @@ from applydesk import (
     clock,
     db,
     directory,
+    directory_check,
     dossiers,
     email_store,
     extract,
@@ -60,7 +61,7 @@ from applydesk.web import (
     root_path,
     url_path,
 )
-from cordware.graph import GraphError
+from cordware.graph import Finder, GraphError
 from cordware.identity import Identity, current_identity
 
 router = APIRouter(prefix="/operator", dependencies=[Depends(gate.require_exercise_operator)])
@@ -678,6 +679,48 @@ def _people_search(request: Request, exercise_id: str, q: str, svc: Any) -> Resp
     )
 
 
+#: An upload held because Graph refused the sign-in as expired (segment
+#: AD2Y, as Review Robin's 20G): nothing was saved.
+RENEW = (
+    "Your sign-in has expired, so the directory could not be asked and nothing was "
+    "saved. Sign in again, then upload the file again."
+)
+
+#: Why addresses went unchecked, in the upload's words.
+_UNCHECKED = {
+    directory_check.NO_TOKEN: "this sign-in carries no directory access",
+    "forbidden": "the directory refused this sign-in",
+    "throttled": "the directory was busy",
+    "timeout": "the lookup ran out of time",
+}
+
+
+def directory_line(counts: directory_check.Counts, reason: str) -> str:
+    """What the directory said of an upload's addresses, in one line
+    (segment AD2Y): found, not found, ambiguous, not checked and why."""
+    if not (counts.found or counts.not_found or counts.ambiguous or counts.not_checked):
+        return ""
+    parts = [f"Directory: {counts.found} found"]
+    if counts.not_found:
+        parts.append(f"{counts.not_found} not found")
+    if counts.ambiguous:
+        parts.append(f"{counts.ambiguous} matching more than one account")
+    if counts.not_checked:
+        why = _UNCHECKED.get(reason, "the directory could not be reached")
+        parts.append(f"{counts.not_checked} not checked ({why})")
+    kept = " Those not found are kept, unverified." if counts.not_found else ""
+    return ", ".join(parts) + "." + kept
+
+
+def _directory_or_none(request: Request) -> Finder | None:
+    """The request's directory, or None when there is none to ask (no
+    token): an upload then saves, every address not checked."""
+    try:
+        return directory.for_request(request)
+    except GraphError:
+        return None
+
+
 @router.post("/exercises/{exercise_id}/candidates", name="applydesk_candidates_change")
 async def candidates_change(request: Request, exercise_id: str) -> Response:
     """Create dossiers' changes (rulings 77, 83): add an entry for
@@ -720,6 +763,15 @@ def _change_list(request: Request, exercise_id: str, sent: Any, svc: Any) -> Res
         raise HTTPException(status_code=404)
     got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
     action = got.get("action")
+    lookup = directory_check.Lookup()
+    if action == "csv" and isinstance(got.get("text"), str):
+        # Segment AD2Y: the file's addresses asked of the directory before
+        # anything is written; an expired sign-in saves nothing.
+        lookup = directory_check.look_up(
+            _directory_or_none(request), candidates.csv_addresses(got["text"])
+        )
+        if lookup.stop:
+            return JSONResponse({"error": RENEW, "renew": True}, status_code=400)
     session = db.new_session()
     said = ""
     bad: tuple[str, ...] = ()
@@ -783,12 +835,20 @@ def _change_list(request: Request, exercise_id: str, sent: Any, svc: Any) -> Res
                 else "Not on the list: removed already."
             )
         elif action == "csv" and isinstance(got.get("text"), str):
-            done = svc.import_csv(session, exercise.public_id, got["text"], actor)
+            done = svc.import_csv(
+                session,
+                exercise.public_id,
+                got["text"],
+                actor,
+                lookup=lookup,
+                tenant_id=(identity.tenant_id or "").strip(),
+            )
             said = (
                 f"{done.added} added"
                 + (f", {done.already} listed already" if done.already else "")
-                + "."
-            )
+                + ". "
+                + directory_line(done.directory, done.unchecked_reason)
+            ).strip()
             bad = done.bad
         else:
             raise candidates.Refused("That change is malformed.")
@@ -811,7 +871,14 @@ def _change_list(request: Request, exercise_id: str, sent: Any, svc: Any) -> Res
         )
     finally:
         session.close()
-    return JSONResponse({"said": said, "bad": list(bad), "candidates": _listed_json(listed)})
+    return JSONResponse(
+        {
+            "said": said,
+            "bad": list(bad),
+            "candidates": _listed_json(listed),
+            "directory": lookup.counts.as_dict(),
+        }
+    )
 
 
 def _per_person_of(public_id: str) -> int:

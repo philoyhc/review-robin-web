@@ -151,6 +151,10 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "exercise.stage_reverted": EventSchema(_EXERCISE | {"refs", "reason"}),
     "exercise.form_closed": EventSchema(_EXERCISE),
     "candidate.added": EventSchema(_EXERCISE | {"refs", "context"}),
+    # An upload's counts with the directory's (segment AD2Y); context
+    # names why addresses went unchecked.
+    "candidate.imported": EventSchema(_EXERCISE | {"counts", "context"}),
+    "invitee.imported": EventSchema(_EXERCISE | {"counts", "context"}),
     # Segment AD2I (ruling 84): a Form's invitees added and removed.
     "invitee.added": EventSchema(_EXERCISE | {"refs", "context"}),
     "invitee.removed": EventSchema(_EXERCISE | {"refs"}),
