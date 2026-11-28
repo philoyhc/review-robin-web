@@ -323,9 +323,29 @@ def open_form(client: TestClient, owner: Person, settings: IdentitySettings) -> 
     return Made(OPEN_FORM, public_id, made=True)
 
 
+def _signed_in(name: str, email: str, settings: IdentitySettings) -> Identity:
+    """A local directory person as their sign-in would arrive: the object ID
+    the local directory gives them (`directory._local_users`), so a sign-in,
+    a directory pick and the seed all bind one person."""
+    import uuid
+
+    address = email.strip().lower()
+    return Identity(
+        principal_id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"mailto:{address}")),
+        email=address,
+        name=name,
+        provider="fake",
+        is_fake=True,
+        tenant_id=settings.fake_auth_tenant_id.strip() or None,
+        upn=address,
+        mail=address,
+    )
+
+
 def _applications(public_id: str, owner: Person, settings: IdentitySettings) -> int:
     """Six applications: the second fake account's first, submitted, so
-    switching to it shows one; then five more, two of them drafts."""
+    switching to it shows one; then five more, two of them drafts. Each
+    applicant is bound as their sign-in would bind them."""
     alternate = settings.fake_auth_alt_email.strip().lower()
     head = [(settings.fake_auth_alt_name, alternate)] if alternate else []
     chosen = head + _people(10, APPLICANTS - len(head), but=alternate)
@@ -358,15 +378,15 @@ def _applications(public_id: str, owner: Person, settings: IdentitySettings) -> 
         exercise = session.scalars(select(Exercise).where(Exercise.public_id == public_id)).one()
         actor = session.get(Person, owner.id)
         added = applications.record_samples(session, exercise, rows, actor)
-        # The second account's application is its own person's (Codex on
-        # #4279): resolving it as a sign-in does binds the pending person
-        # just recorded, or finds the one already bound if it has signed in
-        # before, and the application moves to that person.
-        signed = alternate_identity(settings)
-        if signed is not None and alternate and rows:
-            person = people.resolve(session, signed)
+        # Each applicant signed in to apply, so each is bound as a sign-in
+        # binds them (author, 2026-11-28): the pending person just recorded,
+        # or the one already bound (the second account, if it has signed in
+        # before, Codex on #4279), the application moving to that person.
+        for row, (name, email) in zip(rows, chosen, strict=True):
+            signed = alternate_identity(settings) if email == alternate else None
+            person = people.resolve(session, signed or _signed_in(name, email, settings))
             mine = session.scalars(
-                select(Application).where(Application.public_id == rows[0].public_id)
+                select(Application).where(Application.public_id == row.public_id)
             ).one()
             if person is not None and mine.person_id != person.id:
                 mine.person_id = person.id
