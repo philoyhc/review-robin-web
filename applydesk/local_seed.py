@@ -26,7 +26,7 @@ from sqlalchemy import func, select
 from applydesk import applications, db, ids, operators, people, sample_data
 from applydesk.local_directory import PEOPLE
 from applydesk.models import Application, Candidate, Exercise, Person
-from cordware.identity import Identity, is_local
+from cordware.identity import Identity, alternate_identity, is_local
 from cordware.settings import IdentitySettings, identity_settings
 
 
@@ -56,6 +56,8 @@ _PLATFORM = operators.Actor(None, is_super_admin=True, platform=True)
 #: How long the open form stays open from the run (segment AD2X), and how
 #: long before the run it opened, so the seeded applications fall inside.
 OPEN_FOR = timedelta(days=30)
+#: How long before the run the form opened, so the seeded applications,
+#: dated up to six days back, fall inside its window (cold read).
 OPENED = timedelta(days=10)
 #: How many applications Scenario 1 makes.
 APPLICANTS = 6
@@ -356,6 +358,18 @@ def _applications(public_id: str, owner: Person, settings: IdentitySettings) -> 
         exercise = session.scalars(select(Exercise).where(Exercise.public_id == public_id)).one()
         actor = session.get(Person, owner.id)
         added = applications.record_samples(session, exercise, rows, actor)
+        # The second account's application is its own person's (Codex on
+        # #4279): resolving it as a sign-in does binds the pending person
+        # just recorded, or finds the one already bound if it has signed in
+        # before, and the application moves to that person.
+        signed = alternate_identity(settings)
+        if signed is not None and alternate and rows:
+            person = people.resolve(session, signed)
+            mine = session.scalars(
+                select(Application).where(Application.public_id == rows[0].public_id)
+            ).one()
+            if person is not None and mine.person_id != person.id:
+                mine.person_id = person.id
         session.commit()
         return added
     finally:

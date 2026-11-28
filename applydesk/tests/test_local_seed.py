@@ -152,6 +152,41 @@ def test_six_applications_without_a_second_account(monkeypatch: pytest.MonkeyPat
     finally:
         session.close()
     assert n == local_seed.APPLICANTS
+    assert not _open_form().made  # and a re-run finds it complete
+
+
+def test_the_second_account_sits_on_no_panel() -> None:
+    """Codex on #4279: the plain applicant is on neither panel, which keep
+    their sizes (Readers: Local Operator and three; Mentors: four)."""
+    made = _open_form()
+    state = panels_store.stored(made.public_id)
+    assert state is not None
+    assert "divya.petrova@example.edu" not in {m.email for m, _ in state.roster}
+    sizes = sorted(sum(1 for _, keys in state.roster if p.key in keys) for p in state.panels)
+    assert sizes == [4, 4]
+
+
+def test_the_second_account_holds_no_dossier() -> None:
+    """The cold read: the plain applicant holds no Create dossiers entry."""
+    from applydesk import candidates
+
+    made = next(m for m in local_seed.seed_local() if m.name == local_seed.CREATE_DOSSIERS)
+    session = db.new_session()
+    try:
+        held = candidates.listing(session, made.public_id)
+    finally:
+        session.close()
+    assert "divya.petrova@example.edu" not in {c.email for c in held}
+
+
+def test_the_second_account_s_application_is_its_own_if_it_signed_in_first() -> None:
+    """Codex on #4279: Divya Petrova signing in before the seed runs still
+    finds her application on /me, not on a pending duplicate."""
+    client = TestClient(host_with(("applydesk",))[0])
+    client.cookies.set("cordware_fake_as", "alt")
+    assert client.get("/applydesk/me").status_code == 200  # signs in first
+    _open_form()
+    assert "Herb garden on the roof" in client.get("/applydesk/me").text
 
 
 def test_the_create_dossiers_scenario_runs_once() -> None:

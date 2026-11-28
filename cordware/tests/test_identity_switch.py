@@ -157,11 +157,11 @@ def test_the_second_account_has_its_directory_id(monkeypatch: pytest.MonkeyPatch
     import uuid
 
     from cordware.identity import (
-        _alternate_identity,  # pyright: ignore[reportPrivateUsage]  -- the derivation itself
+        alternate_identity,
     )
 
     monkeypatch.setattr(identity_settings, "fake_auth_alt_principal_id", "")
-    found = _alternate_identity(identity_settings)
+    found = alternate_identity(identity_settings)
     assert found is not None
     assert found.principal_id == str(
         uuid.uuid5(uuid.NAMESPACE_URL, "mailto:divya.petrova@example.edu")
