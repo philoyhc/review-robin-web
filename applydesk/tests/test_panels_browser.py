@@ -1106,3 +1106,45 @@ def test_two_quick_clicks_on_panel_make_one_panel(page: Page) -> None:
         route.fallback()
     _settled(page)
     assert page.locator("th[data-panel]").count() == before + 1
+
+
+def test_members_changed_while_looked_up_keep_the_change(page: Page) -> None:
+    """Codex on #4288: an entry replaced before the directory answers is
+    not overwritten by the answer for the old one."""
+    from playwright.sync_api import Route
+
+    held: list[Route] = []
+    page.route("**/panels/lookup", lambda route: held.append(route))
+    page.goto(PANELS)
+    _manage(page)
+    members = page.locator("[data-pn-members]")
+    members.fill("zoe.tan@example.edu")
+    members.press("Enter")
+    page.wait_for_function("() => window.applydeskPanelsBusy > 0")
+    members.fill("daniel.koh@example.edu")
+    for route in held:
+        route.fallback()
+    _settled(page)
+    assert page.locator("[data-pn-tokens] .token").count() == 0
+    assert members.input_value() == "daniel.koh@example.edu"
+
+
+def test_close_calls_off_a_panel_waiting_on_its_members(page: Page) -> None:
+    """Codex on #4288: Close while +Panel's Members are looked up makes no
+    panel when the answer comes."""
+    from playwright.sync_api import Route
+
+    held: list[Route] = []
+    page.route("**/panels/lookup", lambda route: held.append(route))
+    page.goto(PANELS)
+    _manage(page)
+    before = page.locator("th[data-panel]").count()
+    page.locator("[data-pn-newname]").fill("Late")
+    page.locator("[data-pn-members]").fill("zoe.tan@example.edu")
+    page.locator('[data-pn-act="create"]').click()
+    page.wait_for_function("() => window.applydeskPanelsBusy > 0")
+    page.locator('[data-pn-act="close"]').click()
+    for route in held:
+        route.fallback()
+    _settled(page)
+    assert page.locator("th[data-panel]").count() == before

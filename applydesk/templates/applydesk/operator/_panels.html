@@ -651,6 +651,7 @@
   // Cancel: the names typed put back, the panels added taken back with
   // the rows they brought.
   function dropAll(quiet) {
+    creating += 1;  // a +Panel still waiting on its Members is called off (Codex on #4288)
     var n = renames().length, m = added.length + retiring.length;
     renames().forEach(function (box) { box.value = nameOf(box.closest("li[data-panel]").dataset.panel); });
     retiring.forEach(function (key) {
@@ -853,7 +854,7 @@
   // true when every one was found.
   // One take at a time, each reading the box as it starts, so an older
   // answer never rewrites the box or its message over a newer one.
-  var mQueue = Promise.resolve(true);
+  var mQueue = Promise.resolve(true), creating = 0;
   function mTake(all) {
     mQueue = mQueue.then(function () { return mTakeNow(all); });
     return mQueue;
@@ -861,8 +862,12 @@
   function mTakeNow(all) {
     var parts = mIn.value.split(","); if (!all) parts.pop();
     var taken = parts.length;  // the box's first entries, those asked about
+    var asked = parts.join(",");
     var entries = parts.map(function (raw) { return raw.trim(); }).filter(Boolean);
     return Promise.all(entries.map(find)).then(function (answers) {
+      // The entries were changed while the directory answered: the answer
+      // is for words no longer there, so nothing is taken (Codex on #4288).
+      if (mIn.value.split(",").slice(0, taken).join(",") !== asked) return false;
       var missed = [], twice = [], again = [], failed = "";
       answers.forEach(function (found, i) {
         if (found.person) { if (!mPill(found.person)) again.push(found.person[0]); }
@@ -1009,7 +1014,8 @@
       // One +Panel at a time while its Members are looked up.
       if (a.dataset.busy) return;
       a.dataset.busy = "1";
-      mTake(true).then(function (ok) { delete a.dataset.busy; if (ok) go(); });
+      var mine = creating += 1;
+      mTake(true).then(function (ok) { delete a.dataset.busy; if (ok && creating === mine) go(); });
     } else if (what === "save-names") {
       keepAll();
     } else if (what === "cancel-names") {
