@@ -162,4 +162,5 @@ def test_a_csv_with_bad_rows_shows_its_good_rows_and_keeps_the_bad(page: Page) -
     page.locator("tr[data-entry]", has_text="yan@example.edu").wait_for()
     strip = page.locator('.ap-hand-add [data-cand-live][data-cand-kind="candidates"]')
     assert "is not an email address" in strip.locator("[data-cand-bad]").inner_text()
-    assert strip.locator("[data-cand-said]").inner_text() == "1 added."
+    # Segment AD2Y: the upload names what the directory said.
+    assert strip.locator("[data-cand-said]").inner_text().startswith("1 added. Directory: ")
