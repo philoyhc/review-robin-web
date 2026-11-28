@@ -59,6 +59,7 @@ about 150 institutional accounts to add, invite or admit
 | `guide/todo_master.md` | Rulings, the MVP roadmap and open decisions |
 | `guide/ad2_series.md` | The AD2 series: what every AD2 segment holds to (its own database, checkable on localhost) and the segments AD2A–AD2G in order, each with the findings it takes |
 | `guide/segment_AD1U_ui_adjustments.md` | AD1U: a standing segment for small UI adjustments the author asks for, each an item closing on its own; Item 1, Admin's pages take the operator pages' layout |
+| `guide/segment_AD2H_gate_entries.md` | AD2H: the Dossiers grid's cells in the database: gate entries, result values and outcome decisions with who and when; *Lock* saves; release per audience; *Decided* derived |
 | `guide/segment_AD2I_who_may_apply.md` | AD2I: ruling 84 built: the Form's *Who may apply* (Anyone signed in, Invitees, Dossiers) with a stored invite list, Details' setting retired, the first item before gates, and reordering a stage's items |
 | `guide/segment_AD2G_retire_simulation.md` | AD2G: retire the simulation. Item 1 makes every exercise an ordinary database exercise (the scratch store removed, *New exercise* and *Duplicate* capped at 50 live per creator, the seed's `--reset` and `--blank`); Item 2, request-scoped loading and paging, is planned when Item 1 closes |
 | `guide/things_to_check_in_browser.md` | **Browser checks owed** on merged changes, one section per change, each row ticked and the section deleted once checked (2026-11-22, AD1R and AD1S's moved in from `guide/todo_master.md`) |
