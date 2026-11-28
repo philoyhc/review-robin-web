@@ -148,3 +148,21 @@ def test_the_same_address_twice_is_no_switch(monkeypatch: pytest.MonkeyPatch) ->
 def test_the_landing_page_offers_the_switch() -> None:
     page = TestClient(create_app(apps=())).get("/").text
     assert "data-switch-identity>Switch to Divya Petrova</a>" in page
+
+
+@pytest.mark.usefixtures("local")
+def test_the_second_account_has_its_directory_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex on #4278: a blank ID is derived from the address as the local
+    directory derives each account's, so both bind one person."""
+    import uuid
+
+    from cordware.identity import (
+        _alternate_identity,  # pyright: ignore[reportPrivateUsage]  -- the derivation itself
+    )
+
+    monkeypatch.setattr(identity_settings, "fake_auth_alt_principal_id", "")
+    found = _alternate_identity(identity_settings)
+    assert found is not None
+    assert found.principal_id == str(
+        uuid.uuid5(uuid.NAMESPACE_URL, "mailto:divya.petrova@example.edu")
+    )
