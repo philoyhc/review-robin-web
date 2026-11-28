@@ -148,3 +148,16 @@ def test_the_second_account_sits_on_no_panel() -> None:
     assert "divya.petrova@example.edu" not in {m.email for m, _ in state.roster}
     sizes = sorted(sum(1 for _, keys in state.roster if p.key in keys) for p in state.panels)
     assert sizes == [4, 4]
+
+
+def test_the_second_account_holds_no_dossier() -> None:
+    """The cold read: the plain applicant holds no Create dossiers entry."""
+    from applydesk import candidates
+
+    made = next(m for m in local_seed.seed_local() if m.name == local_seed.CREATE_DOSSIERS)
+    session = db.new_session()
+    try:
+        held = candidates.listing(session, made.public_id)
+    finally:
+        session.close()
+    assert "divya.petrova@example.edu" not in {c.email for c in held}

@@ -393,13 +393,18 @@ def create_dossiers(client: TestClient, owner: Person, settings: IdentitySetting
         ],
     }
     _ok(client.post(f"{base}/process", json=process), "Process's Save")
-    holders = [operator, *_people(30, 4)]
+    holders = [operator, *_people(30, 4, but=settings.fake_auth_alt_email)]
     lines = ["Name,Email,Title"]
     for name, email in holders:
         for term in ("Semester 1", "Semester 2"):
             lines.append(f"{name},{email},Peer mentor · {term}")
     sent = {"action": "csv", "text": "\n".join(lines) + "\n"}
-    _ok(client.post(f"{base}/candidates", json=sent), "Create dossiers' CSV")
+    reply = _ok(client.post(f"{base}/candidates", json=sent), "Create dossiers' CSV")
+    import json
+
+    bad: list[object] = list(json.loads(reply.text).get("bad") or ())
+    if bad:
+        raise LocalSeedRefused(f"Create dossiers' CSV refused rows: {bad}")
     return Made(CREATE_DOSSIERS, public_id, made=True)
 
 
