@@ -2434,3 +2434,55 @@ def test_a_draft_exercise_s_gate_is_created_once_published(client: TestClient) -
     box = box[: box.index("</button>")]
     assert 'data-off="Once the exercise is published"' in box
     assert 'title="Once the exercise is published"' in box
+
+
+def _first_group(text: str) -> tuple[str, str]:
+    found = re.search(
+        r'<th class="ap-first" colspan="\d+"><b>([^<]+)</b>'
+        r'(?:<span class="ap-when">([^<]*)</span>)?</th>',
+        text,
+    )
+    assert found is not None
+    return found.group(1), found.group(2) or ""
+
+
+def test_create_dossiers_first_heads_the_rows_with_its_stage(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Author, 2026-11-28: Create dossiers first heads the identity columns
+    with its stage's name and dates, as a form's stage does."""
+    from dataclasses import replace
+
+    upstream = stages._STAGES[EX][1:]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    held = (replace(upstream[0], candidates=True), *upstream[1:])
+    monkeypatch.setitem(stages._STAGES, EX, held)  # pyright: ignore[reportPrivateUsage]  -- as above
+    text = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
+    assert _first_group(text) == (held[0].label, held[0].dates)
+    assert "From elsewhere" not in text
+
+
+def test_create_dossiers_later_leaves_the_group_dossiers_not_from_elsewhere(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A Create dossiers stage that is not first: the rows still come from a
+    stage, so the group reads *Dossiers* with no *From elsewhere*."""
+    from dataclasses import replace
+
+    upstream = stages._STAGES[EX][1:]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    held = (upstream[0], replace(upstream[1], candidates=True), *upstream[2:])
+    monkeypatch.setitem(stages._STAGES, EX, held)  # pyright: ignore[reportPrivateUsage]  -- as above
+    text = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
+    assert _first_group(text) == ("Dossiers", "")
+    assert "From elsewhere" not in text
+
+
+def test_a_form_stage_also_holding_create_dossiers_heads_the_rows(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from dataclasses import replace
+
+    model = stages._STAGES[EX]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    held = (replace(model[0], candidates=True), *model[1:])
+    monkeypatch.setitem(stages._STAGES, EX, held)  # pyright: ignore[reportPrivateUsage]  -- as above
+    text = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
+    assert _first_group(text) == (held[0].label, held[0].dates)

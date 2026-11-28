@@ -253,12 +253,13 @@ def verified_emails(exercise_id: str) -> frozenset[str]:
         entries = select(Candidate.person_id).where(
             Candidate.exercise_id == exercise, Candidate.removed_at.is_(None)
         )
-        found = session.scalars(
-            select(Person.email).where(
-                Person.object_id.is_not(None),
-                Person.id.in_(applicants.union(entries)),
-            )
+        found = session.execute(
+            select(Person.email, Person.object_id).where(Person.id.in_(applicants.union(entries)))
         ).all()
     finally:
         session.close()
-    return frozenset(k for k in (people.email_key(e) for e in found) if k)
+    # Matched by address, so an address a pending person also holds here is
+    # no pill: their row would show one it has not earned (cold read).
+    bound = {people.email_key(e) for e, oid in found if oid is not None}
+    pending = {people.email_key(e) for e, oid in found if oid is None}
+    return frozenset(k for k in bound - pending if k)

@@ -37,7 +37,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/process_store.py` | An exercise's timeline in the database ("Process"): `load` and `stored_stages` build the dataclasses the pages read, `save` keeps a page's snapshot whole (the revision guard, keys, the references check, the audit), `move_form` is Home's *Open form* and *Close form*. Flushes, never commits; refuses with `Refused` and its `key` |
 | `applydesk/rules.py` | The rule engine, the only rule evaluator: `propose` answers what each rule would change in a table of dossiers (Dossiers' *Apply rules…*), over `Dossier`, `Column` and `Cell` rows built by `columns_of` and `rows_of`. Pure: reads no database |
 | `applydesk/candidates.py` | An exercise's entries, shown as *Create dossiers* (`Candidate` in code; "Candidates"): `listing`, `add`, `add_many`, `remove` and `import_csv`; `set_per_person`, the Form's *Max dossiers per person*. Flushes, never commits |
-| `applydesk/dossiers.py` | An exercise's dossiers ("Dossiers"): `record_samples` (the seed's), `feeds_gates`, `sync_candidates` (mints), `retire_for`, and the readers Process and Dossiers draw rows from (`candidate_rows`, `hand_rows`). Flushes, never commits |
+| `applydesk/dossiers.py` | An exercise's dossiers ("Dossiers"): `record_samples` (the seed's), `feeds_gates`, `sync_candidates` (mints), `retire_for`, and the readers Process and Dossiers draw rows from (`candidate_rows`, `hand_rows`, `verified_emails`). Flushes, never commits |
 | `applydesk/invitees.py` | A Form's invite list ("Invitees"): `listing`, `full`, `add`, `remove` and `import_csv`, sharing `candidates.read_csv`; `tab_shown`, whether the Setup row shows the Invitees tab. Flushes, never commits |
 | `applydesk/eligibility.py` | Who may apply (segment AD4A; ruling 84): `may_apply` answers why a person may apply to an exercise (`open`, `invited`, `dossier`) or None, by the Form's *Who may apply* as stored, Create dossiers' entries when it is on the timeline. Reads only |
 | `applydesk/participant.py` | The signed-in person on `/me` (segment AD4A): `signed_in` binds the identity to a person (`people.resolve`); `my_applications`, `open_to`, `archived_ids`, `on_me` (with `ON_ME`) and `lobby` give *Open to me* (each exercise on /me whose Form admits them, with why) and *My applications*; `may_see` and `owns` gate the exercise and application pages. Never shows an archived exercise |
@@ -369,7 +369,8 @@ seed records the samples' dossiers by the IDs they carry
 `Dossier` view carries the ID, the person's name and address and its
 application or None; Dossiers' grid, gate pages, Extract, rules and the handoff
 read that view. `hand_rows` gives the Dossiers page the entries to draw as
-rows. Dossier events are `dossier.seeded`, `dossier.minted` (counts) and
+rows, and `verified_emails` the addresses it shows as a pill: a bound
+applicant's or entry's, unless a pending person on the exercise shares it. Dossier events are `dossier.seeded`, `dossier.minted` (counts) and
 `dossier.retired` (`refs.dossier_id`).
 
 `timeline_checks.check` (errors block publishing the first stage through

@@ -1536,7 +1536,14 @@ Status filter's *By hand* shows them alone. The placeholder line says the
 cells are not saved and adding and removing these rows is. Process's
 link to it reads *Save, then manage on Dossiers* on an item not yet saved, as
 the Form's link to Invitees does while the tab is not shown.
+An address bound to a directory account is a pill, as Panels shows a
+verified one (author, 2026-11-28).
 
+- **The first stage group.** The stage that makes the rows heads the
+  identity columns with its name and dates when it is first: the form's,
+  or Create dossiers' (author, 2026-11-28). Otherwise the group reads
+  *Dossiers*, with *From elsewhere* only when no stage holds the form or
+  Create dossiers (ruling 15: the table is loaded upstream).
 - **The header** (ruling 52). Under the stages, an information row holds
   each column's kind, counts, rule, lock and *Released*, top-aligned; under
   it the column headers stand on one line, each name a sort button with a

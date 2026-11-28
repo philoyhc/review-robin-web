@@ -233,3 +233,22 @@ def test_the_dossiers_page_heads_its_rows_with_create_dossiers_stage() -> None:
     me = identity_settings.fake_auth_email
     pills = re.findall(r'<span class="pl-addr" data-verified[^>]*>([^<]+)</span>', text)
     assert pills and set(pills) == {me}  # Local Operator is bound; the rest are pending
+
+
+def test_a_bound_applicant_s_address_is_a_pill_and_the_rest_plain() -> None:
+    """Cold read: an application row's address is a pill once its person
+    is bound (here by switching to the second account), and a pending
+    applicant's stays plain beside it."""
+    import re
+
+    made = _open_form()
+    client = TestClient(host_with(("applydesk",))[0])
+    client.cookies.set("cordware_fake_as", "alt")
+    assert client.get("/applydesk/me").status_code == 200  # binds the account
+    client.cookies.delete("cordware_fake_as")
+    text = client.get(f"/applydesk/operator/exercises/{made.public_id}/dossiers").text
+    alt = identity_settings.fake_auth_alt_email
+    pills = re.findall(r'<span class="pl-addr" data-verified[^>]*>([^<]+)</span>', text)
+    assert pills == [alt]
+    plain = re.findall(r'<span class="ap-mail">([^<]+)</span>', text)
+    assert len(plain) == 5 and alt not in plain
