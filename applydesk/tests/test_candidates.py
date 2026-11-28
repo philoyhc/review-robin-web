@@ -1,4 +1,4 @@
-"""The Candidates list, shown as Create dossiers (rulings 77, 83;
+"""Create dossiers' list (`candidates` in code; rulings 77, 83;
 segments AD2C rung 9, AD2K; `applydesk/candidates.py`): entries added
 through the search or a CSV, one dossier each, numbered per person; each
 change audited; the item placed on one stage by Process's

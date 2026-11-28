@@ -1,11 +1,11 @@
 """An exercise's dossiers (segment AD2F; rulings 25, 26, 32, 81; AD-44),
 kept in the `dossier` table: each its own public ID and its source, an
-application or a Candidates row.
+application or a Create dossiers entry.
 
 Until AD4 mints a form's dossiers at submit or at its close, the only
 application dossiers are the samples', which the localhost seed records
-with the IDs they carry (ruling 74). *Create dossiers* (the Candidates
-item) mints a dossier per entry where it is the first item, once the
+with the IDs they carry (ruling 74). *Create dossiers* (`candidates` in
+code) mints a dossier per entry where it is the first item, once the
 exercise is published and on each later add (rulings 81, 83,
 `sync_candidates`)."""
 
@@ -66,7 +66,7 @@ def record_samples(session: Session, exercise: Exercise, actor: Person | None) -
 
 
 def feeds_gates(session: Session, exercise: Exercise) -> bool:
-    """Whether the exercise's Candidates (*Create dossiers*) create its
+    """Whether the exercise's *Create dossiers* entries create its
     dossiers (ruling 83 as amended, author 2026-11-27): its stored
     timeline's first stage holds the item. A Form may follow it, on that
     stage or a later one, and writes to the dossiers it made; a Form first

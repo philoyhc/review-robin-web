@@ -101,7 +101,7 @@ def record_samples(
 ) -> int:
     """Record `samples` on `exercise` (the seed), in their order; one
     already on record is left alone. Each applicant is the pending person
-    of their address, as Candidates' CSV makes them. Returns how many were
+    of their address, as Create dossiers' CSV makes them. Returns how many were
     added, and audits them as one event when any were."""
     known = set(
         session.scalars(select(Application.public_id).where(Application.exercise_id == exercise.id))

@@ -12,7 +12,7 @@ Keys are ``panel-<n>``, minted here past every key the exercise has held,
 retired ones and the sample's included, so a key is never given twice
 (ruling 37). A page's own placeholder keys (``made-1``, ``new-1``) never
 reach a row. Each address is matched to a person on record, else stored as
-a pending person, as Candidates' CSV is. Rows are retired, never deleted
+a pending person, as Create dossiers' CSV is. Rows are retired, never deleted
 (ruling 74): a person removed and added again revives their row.
 """
 

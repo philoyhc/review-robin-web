@@ -1,4 +1,4 @@
-"""The Candidates item in a real Chromium, as the page's script draws it
+"""Create dossiers in a real Chromium, as the page's script draws it
 (ruling 77, segment AD2C rung 8; Codex on #4158): it keeps its own name and
 kicker, and is counted as no outcome."""
 
@@ -17,7 +17,7 @@ DRAFT = "c4xh2ndv6s"
 
 
 def _held(exercise_id: str = MODEL) -> None:
-    """The first stage holds Candidates (rung 9: a stage's own flag)."""
+    """The first stage holds Create dossiers (rung 9: a stage's own flag)."""
     built = stages.plan_of(exercise_id).stages
     session = db.new_session()
     try:

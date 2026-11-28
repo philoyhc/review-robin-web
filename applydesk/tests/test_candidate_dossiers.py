@@ -1,4 +1,4 @@
-"""Candidates' dossiers (segment AD2F rung 5, AD2K; rulings 81, 83):
+"""Create dossiers' dossiers (segment AD2F rung 5, AD2K; rulings 81, 83):
 where Create dossiers is the stored timeline's first item, each entry's
 dossier is minted once the exercise is published and on each later add;
 otherwise the item is only the form's roster."""
@@ -217,7 +217,7 @@ def test_extract_offers_a_candidates_only_exercise_s_data() -> None:
 
 
 def test_a_sample_s_saved_timeline_lists_its_candidates_dossiers() -> None:
-    """Codex on #4246: a sample exercise saved with Candidates and no form
+    """Codex on #4246: a sample exercise saved with Create dossiers and no form
     lists the minted dossiers after its applications, cells kept."""
     from applydesk import process_store
 
