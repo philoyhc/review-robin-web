@@ -82,7 +82,8 @@ participant's `applydesk/routes_me.py`, the Admins' (and the super-admin's)
 | `/me/exercises/<id>/dossiers/<dossier>` | The dossier an evaluator opens |
 
 Any other page under an exercise is a 404. The `/me/exercises/<id>` pages
-answer only for a Published or Closed exercise.
+answer only for an exercise that shows on `/me` ("The User Lobby"), and the
+exercise and application pages only to the people named there.
 
 - **Public IDs** (`applydesk/ids.py`): 10 symbols from RRW's alphabet,
   `23456789abcdefghjkmnpqrstuvwxyz`, drawn at random. A path whose ID has
@@ -133,7 +134,7 @@ answer only for a Published or Closed exercise.
   | An exercise's pages, `/operator/exercises/<id>/…` | Whoever holds a current grant on that exercise, the super-admin and Admins included: one they hold none on, they adopt from Exercises Diagnostics |
   | `/admin/…` | Admins and the super-admin; an operator is not enough |
   | The landing, `/` and `/operator` | Any operator (so a deployed operator lands on the Lobby); anyone else the placeholders' gate |
-  | `/me/…` | The placeholders' gate (`gate.placeholders_only`): anyone on a local run, deployed only the super-admin, until a later AD2 segment |
+  | `/me/…` | The placeholders' gate (`gate.placeholders_only`): anyone on a local run, deployed only the super-admin, until AD4C; then, within it, the person's records ("The User Lobby") |
 
   A link to `/me/…` (the switcher's *User Lobby*, a dossier's *View as
   evaluators see it*) is offered only where that gate admits the viewer
@@ -536,22 +537,40 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     page" and "The Emails page".
   - **Reload.** A save that keys something anew (a panel) reloads the page
     so it holds the keys kept, and says it saved once back.
-- **The User Lobby** (`applydesk/templates/applydesk/me/home.html`), three
-  cards: *My applications*, each of the applicant's own with its state,
-  linking its page, a draft included; *Open to me*, each Published or
-  Closed exercise, saying *Applications open*, *Applications closed* or
-  *Closed: its released results stay here*, and *You are invited* for an
-  invitation-only one; *Dossiers I am asked to evaluate*, each linking its
-  dossier, *An application* in place of the title in a blind exercise. An
-  empty card says so (*No applications yet.*, *No exercise is open to you
-  yet.*, *None to evaluate yet.*).
+- **The User Lobby** (`applydesk/templates/applydesk/me/home.html`) is the
+  signed-in person's: `/me` reads the viewer (`participant.signed_in`, which
+  binds the identity to a person as the operator pages do, `people.resolve`),
+  never a fixed sample. The super-admin sees their own, as anyone does. Three
+  cards:
+  - *My applications*: the person's own stored applications, each with its
+    state, linking its page, a draft included, in the exercises that show on
+    `/me` (not deleted or archived).
+  - *Open to me*: each exercise that shows on `/me` whose Form admits the
+    person (`eligibility.may_apply`: *Anyone signed in*, *Invitees* by the
+    person row, or, where Create dossiers is on the timeline, a live dossier
+    entry, which overrides the stored *Who may apply*). Each says
+    *Applications open* or *Applications closed* (`workflow.form_state`), or
+    *Closed: its released results stay here*, with the chip *You are invited*
+    or *A dossier is held for you* where that is why. A removed invitee or a
+    retired entry no longer admits the person; their applications still show.
+  - *Dossiers I am asked to evaluate*: empty until AD5 pairs evaluators with
+    dossiers (*None to evaluate yet.*).
+
+  An empty card says so (*No applications yet.*, *No exercise is open to you
+  yet.*). An exercise shows on `/me` (`participant.on_me`) by its state
+  (Published, Completed, Closed) for a sample, and by `locks.exercise_status`
+  for one made with *New exercise*; never one with `archived_at` set.
+  The exercise page (`/me/exercises/<id>`) answers only someone its Form
+  admits or who has an application there (`participant.may_see`); anyone else
+  has a 404. The application page answers only its own applicant
+  (`participant.owns`); anyone else, the super-admin included, has a 404.
 - **The applicant's application**
   (`applydesk/templates/applydesk/me/application.html`): the crumb *User
   Lobby / exercise / Your application*; the title with its state; *Shown to
   evaluators* and *Not shown to evaluators*, each a card of the Form's
   questions with the answers (`extract.form_answers`) as one fact list, *—*
   where there is none and *None* for a card with no question; *Your
-  results*, a card likewise, on the applicant's own application only, once an outcome is
+  results* (`stages.released_results`), a card likewise, once an outcome is
   released to applicants. Then a draft's *Save draft* and *Submit*
   (disabled until AD4), or *Applications closed on <date>* once the form
   has closed; a submitted application's *Withdraw* (Outline-amber, disabled
@@ -768,17 +787,17 @@ include.
   link for a Draft); each outcome's Dossiers tally and *Released* /
   *Pending*, linking to Dossiers. It never appears on the applicant's page.
 - **The applicant's page** draws the same partial beside *Apply*, without the
-  operator's part or the Next step line, for a Published or Closed exercise.
+  operator's part or the Next step line, for an exercise that shows on `/me`.
   *Apply* links each of the applicant's own applications there (*Your
   application*), as the User Lobby's *My applications* lists them all
-  (`sample_data.my_applications`, which reads the stored applications the sample applicant owns).
+  (`participant.my_applications`, the stored applications the viewer owns).
   Under each, every outcome released to applicants gives *Your result*
   with the applicant's own value and when (`stages.released_results`; the
   application page lists them as *Your results*); AD7 sends them. `/me`
-  shows Published and Closed exercises (ruling 41): a Closed one stays,
-  read-only, its *Apply* saying it is closed; Draft and Archived do not,
-  and their application and dossier pages answer 404 (author, 2026-11-18).
-  *Your results* is the applicant's own: another application's page shows none.
+  shows only the exercises "The User Lobby" names (ruling 41): a Closed one
+  stays, read-only, its *Apply* saying it is closed; Draft and Archived do
+  not, and their application and dossier pages answer 404 (author,
+  2026-11-18). *Your results* is the applicant's own, as the page is.
   A submitted application may be withdrawn (*Withdraw*, Outline-amber, with a
   confirm, AD4) until a gate holding its dossier completes (ruling 49); then the
   page names the

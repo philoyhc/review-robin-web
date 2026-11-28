@@ -48,6 +48,36 @@ Taken 2026-11-28 at `c14ac325b`.
 | `/me` templates | 4 | `ls applydesk/templates/applydesk/me/` |
 | Test files naming `/me` | 28 | `grep -rln "/me\b\|/me/" applydesk/tests` |
 
+## Status
+
+**Closed 2026-11-28** (#4271 plan, #4272, #4273, #4274, and this close). Intended versus done:
+
+- **The ladder held** (rungs 2–4). Rung 4 also took the fixes from the cumulative read, and rung 3 took two Codex findings before it merged.
+- **The logic is in `applydesk/participant.py`,** a module the plan did not name: `signed_in`, `my_applications`, `owns`, `open_to`, `archived_ids`, `on_me`, `lobby` and `may_see`. The route only calls it.
+- **Decisions confirmed at build:**
+  - *Completed* shows on `/me`. It is the status an exercise made with *New exercise* reaches when every stage has completed; it stays, as Closed does (`participant.ON_ME`).
+  - An exercise made with *New exercise* shows by its status as its stages give it (`locks.exercise_status`). Its stored state stays Draft.
+  - Archiving is read from the row (`archived_at`) for every exercise.
+  - *Applications open* reads the stored form state (`workflow.form_state`), not the placeholder flag.
+  - The exercise page answers only someone admitted or with an application there.
+- **Reads:** one cumulative `diff-reviewer` read at rung 4 (base `e858ac262`), 13 findings, all acted on:
+  - an archived ordinary exercise was shown;
+  - the viewer was resolved twice;
+  - stages were read before eligibility;
+  - *Completed* was unexplained;
+  - the form flag was read as a constant;
+  - the exercise page lacked an eligibility check;
+  - a rule lived in the route;
+  - a duplicated Create dossiers check;
+  - a test helper's identity;
+  - seven missing tests;
+  - the spec rows (at close).
+
+  Codex found two on #4273, both also in the read: the form state and the archived exercise.
+- **Left as is:**
+  - `sample_data.MINE`, `MY_REVIEWS` and `my_applications` stay as test fixtures only; no page reads them. They go when the samples are retired.
+  - The `/me` dossier page is not gated per person (AD5 pairs evaluators with dossiers).
+
 ## PR ladder
 
 1. **Plan** (this file), and the series file. Prose only.

@@ -125,8 +125,8 @@ whole or not at all. *To build:* the purge (AD2D, with stored applications:
 
 | Kind | Recognized by | Reaches | Built |
 |---|---|---|---|
-| **Applicant** (*Candidate*, ruling 71) | their application | `/me`: the exercises open to them, their applications, and what is released to applicants | Placeholder pages; per-person gating in AD2D |
-| **Invitee** | being on the invite list of a Form whose *Who may apply* is *Invitees* (`applydesk/invitees.py`; "The Process page" in `applydesk/spec/applications.md`) | as an Applicant, for that exercise | The list is built; checking it when someone applies is AD4's |
+| **Applicant** (*Candidate*, ruling 71) | their application | `/me`: the exercises open to them, their applications, and what is released to applicants | The pages read the signed-in person; the gate opens in AD4C |
+| **Invitee** | being on the invite list of a Form whose *Who may apply* is *Invitees* (`applydesk/invitees.py`; "The Process page" in `applydesk/spec/applications.md`) | as an Applicant, for that exercise | The list is built; `/me` admits them by it (`applydesk/eligibility.py`); checking it when someone applies is AD4C's |
 | **Evaluator** | membership of a panel a gate draws on | the dossiers they evaluate, `/me/…/dossiers/<id>` (a dossier's own ID, never its application's; a dossier created by hand has no page there yet, AD2V), showing only what their gate × panel's view shows, during the gate's window (ruling 79); they respond in Review Robin, never in Apply Desk | AD2E, AD4, AD5 |
 
 | **Observer** | named on an exercise as observing it (pre-positioned: the model has a place for them; nothing is built until a later segment) | `/me`: what the exercise grants observers, read-only, as Review Robin's observers read `/me/sessions/<id>/collation` | Later |
@@ -137,10 +137,17 @@ role on the exercise's operator pages. Their grants join ruling 68's
 audiences (*Applicant*, *Assigned evaluators*, *Evaluators*) as *Observers*
 when they are built.
 
-A participant may also be an operator; the two are independent. Until AD2D,
+A participant may also be an operator; the two are independent. Until AD4C,
 the participant's pages stay behind the placeholders' gate
 (`gate.placeholders_only`: anyone on a local run, deployed only the
-super-admin).
+super-admin). Within it they read the signed-in person's records:
+
+- *My applications* lists only the person's own.
+- The exercise page (`/me/exercises/<id>`) answers someone whose Form admits
+  them (`eligibility.may_apply`) or who has an application there
+  (`participant.may_see`); anyone else has a 404.
+- The application page answers only its own applicant (`participant.owns`):
+  anyone else, the super-admin included, has a 404.
 
 ## 5. What each kind of account may do
 
@@ -183,7 +190,7 @@ role, so every change has an Owner on record.
 | An exercise's pages, `/operator/exercises/<id>/…` | its operators and Owners, an Admin or the super-admin among them once adopted | Yes |
 | Owner-only posts (operators, ownership, archive, restore, purge, delete) | its Owners | Operators and ownership, archive, restore and delete: yes. Purge: to build (AD2D) |
 | `/admin/…` | Admins and the super-admin | Yes |
-| `/me/…` | participants, by their records (§4) | Behind the placeholders' gate |
+| `/me/…` | participants, by their records (§4): the exercise page to those admitted or applied, an application to its applicant only | Behind the placeholders' gate |
 | `/` and `/operator` | an operator lands on the Lobby; anyone else on the User Lobby | Yes |
 
 ## 7. The Operator Lobby and Exercise Home

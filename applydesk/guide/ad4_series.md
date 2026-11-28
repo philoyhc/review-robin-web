@@ -21,7 +21,7 @@ AD4 is a series of segments, as AD2 is (author, 2026-11-28), taken before AD2H. 
 
 | Segment | Lands | Plan |
 |---|---|---|
-| **AD4A — The User Lobby is the signed-in person's** | `/me` reads the signed-in person: their own applications from the store, and the exercises open to them by the Form's *Who may apply* (anyone signed in, the invite list, or the dossiers made for them). The sample `MINE` goes | `applydesk/guide/segment_AD4A_user_lobby.md` |
+| **AD4A — The User Lobby is the signed-in person's** | `/me` reads the signed-in person: their own applications from the store, and the exercises open to them by the Form's *Who may apply* (anyone signed in, the invite list, or the dossiers made for them). No page reads the sample `MINE`. **Closed 2026-11-28** | `applydesk/guide/archive/segment_AD4A_user_lobby.md` |
 | **AD4B — The form as published** | Publishing the form's stage freezes a version of its questions. An application answers a version, and later edits never change what was asked | — |
 | **AD4C — Drafts and submit** | The application page becomes a form: *Save draft*, and *Submit* within the window. Answers are stored and checked against the version's rules on the server (required, bounds, list options, Select people from the directory). Opens `/me` to every signed-in person | — |
 | **AD4D — Dossiers from submissions, and withdrawing** | At submit, the dossier is written to or created, as the series ruling says. *Withdraw* until a gate holding the dossier completes (ruling 49). *Max dossiers per person* is enforced at submit, race-safe, with withdrawn applications freeing a place | — |
