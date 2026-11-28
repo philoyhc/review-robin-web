@@ -1960,6 +1960,13 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         panels_revision=panels_revision,
         form_revision=form_revision,
         roster=sample_data.roster(exercise.public_id),
+        # Segment AD2Y: the roster's members bound to a directory account,
+        # drawn as pills on Panels.
+        panel_bound=(
+            panels_store.bound_among(m.email for m, _ in sample_data.roster(exercise.public_id))
+            if section == "panels"
+            else frozenset[str]()
+        ),
         uses=stages.panel_uses(exercise.public_id),
         panels_sent=workflow.panels_sent(exercise.public_id),
         blank=sample_data.FormCard("field"),

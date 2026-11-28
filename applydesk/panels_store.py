@@ -19,7 +19,7 @@ a pending person, as Create dossiers' CSV is. Rows are retired, never deleted
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, cast
@@ -560,3 +560,25 @@ def unbound_addresses(session: Session, sent: Any) -> list[str]:
         )
     )
     return [address for key, address in addresses.items() if key not in known]
+
+
+def bound_among(addresses: Iterable[str]) -> frozenset[str]:
+    """The match keys among ``addresses`` a bound person holds, read in a
+    session of its own: the Panels table draws them as pills (segment
+    AD2Y), as Create dossiers' and Invitees' lists do."""
+    keys = {k for k in (people.email_key(a) for a in addresses) if k}
+    if not keys:
+        return frozenset()
+    session = db.new_session()
+    try:
+        return frozenset(
+            k
+            for k in session.scalars(
+                select(Person.email_key).where(
+                    Person.email_key.in_(list(keys)), Person.object_id.is_not(None)
+                )
+            )
+            if k
+        )
+    finally:
+        session.close()
