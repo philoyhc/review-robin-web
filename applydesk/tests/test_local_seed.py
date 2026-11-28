@@ -78,3 +78,34 @@ def test_refused_without_fake_auth(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(identity_settings, "allow_fake_auth", False)
     with pytest.raises(local_seed.LocalSeedRefused):
         local_seed.seed_local()
+
+
+def test_the_create_dossiers_scenario() -> None:
+    from applydesk import candidates
+    from applydesk.models import Dossier
+
+    made = next(m for m in local_seed.seed_local() if m.name == local_seed.CREATE_DOSSIERS)
+    assert made.made
+    session = db.new_session()
+    try:
+        listed = candidates.listing(session, made.public_id)
+        row = session.scalars(select(Exercise).where(Exercise.public_id == made.public_id)).one()
+        minted = session.scalar(
+            select(func.count()).select_from(Dossier).where(Dossier.exercise_id == row.id)
+        )
+        assert candidates.per_person(session, made.public_id) == 2
+    finally:
+        session.close()
+    assert len(listed) == 10 and minted == 10
+    holders = {c.email for c in listed}
+    assert len(holders) == 5 and identity_settings.fake_auth_email in holders
+    assert {c.title for c in listed if c.email == identity_settings.fake_auth_email} == {
+        "Peer mentor · Semester 1",
+        "Peer mentor · Semester 2",
+    }
+    state = panels_store.stored(made.public_id)
+    assert state is not None and len(state.panels) == 2
+    # Local Operator holds dossiers here, so /me says so.
+    lobby = TestClient(host_with(("applydesk",))[0]).get("/applydesk/me").text
+    shown = lobby[lobby.index(local_seed.CREATE_DOSSIERS) :]
+    assert "A dossier is held for you" in shown[: shown.index("</p>")]

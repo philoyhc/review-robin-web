@@ -57,6 +57,7 @@ _PLATFORM = operators.Actor(None, is_super_admin=True, platform=True)
 OPEN_FOR = timedelta(days=30)
 
 OPEN_FORM = "Community Project Grant 2027"
+CREATE_DOSSIERS = "Peer Mentor Nominations 2027"
 
 
 class LocalSeedRefused(RuntimeError):
@@ -318,8 +319,51 @@ def _applications(public_id: str, owner: Person, settings: IdentitySettings) -> 
         session.close()
 
 
+def create_dossiers(client: TestClient, owner: Person, settings: IdentitySettings) -> Made:
+    """Scenario 2: a *Create dossiers* stage alone, published, two dossiers
+    a person; five people, Local Operator among them, each holding two
+    titled dossiers, ten in all, so the Dossiers page is populated; two
+    panels. The author adds the Form."""
+    found = _existing(owner.id, CREATE_DOSSIERS)
+    if found is not None:
+        return Made(CREATE_DOSSIERS, found, made=False)
+    public_id = _make(client, CREATE_DOSSIERS)
+    base = f"/operator/exercises/{public_id}"
+    operator = (settings.fake_auth_name, settings.fake_auth_email)
+    _panels(client, public_id, operator, start=20)
+    process: dict[str, object] = {
+        "revision": _revision(client.get(f"{base}/process").text),
+        "per_person": 2,
+        "stages": [
+            {
+                "name": "Nominations",
+                "from": "",
+                "to": "",
+                "shown": True,
+                "published": True,
+                "form": None,
+                "candidates": True,
+                "gates": [],
+                "outcome": None,
+            }
+        ],
+    }
+    _ok(client.post(f"{base}/process", json=process), "Process's Save")
+    holders = [operator, *_people(30, 4)]
+    lines = ["Name,Email,Title"]
+    for name, email in holders:
+        for term in ("Semester 1", "Semester 2"):
+            lines.append(f"{name},{email},Peer mentor · {term}")
+    sent = {"action": "csv", "text": "\n".join(lines) + "\n"}
+    _ok(client.post(f"{base}/candidates", json=sent), "Create dossiers' CSV")
+    return Made(CREATE_DOSSIERS, public_id, made=True)
+
+
 #: Each scenario, in the order the seed builds them.
-SCENARIOS: Sequence[Callable[[TestClient, Person, IdentitySettings], Made]] = (open_form,)
+SCENARIOS: Sequence[Callable[[TestClient, Person, IdentitySettings], Made]] = (
+    open_form,
+    create_dossiers,
+)
 
 
 def seed_local(settings: IdentitySettings | None = None) -> tuple[Made, ...]:
