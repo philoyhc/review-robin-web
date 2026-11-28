@@ -162,3 +162,32 @@ def test_the_lobby_reads_the_stored_form_state() -> None:
     assert "Applications closed" in shown[: shown.index("</p>")]
     page = client.get(f"/applydesk/me/exercises/{ex}").text
     assert "Start an application" not in page
+
+
+def test_an_archived_exercise_leaves_me() -> None:
+    """Codex on #4273: an exercise made with New exercise reads Draft
+    whatever is stored, so its archiving is read from the row: archived,
+    it leaves the lobby and its page is a 404."""
+    from fastapi.testclient import TestClient
+
+    from applydesk.tests._host import host_with
+
+    ex = _exercise("open")
+    session = db.new_session()
+    row = session.scalars(select(Exercise).where(Exercise.public_id == ex)).one()
+    row.name = "Soon Archived"
+    row.process_revision = 1
+    for stage in session.scalars(select(StageRow).where(StageRow.exercise_id == row.id)):
+        stage.status = "published"
+    session.commit()
+    session.close()
+    client = TestClient(host_with(("applydesk",))[0])
+    assert "Soon Archived" in client.get("/applydesk/me").text
+    assert client.get(f"/applydesk/me/exercises/{ex}").status_code == 200
+    session = db.new_session()
+    row = session.scalars(select(Exercise).where(Exercise.public_id == ex)).one()
+    row.archived_at = datetime.now(UTC)
+    session.commit()
+    session.close()
+    assert "Soon Archived" not in client.get("/applydesk/me").text
+    assert client.get(f"/applydesk/me/exercises/{ex}").status_code == 404

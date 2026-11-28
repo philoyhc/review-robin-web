@@ -21,11 +21,17 @@ router = APIRouter(prefix="/me", dependencies=[Depends(placeholders_only)])
 ON_ME = ("Published", "Completed", "Closed")
 
 
-def _on_me(e: sample_data.Exercise) -> bool:
-    """Whether the exercise shows on /me: a sample by its own state; an
-    exercise made with *New exercise*, whose state stays Draft, by its
-    status as its stages give it (`locks.exercise_status`), so it shows
-    once published (segment AD4A)."""
+def _on_me(e: sample_data.Exercise, archived: frozenset[str] | None = None) -> bool:
+    """Whether the exercise shows on /me: never archived (Codex on #4273:
+    an ordinary exercise's state reads Draft whatever is stored); a sample
+    by its own state; an exercise made with *New exercise*, whose state
+    stays Draft, by its status as its stages give it
+    (`locks.exercise_status`), so it shows once published (segment AD4A).
+    ``archived`` is the archived IDs when the caller has read them."""
+    if archived is None:
+        archived = participant.archived_ids([e.public_id])
+    if e.public_id in archived:
+        return False
     if sample_data.is_sample(e.public_id):
         return e.state in ON_ME
     return locks.exercise_status(e) in ON_ME
@@ -39,12 +45,13 @@ def me(request: Request) -> Response:
     # As the database has them; a deleted one is gone (segment AD2B), and
     # ordinary exercises with the samples.
     live = ordinaries() + stored_all(sample_data.EXERCISES)
-    shown = {e.public_id: e for e in live}
+    archived = participant.archived_ids(e.public_id for e in live)
+    shown = {e.public_id: e for e in live if e.public_id not in archived}
     return render(
         request,
         "applydesk/me/home.html",
         area=USER_LOBBY,
-        exercises=participant.open_to(person_id, [e for e in live if _on_me(e)]),
+        exercises=participant.open_to(person_id, [e for e in live if _on_me(e, archived)]),
         # Not an application in a deleted exercise (Codex on #4140).
         mine=[a for a in participant.my_applications(person_id) if a.exercise_id in shown],
         # Open as the form is stored, not the placeholder's flag (Codex).

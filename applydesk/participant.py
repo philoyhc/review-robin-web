@@ -87,3 +87,22 @@ def open_to(
         return tuple(out)
     finally:
         session.close()
+
+
+def archived_ids(public_ids: Iterable[str]) -> frozenset[str]:
+    """Of these exercises, the archived ones (`archived_at`), which /me
+    never shows (ruling 41), whatever their state reads."""
+    ids = list(public_ids)
+    if not ids:
+        return frozenset()
+    session = db.new_session()
+    try:
+        return frozenset(
+            session.scalars(
+                select(Exercise.public_id).where(
+                    Exercise.public_id.in_(ids), Exercise.archived_at.is_not(None)
+                )
+            )
+        )
+    finally:
+        session.close()
