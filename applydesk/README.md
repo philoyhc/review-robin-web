@@ -7,34 +7,50 @@ the AD2 series moves it into its own database, segment by segment (AD2B:
 an exercise's settings, Details and the Operator Lobby). Rulings and the MVP
 roadmap are in `guide/todo_master.md`.
 
-**On localhost** (segment AD2A, ruling 74), from the repository root with
-the virtualenv active, build Apply Desk's database (a SQLite file,
-`applydesk.db`, unless `APPLYDESK_DATABASE_URL` says otherwise) and load
-the sample exercises, Owned by Cordware's fake identity:
+**On localhost** (segments AD2A and AD2X, ruling 74), from the repository
+root with the virtualenv active and `APP_ENV=local`, `ALLOW_FAKE_AUTH=true`
+in `.env`, build Apply Desk's database (a SQLite file, `applydesk.db`,
+unless `APPLYDESK_DATABASE_URL` says otherwise) and seed it:
 
 ```bash
 alembic -c applydesk/alembic.ini upgrade head
 python -m applydesk.seed
 ```
 
-Two flags (segment AD2G): `--reset` empties Apply Desk's local database
-first (its own tables only, down to base and up to head), and `--blank N`
-adds N blank drafts Owned by the same person, as *New exercise* makes
-them. For a clean slate with three drafts to set up:
+The seed builds the scenario exercises (`local_seed.py`) as Local Operator,
+by posting what the pages post:
+
+- **Community Project Grant 2027**: a published Form, open for 30 days from
+  the seeding, that anyone signed in may apply to; six applications, four
+  submitted and two drafts (answers are derived until AD4C stores them).
+- **Peer Mentor Nominations 2027**: *Create dossiers* alone, two dossiers a
+  person; five people, Local Operator among them, ten dossiers in all.
+- Each has two panels, *Readers* (Local Operator among them) and *Mentors*.
+
+New capabilities add a scenario as they land. The tests keep the sample
+exercises (`seed.seed()`); `--samples` loads those instead.
+
+Flags: `--reset` empties Apply Desk's local database first (its own tables
+only), and `--blank N` adds N blank drafts Owned by the same person, as *New
+exercise* makes them. The open form's window starts at the seeding, so
+re-seed after a month with:
 
 ```bash
-python -m applydesk.seed --reset --blank 3
+python -m applydesk.seed --reset
 ```
 
-The seed is idempotent and refuses to run unless `APP_ENV=local`. An
-operator's pages need it: they answer the platform super-admin, or someone
-on the operator allowlist who operates the exercise, and 404 otherwise
-(`gate.py`). With `FAKE_AUTH_SUPER_ADMIN=false` the fake identity is an
-ordinary operator, the Owner the seed made it.
+The seed is idempotent (a scenario already there is left alone) and refuses
+to run unless `APP_ENV=local` with fake auth on. An operator's pages answer
+the platform super-admin, or someone on the operator allowlist who operates
+the exercise, and 404 otherwise (`gate.py`).
 
-The local people search finds Cordware's fake accounts and every sample
-panel member, applicant and assessor, each with a name and an address:
-about 150 institutional accounts to add, invite or admit
+**Two identities.** The account menu's *Switch to …* flips between Local
+Operator and a second fake account, Divya Petrova (`FAKE_AUTH_ALT_*`), a plain
+applicant who applied to the open form: Review Robin and the landing page
+offer it too. Only on a local run with fake auth on.
+
+The local people search finds Cordware's fake accounts and the 48 people of
+`local_directory.py`, each with a name and an address
 (`directory.for_request`).
 
 | Path | Holds |

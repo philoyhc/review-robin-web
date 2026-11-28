@@ -1,7 +1,10 @@
-"""The localhost seed (segment AD2A; ruling 74): `python -m applydesk.seed`.
+"""The seeds (segment AD2A; ruling 74). `python -m applydesk.seed` builds
+localhost's scenario exercises (`applydesk/local_seed.py`, segment AD2X);
+`seed()` below, and the CLI's `--samples`, load the sample exercises the
+tests use.
 
 On a fresh checkout, after `alembic -c applydesk/alembic.ini upgrade head`,
-it gives every sample exercise its `exercise` row, its applications
+`seed()` gives every sample exercise its `exercise` row, its applications
 (segment AD2J) and their dossiers (AD2F), and makes one person its Owner,
 allowlisted to operate (ruling 75), so every page works on localhost. That person is
 Cordware's fake identity (`FAKE_AUTH_*` in `.env`), bound by its tenant
@@ -176,12 +179,20 @@ def blank(session: Session, owner_id: int, count: int) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m applydesk.seed",
-        description="Load Apply Desk's sample exercises into the local database.",
+        description=(
+            "Seed Apply Desk's local database with the scenario exercises "
+            "(applydesk/local_seed.py), built as Local Operator."
+        ),
+    )
+    parser.add_argument(
+        "--samples",
+        action="store_true",
+        help="load the sample exercises the tests use instead of the scenarios",
     )
     parser.add_argument(
         "--owner",
         metavar="EMAIL",
-        help="make this address the Owner (pending until it signs in) instead of the fake identity",
+        help="with --samples: make this address the Owner (pending until it signs in)",
     )
     parser.add_argument(
         "--reset",
@@ -198,23 +209,47 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if not 0 <= args.blank <= exercises.MOST_MADE:
         parser.error(f"--blank takes 0 to {exercises.MOST_MADE}")
+    if args.owner and not args.samples:
+        parser.error("--owner goes with --samples: the scenarios are built as Local Operator")
+    from applydesk import local_seed
+
     try:
         if args.reset:
             reset()
-        session = db.new_session()
-        try:
-            result = seed(session, owner_email=args.owner)
-            made = blank(session, result.owner_id, args.blank) if args.blank else []
-        finally:
-            session.close()
-    except SeedRefused as refused:
+        if args.samples:
+            session = db.new_session()
+            try:
+                result = seed(session, owner_email=args.owner)
+                made = blank(session, result.owner_id, args.blank) if args.blank else []
+            finally:
+                session.close()
+            said = (
+                f"seeded the samples: {result.exercises_added} exercises and "
+                f"{result.grants_added} Owner grants added (owner person {result.owner_id}); "
+                f"{result.applications_added} applications and {result.dossiers_added} "
+                "dossiers added"
+            )
+        else:
+            scenarios = local_seed.seed_local()
+            owner = local_seed.owner()
+            session = db.new_session()
+            try:
+                made = blank(session, owner.id, args.blank) if args.blank else []
+            finally:
+                session.close()
+            said = "seeded: " + "; ".join(
+                f"{m.name} ({m.public_id}{'' if m.made else ', there already'})" for m in scenarios
+            )
+            said += (
+                f". The form of {local_seed.OPEN_FORM} closes "
+                f"{local_seed.OPEN_FOR.days} days after it was first seeded"
+            )
+    except (SeedRefused, local_seed.LocalSeedRefused) as refused:
         print(f"refused: {refused}", file=sys.stderr)
         return 2
     print(
         ("reset, then " if args.reset else "")
-        + f"seeded: {result.exercises_added} exercises and {result.grants_added} "
-        f"Owner grants added (owner person {result.owner_id}); "
-        f"{result.applications_added} applications and {result.dossiers_added} dossiers added"
+        + said
         + (f"; {len(made)} blank drafts added" if made else "")
     )
     return 0

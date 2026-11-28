@@ -87,20 +87,21 @@ def _fake_identity(settings: IdentitySettings) -> Identity:
     )
 
 
-def _owner(settings: IdentitySettings) -> Person:
+def owner(settings: IdentitySettings | None = None) -> Person:
     """Local Operator, bound as a sign-in binds them and admitted to
-    operate; committed."""
+    operate; committed. Detached, for its ID."""
+    settings = settings or identity_settings
     session = db.new_session()
     try:
-        owner = people.resolve(session, _fake_identity(settings))
-        if owner is None:
+        person = people.resolve(session, _fake_identity(settings))
+        if person is None:
             raise LocalSeedRefused("the fake identity has no tenant or principal ID to bind")
-        if not operators.may_operate(owner):
-            operators.admit(session, _PLATFORM, owner)
+        if not operators.may_operate(person):
+            operators.admit(session, _PLATFORM, person)
         session.commit()
-        session.refresh(owner)
-        session.expunge(owner)
-        return owner
+        session.refresh(person)
+        session.expunge(person)
+        return person
     finally:
         session.close()
 
@@ -374,6 +375,6 @@ def seed_local(settings: IdentitySettings | None = None) -> tuple[Made, ...]:
         raise LocalSeedRefused(
             "the scenarios need APP_ENV=local and ALLOW_FAKE_AUTH=true (ruling 74)"
         )
-    owner = _owner(cfg)
+    found = owner(cfg)
     client = _client()
-    return tuple(scenario(client, owner, cfg) for scenario in SCENARIOS)
+    return tuple(scenario(client, found, cfg) for scenario in SCENARIOS)
