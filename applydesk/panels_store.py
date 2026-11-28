@@ -19,7 +19,7 @@ a pending person, as Create dossiers' CSV is. Rows are retired, never deleted
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, cast
@@ -27,7 +27,7 @@ from typing import Any, cast
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from applydesk import audit, db, people, sample_data
+from applydesk import audit, db, directory_check, people, sample_data
 from applydesk.models import Exercise, PanelMember, Person, RosterEntry
 from applydesk.models import Panel as PanelRow
 from applydesk.sample_data import Member, Panel
@@ -298,10 +298,18 @@ def _parse(
 # --- Save ------------------------------------------------------------------
 
 
-def _on_record(session: Session, address: str, actor: Person | None) -> Person:
-    """The person on record with this address (a bound one by its address
+def _on_record(
+    session: Session,
+    address: str,
+    actor: Person | None,
+    bound: Mapping[str, Person] | None = None,
+) -> Person:
+    """The person the directory resolved this address to (``bound``, segment
+    AD2Y), else the person on record with it (a bound one by its address
     snapshot, else a pending one), else a new pending person."""
     key = people.email_key(address)
+    if bound and key and key in bound:
+        return bound[key]
     found = session.scalar(
         select(Person)
         .where(Person.email_key == key)
@@ -311,7 +319,11 @@ def _on_record(session: Session, address: str, actor: Person | None) -> Person:
 
 
 def _write(
-    session: Session, exercise: Exercise, state: State, actor: Person | None
+    session: Session,
+    exercise: Exercise,
+    state: State,
+    actor: Person | None,
+    bound: Mapping[str, Person] | None = None,
 ) -> dict[str, int]:
     """Make the stored rows say ``state``: panels by key, roster entries
     by person, memberships by pair; whatever the state drops is retired."""
@@ -352,7 +364,7 @@ def _write(
     }
     kept: dict[int, tuple[RosterEntry, frozenset[str]]] = {}
     for position, (member, keys) in enumerate(state.roster):
-        person = _on_record(session, member.email, actor)
+        person = _on_record(session, member.email, actor, bound)
         if person.id in kept:
             raise Refused(f"{member.email} is someone already on the roster under another address.")
         entry = entries.get(person.id)
@@ -406,10 +418,14 @@ def save(
     opened: int,
     actor: Person | None,
     in_use: Callable[[], frozenset[str]],
+    *,
+    lookup: directory_check.Lookup | None = None,
+    tenant_id: str = "",
 ) -> int:
     """Keep the Panels page's snapshot ``sent`` as the exercise's panels and
     roster, if no save came between (``opened``, the revision the page
-    loaded); the new revision. Flushed, not committed: the caller's
+    loaded); the new revision. A member ``lookup`` resolved is bound to
+    their account's person (segment AD2Y). Flushed, not committed: the caller's
     transaction holds the change and its audit."""
     exercise = lock(session, public_id)
     if exercise.archived_at is not None:
@@ -422,7 +438,10 @@ def save(
     # What uses a panel is read under the lock, so a Process save that adds
     # a gate on it cannot land between the check and this save (cold read).
     state = _parse(public_id, sent, before, taken_keys(session, exercise), in_use())
-    counts = _write(session, exercise, state, actor)
+    # Segment AD2Y: the members the directory resolved are bound to their
+    # accounts' people; the rest are on record or pending, as before.
+    bound = directory_check.bind(session, lookup, tenant_id, actor) if lookup else {}
+    counts = _write(session, exercise, state, actor, bound)
     exercise.panels_revision += 1
     audit.write_event(
         session,
@@ -514,3 +533,30 @@ def adopt(
     )
     session.flush()
     return keys
+
+
+def unbound_addresses(session: Session, sent: Any) -> list[str]:
+    """The addresses Panels' snapshot ``sent`` names that no bound person
+    holds: those a save asks the directory about (segment AD2Y), so a
+    roster already bound costs no lookup. A malformed snapshot names none;
+    the save then says why."""
+    got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
+    rows = got.get("people")
+    if not isinstance(rows, list):
+        return []
+    addresses: dict[str, str] = {}
+    for row in cast(list[Any], rows):
+        email = cast(dict[str, Any], row).get("email") if isinstance(row, dict) else None
+        key = people.email_key(email) if isinstance(email, str) else None
+        if key:
+            addresses.setdefault(key, cast(str, email).strip())
+    if not addresses:
+        return []
+    known = set(
+        session.scalars(
+            select(Person.email_key).where(
+                Person.email_key.in_(list(addresses)), Person.object_id.is_not(None)
+            )
+        )
+    )
+    return [address for key, address in addresses.items() if key not in known]

@@ -65,6 +65,7 @@ Taken 2026-11-28 at `3ec4683da`.
 
 - Rung 2: `look_up` (asks and counts, no database) and `bind` (stores the found, in the caller's transaction), so a caller refuses an expired sign-in before writing anything. No audit event of its own: `people.from_directory` audits each binding, and the upload's counts go on its own event at rung 3, *Recheck*'s at rung 5.
 - Rung 3: the lookup runs in the route before any write; the upload records `candidate.imported` / `invitee.imported` with its counts and the directory's; the reply's `said` carries the directory line. The seed's Create dossiers CSV now comes out bound (its test updated).
+- Rung 4 split in two at the build (2026-11-28): **4a** the server (`panels/search` for the typeahead, `panels/lookup` for a CSV or a typed address, Save binding the members no bound person holds, an expired sign-in saving nothing); **4b** the page asking them, the sample-institution list gone. A typed address the directory does not find is kept, unverified, as an upload's is (the author's ruling 1).
 
 ## PR ladder
 

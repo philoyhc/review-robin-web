@@ -686,6 +686,12 @@ RENEW = (
     "saved. Sign in again, then upload the file again."
 )
 
+#: Panels' Save held the same way (segment AD2Y).
+RENEW_SAVE = (
+    "Your sign-in has expired, so the directory could not be asked and nothing was "
+    "saved. Sign in again, then save again."
+)
+
 #: Why addresses went unchecked, in the upload's words.
 _UNCHECKED = {
     directory_check.NO_TOKEN: "this sign-in carries no directory access",
@@ -993,6 +999,54 @@ def _propose(exercise_id: str, sent: Any) -> Response:
     )
 
 
+@router.get("/exercises/{exercise_id}/panels/search", name="applydesk_panels_search")
+def panels_search(request: Request, exercise_id: str, q: str = "") -> Response:
+    """Panels' typeahead (segment AD2Y): the people a name or address
+    finds, as [name, email], those on record and bound first, then the
+    directory's; a person picked here is already found."""
+    exercise_or_404(exercise_id)
+    session = db.new_session()
+    try:
+        found = allowlist.search(session, q, lambda: directory.for_request(request))
+    finally:
+        session.close()
+    picked: list[list[str]] = [
+        [p.display_name or p.email or "", p.email or ""]
+        for p in found.on_record
+        if p.object_id and p.email
+    ]
+    picked += [[u.display_name, u.mail or u.user_principal_name] for u in found.in_directory]
+    return JSONResponse({"people": picked, "directory_failed": bool(found.directory_failed)})
+
+
+@router.post("/exercises/{exercise_id}/panels/lookup", name="applydesk_panels_lookup")
+async def panels_lookup(request: Request, exercise_id: str) -> Response:
+    """Panels' CSV and typed addresses asked of the directory (segment
+    AD2Y): each found one as [name, mail], by its address as sent, and
+    the line an upload shows. Nothing is saved: Save binds them."""
+    exercise_or_404(exercise_id)
+    sent = await _page_json(request)
+    got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
+    raw = got.get("addresses")
+    if not isinstance(raw, list) or len(cast(list[Any], raw)) > candidates.MAX_ROWS:
+        return JSONResponse({"error": "The addresses are malformed."}, status_code=400)
+    addresses = [a for a in cast(list[Any], raw) if isinstance(a, str)]
+    lookup = await run_in_threadpool(
+        directory_check.look_up, _directory_or_none(request), addresses
+    )
+    if lookup.stop:
+        return JSONResponse({"error": RENEW, "renew": True}, status_code=400)
+    found: dict[str, list[str]] = {}
+    for address in addresses:
+        outcome = lookup.resolved(address)
+        if outcome is not None and outcome.user is not None:
+            user = outcome.user
+            found[address] = [user.display_name, user.mail or user.user_principal_name]
+    return JSONResponse(
+        {"found": found, "said": directory_line(lookup.counts, lookup.unchecked_reason)}
+    )
+
+
 @router.post("/exercises/{exercise_id}/panels", name="applydesk_exercise_panels_save")
 async def exercise_panels_save(request: Request, exercise_id: str) -> Response:
     """Panels' *Save* (segment AD1N rung 5; every exercise since AD2E): its
@@ -1012,6 +1066,17 @@ def _save_panels(request: Request, exercise_id: str, sent: object) -> Response:
     opened = got.get("revision")
     if not isinstance(opened, int) or isinstance(opened, bool):
         return JSONResponse({"error": "The panels are malformed."}, status_code=400)
+    # Segment AD2Y: the members no bound person holds are asked of the
+    # directory before the save's transaction; an expired sign-in saves
+    # nothing.
+    asking = db.new_session()
+    try:
+        unbound = panels_store.unbound_addresses(asking, sent)
+    finally:
+        asking.close()
+    lookup = directory_check.look_up(_directory_or_none(request), unbound)
+    if lookup.stop:
+        return JSONResponse({"error": RENEW_SAVE, "renew": True}, status_code=400)
     session = db.new_session()
     try:
         actor = people.resolve(session, identity)
@@ -1023,6 +1088,8 @@ def _save_panels(request: Request, exercise_id: str, sent: object) -> Response:
             opened,
             actor,
             lambda: frozenset(stages.panel_uses(exercise.public_id)),
+            lookup=lookup,
+            tenant_id=(identity.tenant_id or "").strip(),
         )
         session.commit()
     except panels_store.Refused as why:
