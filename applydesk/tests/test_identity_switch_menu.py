@@ -35,11 +35,11 @@ def test_the_second_account_is_its_directory_entry(monkeypatch: pytest.MonkeyPat
     person."""
     from applydesk import directory
     from cordware.identity import (
-        _alternate_identity,  # pyright: ignore[reportPrivateUsage]  -- the derivation itself
+        alternate_identity,
     )
 
     monkeypatch.setattr(identity_settings, "fake_auth_alt_email", "divya.petrova@example.edu")
     monkeypatch.setattr(identity_settings, "fake_auth_alt_principal_id", "")
     entry = next(u for u in directory._local_users() if u.mail == "divya.petrova@example.edu")  # pyright: ignore[reportPrivateUsage]  -- the local list
-    alternate = _alternate_identity(identity_settings)
+    alternate = alternate_identity(identity_settings)
     assert alternate is not None and alternate.principal_id == entry.id
