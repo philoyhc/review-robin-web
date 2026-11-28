@@ -226,6 +226,8 @@
     if (q.length < 2) return;
     typing = setTimeout(function () {
       ask(SEARCH + "?q=" + encodeURIComponent(q)).then(function (got) {
+        // Only the search for what the box still holds fills the list.
+        if (box.value.split(",").pop().trim() !== q) return;
         offered.textContent = "";
         (got.people || []).forEach(function (p) { var o = document.createElement("option"); o.value = p[1]; o.textContent = p[0]; offered.appendChild(o); });
       }, function () {});
