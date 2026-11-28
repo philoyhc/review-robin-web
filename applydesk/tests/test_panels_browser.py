@@ -288,6 +288,8 @@ def test_a_csv_goes_out_and_comes_in(page: Page) -> None:
     # Kept unverified, the row may be opened and kept again unchanged; only
     # a new or changed address must be found.
     kim.locator("[data-pn-select]").check()
+    # Opened, its address is in the editor to check or correct (Codex on #4288).
+    assert kim.locator("[data-pn-entry]").input_value() == "kim.lee@example.edu"
     kim.locator('[data-pn-act="save"]').click()
     assert page.locator("[data-pn-said]").inner_text() == "Kim Lee: nothing changed."
     dan = page.locator("[data-pn-row]").nth(-2)  # added by the script, unselected
@@ -1060,3 +1062,25 @@ def test_a_lookup_answered_after_the_row_is_undone_is_dropped(page: Page) -> Non
         route.fallback()
     _settled(page)
     assert zoe.locator('[data-pn="email"]').input_value() == "zoe.tan@example.edu"
+
+
+def test_a_tick_mark_waits_for_the_lookup_of_an_edited_email(page: Page) -> None:
+    """Codex on #4288: ✓ right after an email is changed keeps the new
+    address once the directory answers, not the old one."""
+    from playwright.sync_api import Route
+
+    held: list[Route] = []
+    page.route("**/panels/lookup", lambda route: held.append(route))
+    page.goto(PANELS)
+    zoe = _row(page, "zoe.tan@example.edu")
+    zoe.locator("[data-pn-select]").check()
+    zoe.locator('[data-pn-act="unverify"]').click()
+    zoe.locator("[data-pn-entry]").fill("daniel.koh@example.edu")
+    zoe.locator('[data-pn-act="save"]').click()  # the edit's change fires first
+    page.wait_for_function("() => window.applydeskPanelsBusy > 0")
+    assert zoe.get_attribute("data-sel") == ""  # still open, waiting
+    for route in held:
+        route.fallback()
+    _settled(page)
+    expect(page.locator("[data-pn-row][data-sel]")).to_have_count(0)
+    assert page.locator('[data-pn="email"][value="daniel.koh@example.edu"]').count() >= 1

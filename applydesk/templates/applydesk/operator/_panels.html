@@ -432,6 +432,9 @@
       if (focused) pill.focus();
     } else {
       hidden.value = entry.trim();
+      // The editor shows the address too, to be checked or corrected
+      // (Codex on #4288).
+      box.value = entry.trim();
       cell.removeAttribute("data-verified");
     }
     label(r);
@@ -452,11 +455,14 @@
     }
     // Only the latest lookup for an open row is applied (Codex on #4288).
     var gen = r.pnGen = (r.pnGen || 0) + 1;
-    return find(entry).then(function (found) {
+    // ✓ waits for it (Codex on #4288).
+    var pending = r.pnPending = find(entry).then(function (found) {
+      if (r.pnPending === pending) delete r.pnPending;
       if (r.pnGen !== gen || !r.isConnected) return;
       if (found.error) said.textContent = found.error;
       markEmail(r, entry, found.person || null);
     });
+    return pending;
   }
   function addRow(m) {
     var r = document.getElementById("pn-new-row").content.firstElementChild.cloneNode(true);
@@ -901,6 +907,9 @@
   fromSel.addEventListener("change", function () { mWrap.hidden = !!fromSel.value; });
   // ✓ keeps a row: refused while the row has a problem.
   function save(r) {
+    // An email still being looked up is kept once the directory answers
+    // (Codex on #4288).
+    if (r.pnPending) { r.pnPending.then(function () { if (r.isConnected && r.hasAttribute("data-sel")) save(r); }); return; }
     check();
     var why = r.querySelector("[data-pn-why]").textContent;
     // Segment AD2Y: an address already on the roster and not changed may
