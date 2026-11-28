@@ -26,6 +26,7 @@ A frozen dataclass.
 | `name` | Display name, or `None`. |
 | `provider` | The identity provider, or `None`; `"fake"` on the fake identity. |
 | `is_fake` | `True` only on the fake identity. Default `False`. |
+| `is_alternate` | `True` only on the second fake account (below), which is also `is_fake`. Default `False`. |
 | `tenant_id` | The account's directory tenant (Entra `tid`), or `None`. |
 | `upn` | The account's user principal name, as the provider gave it, or `None`. |
 | `mail` | The account's primary email, as the provider gave it, or `None`. Never the UPN standing in for it. |
@@ -96,7 +97,8 @@ would.
 Resolution order:
 
 1. Easy Auth headers present: the identity parsed from them (below).
-2. Else, if `ALLOW_FAKE_AUTH` is on: the fake identity.
+2. Else, if `ALLOW_FAKE_AUTH` is on: the fake identity, or the second fake
+   account while its cookie is set and the switch is allowed (below).
 3. Else a **401** `Not authenticated` (`HTTPException`), and the request is
    counted as missing headers (Logging).
 
@@ -167,6 +169,38 @@ behavior off it alone. The host's guard confines fake auth to
 `APP_ENV=local` (`cordware/spec/host.md` "Fake-auth guard"), so `is_fake` is
 never true in a deployed environment.
 
+### The second fake account
+
+A local run may switch between the fake identity and a second fake
+account, a plain participant, from the account menu (segment AD2X;
+`cordware/spec/header_chrome.md` §4).
+
+- **`alternate_identity(settings)`** builds it from `FAKE_AUTH_ALT_EMAIL`
+  and `FAKE_AUTH_ALT_NAME`, or returns `None` when the email is blank. Its
+  `principal_id` is `FAKE_AUTH_ALT_PRINCIPAL_ID`, or, when blank,
+  `uuid5(NAMESPACE_URL, "mailto:<email, lowercased>")`, the ID a local
+  run's directory gives each account, so picking the person there and
+  switching to them bind one person. `upn` and `mail` are its email;
+  `provider="fake"`, `is_fake=True`, `is_alternate=True`.
+- **`switch_allowed(settings=None)`** holds only with `ALLOW_FAKE_AUTH` on,
+  `APP_ENV=local`, a second email set, that email not the fake email
+  (case-folded), and not on the effective super-admin list. An
+  application reading super-admin by email therefore never grants it to
+  the second account.
+- **`FAKE_AS_COOKIE`** (`cordware_fake_as`) set to `alt` picks it, honored
+  only while `switch_allowed` holds; anywhere else the cookie is ignored.
+  Easy Auth headers win over it as over the fake identity.
+- **It is never the super-admin**: `is_super_admin` is false on it
+  whatever its email. An application grants it nothing it grants the
+  fake user for being fake (Review Robin keys its fake roles on `is_fake
+  and not is_alternate`).
+- **`fake_switch(request, settings=None)`** returns the account menu's
+  item, `FakeSwitch(label, href)`, or `None` unless `switch_allowed` holds
+  and the viewer is fake. The label is *Switch to* the other account's
+  name; the href is `SWITCH_PATH` with `to=alt` or `to=main` and
+  `return_to` the current path and query. The host serves the route
+  (`cordware/spec/host.md` "Identity switch").
+
 ## Host-level reads
 
 Valid outside a request. Each takes an optional `IdentitySettings`, else reads
@@ -225,6 +259,9 @@ applications import identity and never the entry point (`cordware/spec/host.md`
 | `FAKE_AUTH_TENANT_ID` | `local-tenant` | The fake identity's `tenant_id`. |
 | `FAKE_AUTH_UPN` | empty | The fake identity's `upn`; blank is `FAKE_AUTH_EMAIL`. |
 | `FAKE_AUTH_MAIL` | empty | The fake identity's `mail`; blank is `FAKE_AUTH_EMAIL`. |
+| `FAKE_AUTH_ALT_PRINCIPAL_ID` | empty | The second fake account's `principal_id`; blank derives it from its email. |
+| `FAKE_AUTH_ALT_EMAIL` | `divya.petrova@example.edu` | The second fake account's `email`; blank turns the switch off. |
+| `FAKE_AUTH_ALT_NAME` | `Divya Petrova` | The second fake account's `name`. |
 | `FAKE_AUTH_SUPER_ADMIN` | `true` | Whether the fake email joins the effective super-admin list while fake auth is on. |
 | `SUPER_ADMIN_EMAILS` | empty | Comma-separated emails (not JSON), trimmed, empty items dropped. Set only by the deployer. Compared with `email`, so list each account's mail address, not its sign-in name where the two differ. |
 

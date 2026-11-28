@@ -75,7 +75,7 @@ Taken 2026-11-28 at `37ae6ec49`.
   - the plain applicant sat on a panel;
   - five applications without a second account;
   - a README sentence dropped.
-- Left for whoever next writes the spec: `cordware/spec/identity.md`, `cordware/spec/host.md` (the route, the cookie, the Azure note), `cordware/spec/header_chrome.md` §4, `spec/permissions.md` (done), and the `local_seed.py` and `local_directory.py` rows in `applydesk/spec/architecture.md`.
+- Specs written after rung 6 (prose PR): `cordware/spec/identity.md` "The second fake account", `cordware/spec/host.md` "Identity switch" and the Azure note, `cordware/spec/header_chrome.md` §4, `applydesk/spec/architecture.md` (the `local_seed.py`, `local_directory.py`, `seed.py` and `directory.py` rows, "The seed"); `spec/permissions.md` and `spec/settings_inventory.md` at rung 3. A new scenario updates "The seed" as it lands.
 
 ## PR ladder
 
