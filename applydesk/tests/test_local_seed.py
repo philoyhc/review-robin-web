@@ -235,20 +235,30 @@ def test_the_dossiers_page_heads_its_rows_with_create_dossiers_stage() -> None:
     assert pills and set(pills) == {me}  # Local Operator is bound; the rest are pending
 
 
-def test_a_bound_applicant_s_address_is_a_pill_and_the_rest_plain() -> None:
-    """Cold read: an application row's address is a pill once its person
-    is bound (here by switching to the second account), and a pending
-    applicant's stays plain beside it."""
+def test_every_seeded_applicant_signed_in_so_each_address_is_a_pill() -> None:
+    """Author, 2026-11-28: an applicant signs in to apply, so the seed binds
+    each one as a sign-in would; the Dossiers table shows each address as a
+    pill, the second account's among them."""
     import re
 
+    from applydesk.models import Person
+
     made = _open_form()
-    client = TestClient(host_with(("applydesk",))[0])
-    client.cookies.set("cordware_fake_as", "alt")
-    assert client.get("/applydesk/me").status_code == 200  # binds the account
-    client.cookies.delete("cordware_fake_as")
-    text = client.get(f"/applydesk/operator/exercises/{made.public_id}/dossiers").text
-    alt = identity_settings.fake_auth_alt_email
+    session = db.new_session()
+    try:
+        row = session.scalars(select(Exercise).where(Exercise.public_id == made.public_id)).one()
+        applicants = session.scalars(
+            select(Person)
+            .join(Application, Application.person_id == Person.id)
+            .where(Application.exercise_id == row.id)
+        ).all()
+    finally:
+        session.close()
+    assert len(applicants) == 6 and all(p.object_id for p in applicants)
+    text = (
+        TestClient(host_with(("applydesk",))[0])
+        .get(f"/applydesk/operator/exercises/{made.public_id}/dossiers")
+        .text
+    )
     pills = re.findall(r'<span class="pl-addr" data-verified[^>]*>([^<]+)</span>', text)
-    assert pills == [alt]
-    plain = re.findall(r'<span class="ap-mail">([^<]+)</span>', text)
-    assert len(plain) == 5 and alt not in plain
+    assert len(pills) == 6 and identity_settings.fake_auth_alt_email in pills

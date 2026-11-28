@@ -461,9 +461,10 @@ through the pages' own requests as Local Operator:
 - **Scenario 1, an open application form**: the Form published, its
   window opened ten days before the run and closing 30 days after it,
   two panels of its own (Local Operator on one), and six directory
-  people's applications, four submitted and two drafts. The second fake
-  account's is the first, submitted (`cordware/spec/identity.md` "The
-  second fake account"); that account sits on no panel.
+  people's applications, four submitted and two drafts, each applicant
+  bound as their sign-in would bind them. The second fake account's is
+  the first, submitted (`cordware/spec/identity.md` "The second fake
+  account"); that account sits on no panel.
 - **Scenario 2, Create dossiers**: two dossiers per person for five
   people, Local Operator among them, entered as the page's CSV, and two
   panels of its own.
