@@ -163,10 +163,11 @@ def get_or_create_user(
     cfg = default_settings
     is_operator = _email_in(cfg.operator_emails, current_user.email)
     is_sys_admin = _email_in(cfg.sys_admin_emails, current_user.email)
-    # The fake identity's roles key off its marker alone (segment 21C
-    # C2): Cordware sets `is_fake` only on the fake user, which its
-    # guard confines to `APP_ENV=local`.
-    if current_user.is_fake:
+    # The fake identity's roles key off its marker (segment 21C C2):
+    # Cordware sets `is_fake` only on its fake accounts, which its guard
+    # confines to `APP_ENV=local`. The second one a local run switches to
+    # (`is_alternate`, segment AD2X) is a plain user, granted nothing.
+    if current_user.is_fake and not current_user.is_alternate:
         if cfg.fake_auth_operator:
             is_operator = True
         if cfg.fake_auth_sys_admin:

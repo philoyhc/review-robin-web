@@ -28,6 +28,7 @@ import binascii
 import json
 import logging
 import threading
+import uuid
 from dataclasses import dataclass, field, replace
 from typing import Any, cast
 
@@ -45,6 +46,9 @@ class Identity:
     name: str | None
     provider: str | None = None
     is_fake: bool = False
+    # The second fake account a local run switches to (segment AD2X): fake,
+    # but never granted the fake user's roles, and never the super-admin.
+    is_alternate: bool = False
     # The account's tenant, UPN and primary email as Entra gives them,
     # each its own field: an application matching a roster on first sign-in
     # tries the UPN and the email separately, and binds on (tenant,
@@ -70,8 +74,9 @@ class Identity:
     @property
     def is_super_admin(self) -> bool:
         """Computed from the host-level predicate, never stored, so the
-        flag, `is_super_admin_email` and `super_admin_configured` agree."""
-        return is_super_admin_email(self.email, self.resolved_with)
+        flag, `is_super_admin_email` and `super_admin_configured` agree.
+        Never the second fake account (segment AD2X)."""
+        return not self.is_alternate and is_super_admin_email(self.email, self.resolved_with)
 
     @property
     def super_admin_configured(self) -> bool:
@@ -310,12 +315,19 @@ def _alternate_identity(settings: IdentitySettings) -> Identity | None:
     email = settings.fake_auth_alt_email.strip()
     if not email:
         return None
+    # A blank ID is derived from the address, as Apply Desk's local
+    # directory derives each account's (Codex on #4278), so picking the
+    # person there and switching to them bind one person.
+    principal = settings.fake_auth_alt_principal_id.strip() or str(
+        uuid.uuid5(uuid.NAMESPACE_URL, f"mailto:{email.lower()}")
+    )
     return Identity(
-        principal_id=settings.fake_auth_alt_principal_id,
+        principal_id=principal,
         email=email,
         name=settings.fake_auth_alt_name,
         provider="fake",
         is_fake=True,
+        is_alternate=True,
         tenant_id=settings.fake_auth_tenant_id.strip() or None,
         upn=email,
         mail=email,
@@ -327,7 +339,17 @@ def switch_allowed(settings: IdentitySettings | None = None) -> bool:
     auth on, `APP_ENV=local` (the guard fake auth itself has), and a
     second account set."""
     s = _settings(settings)
-    return s.allow_fake_auth and is_local(s) and _alternate_identity(s) is not None
+    alternate = s.fake_auth_alt_email.strip().casefold()
+    # Never the fake user's own address (the switch would only change
+    # names), nor a super-admin's: applications that read super-admin by
+    # email would grant it otherwise (Codex on #4278).
+    return (
+        s.allow_fake_auth
+        and is_local(s)
+        and bool(alternate)
+        and alternate != s.fake_auth_email.strip().casefold()
+        and not is_super_admin_email(alternate, s)
+    )
 
 
 @dataclass(frozen=True)

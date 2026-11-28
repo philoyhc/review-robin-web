@@ -36,7 +36,9 @@ class IdentitySettings(BaseSettings):
     # A second fake account a local run can switch to from the account
     # menu (segment AD2X): a plain applicant, never the super-admin. A blank
     # email turns the switch off. It shares the tenant above.
-    fake_auth_alt_principal_id: str = "local-dev-2"
+    # Blank derives the object ID from the address, as a local run's
+    # directory does, so a directory pick and a switch bind one person.
+    fake_auth_alt_principal_id: str = ""
     fake_auth_alt_email: str = "divya.petrova@example.edu"
     fake_auth_alt_name: str = "Divya Petrova"
 
