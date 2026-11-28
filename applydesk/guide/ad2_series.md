@@ -14,7 +14,7 @@ The roadmap's AD2 row ("Database and identity") is a series of segments, each it
 - **Every change audited**, in RRW's envelope, through Apply Desk's own copy (ruling 74).
 - **A save names the revision it started from** and is refused, *changed since you opened it; reload*, if a newer one exists (ruling 74).
 - **Nothing is hard-deleted**: `retired_at` / `withdrawn_at` (ruling 74).
-- **The samples are seeds**: loaded on localhost and in tests, never in production (ruling 74).
+- **The samples are seeds** for the tests, never production (ruling 74). From AD2X, localhost seeds scenario exercises built through the services instead.
 
 ## The segments, in order
 
@@ -37,6 +37,7 @@ The roadmap's AD2 row ("Database and identity") is a series of segments, each it
 | AD2T — Gate lifecycle and transfer | The gate's state with its timestamps, the transfer record (`gate_transfer`), the dossiers and pairs frozen at send; progress counted, not canned | AD-32 | — |
 | AD2V — Dossier visibility | Ruling 79's views: what each gate × panel's evaluators see during its window, what each outcome opens to candidates and past evaluators (continue, add or reset), each field's ceiling, and the flag for an item no view shows; after AD2F stores dossiers | — | — |
 | AD2S — A scale on a Review Robin gate | `gate_field`'s `scale` and `scale_labels`; the gate's *Response fields* offer *Integer (scale)* and *Decimal (scale)*, and the handoff carries them (moved from Review Robin's 20P Item 2, 2026-11-25) | — | `applydesk/guide/archive/segment_AD2S_gate_scale.md` (closed 2026-11-25) |
+| AD2X — Local test data | No new tables: the localhost seed builds scenario exercises through the services (an open form with applications; Create dossiers with ten dossiers; two panels each), the local directory a fixed list, two identities on localhost | — | `applydesk/guide/segment_AD2X_local_seed.md` |
 | AD2G — Retire the simulation | In two parts. First, once AD2E, AD2D and AD2L store their pages: the browser's scratch store removed, *New exercise* and *Duplicate* making ordinary exercises, and test exercises seeded instead (`python -m applydesk.seed` with a reset and blank exercises; Admin's *Load sample exercises* for Azure). Then request-scoped loading with SQL paging, and the sample-data path off production | S10 follow-up, AD-125 | — |
 
 **The order from AD2C** (author, 2026-11-23): **AD2E** panels, then **AD2D** version 1 (the form's questions), then **AD2L** email templates, then **AD2G**'s first part (the browser store removed, test exercises seeded). Each moves its page off the browser store, which goes once nothing reads it, so no stopgap table is needed. Then (author, 2026-11-26): **AD2J** applications, so a form dossier has an application to point at; **AD2F** dossiers; **AD2K** Populate Dossiers and Process validation (ruling 83); **AD2H** entries and outcomes and **AD2P** pairs, in either order, since each needs only dossiers; **AD2T** the gate lifecycle, which freezes both at send. AD2V follows AD2F; AD2G's second part follows AD2P, since the gate page pages stored pairs; AD2D's answers and nominations come with AD4's form.
