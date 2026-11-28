@@ -8,10 +8,17 @@ from collections.abc import Iterable
 
 from sqlalchemy import select
 
-from applydesk import applications, db, eligibility, people, sample_data
+from applydesk import applications, db, eligibility, locks, people, sample_data
 from applydesk.eligibility import Reason
 from applydesk.models import Application, Exercise
 from cordware.identity import Identity
+
+#: What shows on /me (ruling 41): a Closed exercise stays, read-only, with
+#: its released results; Draft and Archived do not. "Completed" is a status
+#: worked out from stages (`locks.exercise_status`) for an exercise made with
+#: *New exercise*: one whose stages have all completed stays, as a Closed
+#: one does (segment AD4A).
+ON_ME = ("Published", "Completed", "Closed")
 
 
 def signed_in(identity: Identity | None) -> int | None:
@@ -106,3 +113,42 @@ def archived_ids(public_ids: Iterable[str]) -> frozenset[str]:
         )
     finally:
         session.close()
+
+
+def on_me(e: sample_data.Exercise, archived: frozenset[str]) -> bool:
+    """Whether the exercise shows on /me (ruling 41): never archived; a
+    sample by its own state; an exercise made with *New exercise*, whose
+    state stays Draft, by its status as its stages give it, so it shows
+    once published. The status is the costly part, so it comes last."""
+    if e.public_id in archived:
+        return False
+    if sample_data.is_sample(e.public_id):
+        return e.state in ON_ME
+    return locks.exercise_status(e) in ON_ME
+
+
+def lobby(
+    person_id: int | None, live: Iterable[sample_data.Exercise]
+) -> tuple[tuple[tuple[sample_data.Exercise, Reason], ...], tuple[sample_data.Application, ...]]:
+    """The User Lobby's *Open to me* (each exercise on /me whose Form admits
+    the person, with why) and *My applications* (their own, in exercises
+    not deleted or archived). Who may apply is checked before the status,
+    so the stages of an exercise the person cannot apply to are not read."""
+    live = tuple(live)
+    archived = archived_ids(e.public_id for e in live)
+    kept = [e for e in live if e.public_id not in archived]
+    admitted = tuple(pair for pair in open_to(person_id, kept) if on_me(pair[0], archived))
+    shown = {e.public_id for e in kept}
+    mine = tuple(a for a in my_applications(person_id) if a.exercise_id in shown)
+    return admitted, mine
+
+
+def may_see(person_id: int | None, e: sample_data.Exercise) -> bool:
+    """Whether the person reaches the exercise's /me page: it shows on /me,
+    and its Form admits them or they have an application in it (segment
+    AD4A; the series' rule, checked on the server)."""
+    if not on_me(e, archived_ids([e.public_id])):
+        return False
+    if open_to(person_id, [e]):
+        return True
+    return any(a.exercise_id == e.public_id for a in my_applications(person_id))

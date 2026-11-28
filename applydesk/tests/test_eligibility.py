@@ -138,6 +138,17 @@ def test_open_to_me_lists_only_what_admits_the_viewer() -> None:
     assert "You are invited" in shown[: shown.index("</p>")]
 
 
+def _publish(public_id: str, name: str) -> None:
+    session = db.new_session()
+    row = session.scalars(select(Exercise).where(Exercise.public_id == public_id)).one()
+    row.name = name
+    row.process_revision = 1
+    for stage in session.scalars(select(StageRow).where(StageRow.exercise_id == row.id)):
+        stage.status = "published"
+    session.commit()
+    session.close()
+
+
 def test_the_lobby_reads_the_stored_form_state() -> None:
     """Codex on #4273: an exercise made with New exercise says
     Applications open or closed as its form is stored, not by the
@@ -164,30 +175,67 @@ def test_the_lobby_reads_the_stored_form_state() -> None:
     assert "Start an application" not in page
 
 
-def test_an_archived_exercise_leaves_me() -> None:
-    """Codex on #4273: an exercise made with New exercise reads Draft
-    whatever is stored, so its archiving is read from the row: archived,
-    it leaves the lobby and its page is a 404."""
+def test_the_lobby_hides_drafts_archived_and_what_does_not_admit() -> None:
+    """Cold read (AD4A): an exercise made with New exercise shows once
+    published and open to all; a draft, an archived one, and one whose
+    Form does not admit the viewer do not, nor does its page answer. Archiving is read from the row,
+    as its state reads Draft whatever is stored (Codex on #4273)."""
     from fastapi.testclient import TestClient
 
     from applydesk.tests._host import host_with
 
-    ex = _exercise("open")
-    session = db.new_session()
-    row = session.scalars(select(Exercise).where(Exercise.public_id == ex)).one()
-    row.name = "Soon Archived"
-    row.process_revision = 1
-    for stage in session.scalars(select(StageRow).where(StageRow.exercise_id == row.id)):
-        stage.status = "published"
-    session.commit()
-    session.close()
     client = TestClient(host_with(("applydesk",))[0])
-    assert "Soon Archived" in client.get("/applydesk/me").text
-    assert client.get(f"/applydesk/me/exercises/{ex}").status_code == 200
+    open_ex = _exercise("open")
+    _publish(open_ex, "Open Bursary")
+    draft = _exercise("open")
+    invited_only = _exercise("invitation")
+    _publish(invited_only, "Closed Circle")
+    lobby = client.get("/applydesk/me").text
+    assert "Open Bursary" in lobby and "Closed Circle" not in lobby
+    assert client.get(f"/applydesk/me/exercises/{open_ex}").status_code == 200
+    assert client.get(f"/applydesk/me/exercises/{draft}").status_code == 404
+    assert client.get(f"/applydesk/me/exercises/{invited_only}").status_code == 404
     session = db.new_session()
-    row = session.scalars(select(Exercise).where(Exercise.public_id == ex)).one()
+    row = session.scalars(select(Exercise).where(Exercise.public_id == open_ex)).one()
     row.archived_at = datetime.now(UTC)
     session.commit()
     session.close()
-    assert "Soon Archived" not in client.get("/applydesk/me").text
-    assert client.get(f"/applydesk/me/exercises/{ex}").status_code == 404
+    assert "Open Bursary" not in client.get("/applydesk/me").text
+    assert client.get(f"/applydesk/me/exercises/{open_ex}").status_code == 404
+
+
+def test_a_dossier_held_shows_its_chip() -> None:
+    from fastapi.testclient import TestClient
+
+    from applydesk.tests._host import host_with
+
+    ex = _exercise(None, create_dossiers=True)
+    _publish(ex, "Held For You")
+    client = TestClient(host_with(("applydesk",))[0])
+    assert "Held For You" not in client.get("/applydesk/me").text
+    _add(ex, "admin@example.edu", candidates)
+    lobby = client.get("/applydesk/me").text
+    shown = lobby[lobby.index("Held For You") :]
+    assert "A dossier is held for you" in shown[: shown.index("</p>")]
+
+
+def test_a_retired_create_dossiers_stage_falls_back_to_the_stored_choice() -> None:
+    ex = _exercise("open", create_dossiers=True)
+    assert _why(ex, "ann@example.edu") is None
+    session = db.new_session()
+    row = session.scalars(select(Exercise).where(Exercise.public_id == ex)).one()
+    for stage in session.scalars(select(StageRow).where(StageRow.exercise_id == row.id)):
+        if stage.holds_candidates:
+            stage.retired_at = datetime.now(UTC)
+    session.commit()
+    session.close()
+    assert _why(ex, "ann@example.edu") == "open"
+
+
+def test_an_unbound_identity_is_no_one() -> None:
+    from applydesk import participant
+    from cordware.identity import Identity
+
+    unbound = Identity(name="Nobody", email="nobody@example.edu", principal_id=None, tenant_id=None)
+    assert participant.signed_in(unbound) is None
+    assert participant.lobby(None, ()) == ((), ())
