@@ -18,7 +18,7 @@ from sqlalchemy import exists, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from applydesk import audit, db, ids, sample_data
+from applydesk import audit, db, ids, people, sample_data
 from applydesk.models import Application, Candidate, Dossier, Exercise, Person
 from applydesk.models import Stage as StageRow
 
@@ -239,3 +239,27 @@ def hand_rows(exercise_id: str) -> tuple[HandRow, ...]:
         HandRow(entry, dossier or "", name or email or "", email or "", title or "")
         for entry, dossier, name, email, title in rows
     )
+
+
+def verified_emails(exercise_id: str) -> frozenset[str]:
+    """The match keys (`people.email_key`) of the exercise's applicants and
+    Create dossiers entries who are bound to a directory account, read in a
+    session of their own: the Dossiers page shows their addresses as a
+    pill, as Panels and Process do (author, 2026-11-28)."""
+    session = db.new_session()
+    try:
+        exercise = select(Exercise.id).where(Exercise.public_id == exercise_id).scalar_subquery()
+        applicants = select(Application.person_id).where(Application.exercise_id == exercise)
+        entries = select(Candidate.person_id).where(
+            Candidate.exercise_id == exercise, Candidate.removed_at.is_(None)
+        )
+        found = session.execute(
+            select(Person.email, Person.object_id).where(Person.id.in_(applicants.union(entries)))
+        ).all()
+    finally:
+        session.close()
+    # Matched by address, so an address a pending person also holds here is
+    # no pill: their row would show one it has not earned (cold read).
+    bound = {people.email_key(e) for e, oid in found if oid is not None}
+    pending = {people.email_key(e) for e, oid in found if oid is None}
+    return frozenset(k for k in bound - pending if k)

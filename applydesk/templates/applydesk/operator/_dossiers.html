@@ -98,8 +98,11 @@
   <table class="ap-table">
     <thead>
       <tr class="ap-groups">
-        {% set ast = plan.stages[0] if plan.stages and plan.stages[0].form else none %}{# leads the identity columns only when first #}
-        <th class="ap-first" colspan="{{ 3 + (ast.columns | length if ast else 0) }}"><b>{{ ast.label if ast else "Dossiers" }}</b>{% if ast %}<span class="ap-when">{{ ast.dates }}</span>{% elif not plan.form_stage %}<span class="ap-when">From elsewhere</span>{% endif %}</th>
+        {# The stage that makes the rows, the form's or Create dossiers', leads
+           the identity columns only when first; "From elsewhere" only
+           when neither stage is there (ruling 15). #}
+        {% set ast = plan.stages[0] if plan.stages and (plan.stages[0].form or plan.stages[0].candidates) else none %}
+        <th class="ap-first" colspan="{{ 3 + (ast.columns | length if ast else 0) }}"><b>{{ ast.label if ast else "Dossiers" }}</b>{% if ast %}<span class="ap-when">{{ ast.dates }}</span>{% elif not plan.form_stage and not plan.stages | selectattr("candidates") | list %}<span class="ap-when">From elsewhere</span>{% endif %}</th>
         {% for r in plan.stages if r.columns and r is not sameas ast %}<th class="ap-r" colspan="{{ r.columns | length }}"><b>{{ r.label }}</b><span class="ap-when">{{ r.dates }}</span></th>{% endfor %}
       </tr>
       {# Ruling 52: under the stages, an information row (kind, counts,
@@ -145,7 +148,7 @@
            Application ID. #}
         <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ rid }}">
           {% if d.state == "Submitted" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ d.public_id) }}"><code>{{ d.public_id }}</code></a>{% elif d.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ d.public_id }}</code>{% endif %}{% if a %}<span class="ap-app">Application <code>{{ d.key }}</code></span>{% else %}<span class="ap-app">Created by hand{% if h and h.title %} · {{ h.title }}{% endif %}</span>{% endif %}</td>
-        <td class="ap-who"><strong>{{ d.name }}</strong><span class="ap-mail">{{ d.email }}</span></td>
+        <td class="ap-who"><strong>{{ d.name }}</strong><span class="ap-mail">{% if verified_email(d.email) %}<span class="pl-addr" data-verified title="Matched to a directory account">{{ d.email }}</span>{% else %}{{ d.email }}{% endif %}</span></td>
         <td class="ap-stat">{% if a %}{% with value = d.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}{% else %}<span class="chip chip-info">By hand</span>{% endif %}<span class="ap-note">{{ a.submitted if a else "" }}</span>{% if d.state == "Submitted" and d.key not in redraft_closed %}<button class="btn btn-alert btn-short ap-redraft" type="button" disabled title="Returning to draft is not built yet" aria-label="Return {{ rid }} to draft">Return to draft</button>{% endif %}</td>
         {% for r in plan.stages %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
           <td class="{{ 'ap-out' if c.via is not defined }} {{ 'ap-r' if loop.first }}" data-cell="{{ c.key }}"{% if cell.by_hand %} data-hand{% endif %}>
@@ -167,7 +170,7 @@
     {% for h in hand_pending %}
       <tr data-entry="{{ h.entry_id }}" data-row data-ap-i="{{ plan.rows | length + loop.index0 }}" data-ap-app="" data-ap-name="" data-status="Entry" data-search="{{ (h.name ~ ' ' ~ h.email ~ ' ' ~ h.title) | lower }}" data-answers="{}">
         <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ h.name }}{% if h.title %} ({{ h.title }}){% endif %}"><span class="muted">No dossier yet</span><span class="ap-app">Created by hand{% if h.title %} · {{ h.title }}{% endif %}</span></td>
-        <td class="ap-who"><strong>{{ h.name }}</strong><span class="ap-mail">{{ h.email }}</span></td>
+        <td class="ap-who"><strong>{{ h.name }}</strong><span class="ap-mail">{% if verified_email(h.email) %}<span class="pl-addr" data-verified title="Matched to a directory account">{{ h.email }}</span>{% else %}{{ h.email }}{% endif %}</span></td>
         <td class="ap-stat"><span class="chip chip-info">By hand</span><span class="ap-note"></span></td>
         {% for r in plan.stages %}{% for c in r.columns %}<td class="{{ 'ap-out' if c.via is not defined }} {{ 'ap-r' if loop.first }}" data-cell="{{ c.key }}"><span class="muted">—</span></td>{% endfor %}{% endfor %}
       </tr>
