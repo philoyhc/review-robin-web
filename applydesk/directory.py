@@ -2,8 +2,8 @@
 person searches by name or email, people already on record first, then
 the institution's directory through Graph (`cordware/graph.py`,
 `search_users`), as Review Robin's pickers do. A local run's directory is
-Cordware's fake one, with the sample panels' members, applicants and
-assessors added, names and addresses (`for_request`).
+Cordware's fake one, with the people of `applydesk/local_directory.py`
+added, names and addresses (`for_request`).
 
 A failed directory search is reported, never read as "nobody there": the
 result then holds only people on record and names the failure's kind.
@@ -37,22 +37,15 @@ MIN_QUERY = 2
 
 @cache
 def _local_users() -> tuple[DirectoryUser, ...]:
-    """Cordware's fake accounts, then every sample panel's members, sample
-    applicant and assessor not already among them, each with a name and an
-    address (author, 2026-11-27: the RA exercise's panels make a longer
-    list of institutional accounts to check with on localhost).
-    Each member's object ID is derived from the address, so it is the same
-    on every run."""
-    from applydesk import sample_data
+    """Cordware's fake accounts, then the local directory's people
+    (`local_directory.PEOPLE`, segment AD2X), each with a name and an
+    address. Each one's object ID is derived from the address, so it is
+    the same on every run."""
+    from applydesk.local_directory import PEOPLE
 
-    sampled = (
-        *((m.name, m.email) for panel in sample_data.PANELS for m in panel.members),
-        *((a.applicant, a.email) for a in sample_data.APPLICATIONS),
-        *((a.name, a.email) for a in sample_data.ASSESSORS),
-    )
     taken = {(u.mail or u.user_principal_name).lower() for u in FAKE_USERS}
     added: list[DirectoryUser] = []
-    for name, email in sampled:
+    for name, email in PEOPLE:
         address = email.lower()
         if address in taken:
             continue
@@ -64,7 +57,7 @@ def _local_users() -> tuple[DirectoryUser, ...]:
 
 def for_request(request: HTTPConnection) -> Directory:
     """The directory as the request's user sees it (`directory_for`); a
-    local run's fake directory also finds the sample panels' members."""
+    local run's fake directory also finds `local_directory.PEOPLE`."""
     found = directory_for(request)
     return FakeDirectory(_local_users()) if type(found) is FakeDirectory else found
 

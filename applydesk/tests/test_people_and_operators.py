@@ -781,3 +781,28 @@ def test_a_first_sign_in_is_audited_once(session: Session) -> None:
     people.resolve(session, _identity("o-eve", "eve@example.edu"))
     session.commit()
     assert me is not None and _events(session, "person.signed_in") == 1
+
+
+def test_the_local_directory_is_its_own_list() -> None:
+    """Segment AD2X: a local run's people search finds the RA exercise's
+    panels' people from `applydesk/local_directory.py`, which imports no
+    sample data, each once, after Cordware's fake accounts."""
+    import ast
+    from pathlib import Path
+
+    from applydesk import local_directory
+    from cordware.graph import FAKE_USERS
+
+    source = Path(local_directory.__file__).read_text()
+    imported = {
+        alias.name if isinstance(node, ast.Import) else node.module
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Import | ast.ImportFrom)
+        for alias in getattr(node, "names", [])
+    }
+    assert not any("sample_data" in str(name) for name in imported)
+    users = directory._local_users()
+    assert users[: len(FAKE_USERS)] == FAKE_USERS
+    addresses = [u.mail for u in users[len(FAKE_USERS) :]]
+    assert len(addresses) == len(set(addresses)) == len(local_directory.PEOPLE)
+    assert "aisha.bello@example.edu" in addresses
