@@ -829,12 +829,16 @@ def _hand_rows(public_id: str, section: str) -> dict[str, Any]:
     ``verified_email`` says whose address is a directory account's."""
     rows = dossiers.hand_rows(public_id) if section == "dossiers" else ()
     bound = dossiers.verified_emails(public_id) if section == "dossiers" else frozenset[str]()
+
+    def verified_email(email: str) -> bool:
+        return people.email_key(email) in bound
+
     return {
         "hand_minted": {h.dossier_id: h for h in rows if h.dossier_id},
         "hand_pending": tuple(h for h in rows if not h.dossier_id),
         # A bound applicant's or entry's address is a pill (author,
         # 2026-11-28), as Panels and Process show a verified one.
-        "verified_email": lambda email: people.email_key(email) in bound,
+        "verified_email": verified_email,
     }
 
 
