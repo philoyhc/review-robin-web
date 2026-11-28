@@ -108,3 +108,16 @@ def test_no_directory_saves_every_address_unchecked(monkeypatch: pytest.MonkeyPa
         assert session.scalar(select(func.count()).select_from(Invitee)) == 2
     finally:
         session.close()
+
+
+def test_rows_before_an_unreadable_one_are_looked_up() -> None:
+    """Codex on #4287: `read_csv` keeps the rows before a field past the
+    parser's limit, so the lookup takes them too."""
+    import csv
+
+    huge = "x" * (csv.field_size_limit() + 1)
+    text = f"Name,Email\nAisha,{FOUND}\nToo long,{huge}\n"
+    sent = _post("invitees", {"action": "csv", "text": text})
+    assert sent.status_code == 200, sent.text
+    assert sent.json()["directory"]["directory_by_mail"] == 1
+    assert _person(FOUND).object_id
