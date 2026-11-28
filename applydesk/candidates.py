@@ -12,10 +12,10 @@ person holds. Removing an
 entry sets ``removed_at``; adding the person again is a new entry, never
 the old one back (ruling 83). A CSV saves its good rows and lists the rest
 back, as the Panels roster import does: each row is one address and, if
-given, a name and a title. A row's address is matched to a person on
-record, else stored as a pending person (``people.pending``); the
-directory is searched one person at a time, from the search, not per CSV
-row. Each add and removal is audited.
+given, a name and a title. A row's address the directory resolves is its
+account's person (`directory_check`, segment AD2Y); any other is matched to
+a person on record, else stored as a pending person (``people.pending``).
+Each add and removal is audited, and each upload with its directory counts.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from datetime import UTC, datetime
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from applydesk import audit, dossiers, people
+from applydesk import audit, directory_check, dossiers, people
 from applydesk.models import Candidate, Exercise, Person
 
 #: How a candidate came: picked in the search, or a CSV row.
@@ -76,6 +76,9 @@ class Imported:
     added: int
     already: int
     bad: tuple[str, ...]
+    #: What the directory said of the file's addresses (segment AD2Y).
+    directory: directory_check.Counts = directory_check.Counts()
+    unchecked_reason: str = ""
 
 
 def _exercise(session: Session, public_id: str, *, lock: bool = False) -> Exercise:
@@ -288,12 +291,21 @@ def _on_record(session: Session, address: str) -> Person | None:
     )
 
 
-def import_csv(session: Session, public_id: str, text: str, actor: Person | None) -> Imported:
+def import_csv(
+    session: Session,
+    public_id: str,
+    text: str,
+    actor: Person | None,
+    *,
+    lookup: directory_check.Lookup | None = None,
+    tenant_id: str = "",
+) -> Imported:
     """Add each good row of a CSV with an *Email* column and, if given,
     *Name* and *Title* ones (any case, any order), one entry a row; the rest
     are listed back by row number. A person may be in the file as often as
-    they are to hold dossiers; a row without a title is *Dossier n*.
-    Flushes; the caller commits."""
+    they are to hold dossiers; a row without a title is *Dossier n*. Each
+    address ``lookup`` resolved is its directory account's person (segment
+    AD2Y); the rest are on record or pending. Flushes; the caller commits."""
     done = read_csv(
         session,
         public_id,
@@ -303,6 +315,9 @@ def import_csv(session: Session, public_id: str, text: str, actor: Person | None
         add=lambda person, title: add(
             session, public_id, person, "csv", actor, mint=False, title=title
         ),
+        lookup=lookup,
+        tenant_id=tenant_id,
+        event_type="candidate.imported",
     )
     if done.added:  # once for the file (ruling 81), not per row
         dossiers.sync_candidates(session, _exercise(session, public_id), actor)
@@ -323,13 +338,20 @@ def read_csv(
     *,
     most: int,
     add: Callable[[Person, str], bool],
+    lookup: directory_check.Lookup | None = None,
+    tenant_id: str = "",
+    event_type: str = "",
 ) -> Imported:
     """A people CSV read and added row by row through ``add(person,
     title)``: an *Email* column and, if given, *Name* and *Title* ones (any
     case, any order); a person at most ``most`` times; each bad row listed
     back by number. Shared by Create dossiers and a Form's invitees (segment
-    AD2I). Flushes."""
-    _exercise(session, public_id)
+    AD2I). An address ``lookup`` resolved is bound to its account's person
+    first (`directory_check.bind`, segment AD2Y), and ``event_type`` records
+    the file's counts with the directory's. Flushes."""
+    exercise = _exercise(session, public_id)
+    lookup = lookup or directory_check.Lookup()
+    bound = directory_check.bind(session, lookup, tenant_id, actor)
     reader = csv.reader(io.StringIO(text.lstrip("\ufeff")))
     try:
         header = next(reader, None)
@@ -377,11 +399,55 @@ def read_csv(
             )
             continue
         seen[key] = seen.get(key, 0) + 1
-        person = _on_record(session, address) or people.pending(session, address, actor)
+        person = (
+            bound.get(key)
+            or _on_record(session, address)
+            or people.pending(session, address, actor)
+        )
         if name and not person.display_name and person.object_id is None:
             person.display_name = name[:200]  # a pending person's name, from the file
         if add(person, title):
             added += 1
         else:
             already += 1
-    return Imported(added, already, tuple(bad))
+    if event_type:
+        audit.write_event(
+            session,
+            event_type=event_type,
+            actor=actor,
+            exercise=exercise,
+            payload=audit.counts(
+                added=added, already=already, bad=len(bad), **lookup.counts.as_dict()
+            ),
+            context=(
+                {"directory_unchecked": lookup.unchecked_reason}
+                if lookup.unchecked_reason
+                else None
+            ),
+        )
+    return Imported(added, already, tuple(bad), lookup.counts, lookup.unchecked_reason)
+
+
+def csv_addresses(text: str) -> list[str]:
+    """The *Email* column's values, for the directory to look up before
+    the file is read (segment AD2Y); none from a file `read_csv` would
+    refuse, which then says why."""
+    reader = csv.reader(io.StringIO(text.lstrip("\ufeff")))
+    try:
+        header = next(reader, None)
+        if header is None:
+            return []
+        names = [h.strip().casefold() for h in header]
+        if "email" not in names:
+            return []
+        at = names.index("email")
+        found: list[str] = []
+        for i, row in enumerate(reader):
+            if i >= MAX_ROWS:
+                break
+            address = row[at].strip() if at < len(row) else ""
+            if address and len(address) <= MAX_EMAIL and _EMAIL.fullmatch(address):
+                found.append(address)
+        return found
+    except csv.Error:
+        return []

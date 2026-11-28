@@ -230,9 +230,10 @@ def test_the_dossiers_page_heads_its_rows_with_create_dossiers_stage() -> None:
         r'<th class="ap-first" colspan="\d+"><b>([^<]+)</b><span class="ap-when">([^<]+)<', text
     )
     assert head is not None and head.groups() == ("Nominations", "Dates not set")
-    me = identity_settings.fake_auth_email
     pills = re.findall(r'<span class="pl-addr" data-verified[^>]*>([^<]+)</span>', text)
-    assert pills and set(pills) == {me}  # Local Operator is bound; the rest are pending
+    # Segment AD2Y: the CSV's addresses are looked up in the local
+    # directory, so all five holders are bound, Local Operator among them.
+    assert len(set(pills)) == 5 and identity_settings.fake_auth_email in pills
 
 
 def test_every_seeded_applicant_signed_in_so_each_address_is_a_pill() -> None:

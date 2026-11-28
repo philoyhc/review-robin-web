@@ -173,7 +173,8 @@ def test_the_routes_add_remove_and_upload() -> None:
         assert odd.status_code == 400 and "1 to 20" in odd.json()["error"], count
     upload = _post(client, {"action": "csv", "text": "Email\ndee@example.edu\nbad\n"})
     assert upload.status_code == 200
-    assert upload.json()["said"] == "1 added." and len(upload.json()["bad"]) == 1
+    assert upload.json()["said"].startswith("1 added. Directory: ")  # segment AD2Y
+    assert len(upload.json()["bad"]) == 1
     entry = added.json()["candidates"][0]
     assert entry["person_id"] == cy_id and entry["title"] == "Dossier 1"
     removed = _post(client, {"action": "remove", "entry_id": entry["id"]})
