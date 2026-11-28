@@ -149,10 +149,37 @@ def _publish(public_id: str, name: str) -> None:
     session.close()
 
 
+def test_the_lobby_reads_the_stored_form_state() -> None:
+    """Codex on #4273: an exercise made with New exercise says
+    Applications open or closed as its form is stored, not by the
+    placeholder's flag."""
+    from fastapi.testclient import TestClient
+
+    from applydesk.tests._host import host_with
+
+    ex = _exercise("open")
+    session = db.new_session()
+    row = session.scalars(select(Exercise).where(Exercise.public_id == ex)).one()
+    row.name = "Stored Form"
+    row.process_revision = 1
+    for stage in session.scalars(select(StageRow).where(StageRow.exercise_id == row.id)):
+        stage.status = "published"
+        stage.form_state = "closed"
+    session.commit()
+    session.close()
+    client = TestClient(host_with(("applydesk",))[0])
+    lobby = client.get("/applydesk/me").text
+    shown = lobby[lobby.index("Stored Form") :]
+    assert "Applications closed" in shown[: shown.index("</p>")]
+    page = client.get(f"/applydesk/me/exercises/{ex}").text
+    assert "Start an application" not in page
+
+
 def test_the_lobby_hides_drafts_archived_and_what_does_not_admit() -> None:
     """Cold read (AD4A): an exercise made with New exercise shows once
     published and open to all; a draft, an archived one, and one whose
-    Form does not admit the viewer do not, nor does its page answer."""
+    Form does not admit the viewer do not, nor does its page answer. Archiving is read from the row,
+    as its state reads Draft whatever is stored (Codex on #4273)."""
     from fastapi.testclient import TestClient
 
     from applydesk.tests._host import host_with
