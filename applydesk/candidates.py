@@ -444,14 +444,19 @@ def csv_addresses(text: str) -> list[str]:
         return []
     at = names.index("email")
     found: list[str] = []
-    while len(found) < MAX_ROWS:
+    # Row by row as `read_csv` reads, so the lookup takes exactly the rows
+    # it may save: those before an unreadable one (Codex on #4287), and
+    # none past `MAX_ROWS` by row number, blank and bad rows counted.
+    n = 1
+    while True:
+        n += 1
         try:
             row = next(reader)
-        except StopIteration:
+        except (StopIteration, csv.Error):
             break
-        except csv.Error:
-            # `read_csv` saves the rows before an unreadable one, so they
-            # are looked up too (Codex on #4287).
+        if not any(cell.strip() for cell in row):
+            continue
+        if n - 1 > MAX_ROWS:
             break
         address = row[at].strip() if at < len(row) else ""
         if address and len(address) <= MAX_EMAIL and _EMAIL.fullmatch(address):
