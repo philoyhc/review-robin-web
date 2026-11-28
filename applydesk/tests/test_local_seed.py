@@ -195,3 +195,19 @@ def test_the_create_dossiers_scenario_runs_once() -> None:
     made = again[local_seed.CREATE_DOSSIERS]
     assert not made.made and made.public_id == first[local_seed.CREATE_DOSSIERS].public_id
     assert local_seed._count(made.public_id, local_seed.Candidate) == 10  # pyright: ignore[reportPrivateUsage]  -- the seed's own
+
+
+def test_a_comma_in_the_operator_s_name_survives_the_csv(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex on #4280: Create dossiers' CSV quotes a configured name with a
+    comma, so Local Operator still holds two dossiers."""
+    from applydesk import candidates
+
+    monkeypatch.setattr(identity_settings, "fake_auth_name", "Operator, Local")
+    made = next(m for m in local_seed.seed_local() if m.name == local_seed.CREATE_DOSSIERS)
+    session = db.new_session()
+    try:
+        listed = candidates.listing(session, made.public_id)
+    finally:
+        session.close()
+    assert len(listed) == 10
+    assert sum(1 for c in listed if c.email == identity_settings.fake_auth_email) == 2

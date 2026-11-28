@@ -407,11 +407,18 @@ def create_dossiers(client: TestClient, owner: Person, settings: IdentitySetting
     }
     _ok(client.post(f"{base}/process", json=process), "Process's Save")
     holders = [operator, *_people(30, 4, but=settings.fake_auth_alt_email)]
-    lines = ["Name,Email,Title"]
+    # Written by the csv module, so a configured name with a comma stays
+    # one field (Codex on #4280).
+    import csv
+    import io
+
+    out = io.StringIO()
+    rows = csv.writer(out, lineterminator="\n")
+    rows.writerow(["Name", "Email", "Title"])
     for name, email in holders:
         for term in ("Semester 1", "Semester 2"):
-            lines.append(f"{name},{email},Peer mentor · {term}")
-    sent = {"action": "csv", "text": "\n".join(lines) + "\n"}
+            rows.writerow([name, email, f"Peer mentor · {term}"])
+    sent = {"action": "csv", "text": out.getvalue()}
     reply = _ok(client.post(f"{base}/candidates", json=sent), "Create dossiers' CSV")
     import json
 
