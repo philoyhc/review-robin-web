@@ -26,7 +26,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import Response
 from fastapi.templating import Jinja2Templates
 
-from cordware.identity import current_identity, extract_claims
+from cordware.identity import current_identity, extract_claims, fake_switch
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
@@ -64,6 +64,7 @@ def add_landing_page(host: FastAPI, links: Sequence[LandingLink]) -> None:
                 "links": [(link.title, f"{root}{link.href}", link.icon) for link in links],
                 "identity": identity,
                 "claims": extract_claims(request) if show_claims else [],
+                "switch": fake_switch(request),
             },
         )
         response.headers["Cache-Control"] = "no-store"

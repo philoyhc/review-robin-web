@@ -20,7 +20,7 @@ from applydesk import extract, gate, locks, paging, sample_data, stages, workflo
 from applydesk.ids import PUBLIC_ID_ALPHABET, PUBLIC_ID_LENGTH, generate_public_id, is_public_id
 from applydesk.main import create_app
 from applydesk.tests._host import host_with
-from cordware.identity import Identity
+from cordware.identity import SWITCH_PATH, Identity
 
 EX = "wa9juxbc2t"  # the model exercise: not blind, its Interview stage under way
 OPEN = "r6tm4kq9wz"  # open for applications
@@ -236,7 +236,10 @@ def test_every_link_stays_in_the_mount(client: TestClient, path: str) -> None:
     for link in _LINK.findall(client.get(path).text):
         if link.startswith("data:") or link.startswith("#"):
             continue
-        assert link.startswith("/applydesk/") or link in ("/", "/.auth/logout"), (path, link)
+        # The host's own: its root, sign-out, and a local run's *Switch to …*
+        # (segment AD2X).
+        host = link in ("/", "/.auth/logout") or link.startswith(f"{SWITCH_PATH}?")
+        assert link.startswith("/applydesk/") or host, (path, link)
 
 
 def test_the_tabs_mark_the_current_page(client: TestClient) -> None:

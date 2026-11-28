@@ -25,7 +25,7 @@ from starlette.responses import Response
 from applydesk import sample_data, tones, workflow
 from applydesk.gate import is_operator, reaches_placeholders
 from applydesk.gate import viewer as gate_viewer
-from cordware.identity import current_identity, institution_name
+from cordware.identity import current_identity, fake_switch, institution_name
 
 
 def root_path(request: HTTPConnection) -> str:
@@ -79,6 +79,8 @@ def _add_globals(env: _HasGlobals, **values: object) -> None:
 
 
 _add_globals(templates.env, url=_url, is_here=_is_here, host_url=_host_url)
+# A local run's *Switch to …* in the account menu (segment AD2X).
+_add_globals(templates.env, fake_switch=fake_switch)
 # The exercise's help contact and timezone, read on Home and on every
 # gate's card (AD1G amendment).
 _add_globals(templates.env, help_contact=sample_data.help_contact, timezone=sample_data.timezone)

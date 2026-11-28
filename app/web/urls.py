@@ -32,7 +32,7 @@ from starlette.requests import HTTPConnection
 from starlette.responses import RedirectResponse
 
 from app.web.views import top_line
-from cordware.identity import institution_name
+from cordware.identity import fake_switch, institution_name
 
 
 def root_path(request: HTTPConnection) -> str:
@@ -130,6 +130,8 @@ TEMPLATE_GLOBALS: dict[str, object] = {
     "here_in": _here_in,
     "here_under": _here_under,
     "host_url": _host_url,
+    # A local run's *Switch to …* in the account menu (segment AD2X).
+    "fake_switch": fake_switch,
 }
 
 

@@ -28,6 +28,7 @@ import binascii
 import json
 import logging
 import threading
+import uuid
 from dataclasses import dataclass, field, replace
 from typing import Any, cast
 
@@ -45,6 +46,9 @@ class Identity:
     name: str | None
     provider: str | None = None
     is_fake: bool = False
+    # The second fake account a local run switches to (segment AD2X): fake,
+    # but never granted the fake user's roles, and never the super-admin.
+    is_alternate: bool = False
     # The account's tenant, UPN and primary email as Entra gives them,
     # each its own field: an application matching a roster on first sign-in
     # tries the UPN and the email separately, and binds on (tenant,
@@ -70,8 +74,9 @@ class Identity:
     @property
     def is_super_admin(self) -> bool:
         """Computed from the host-level predicate, never stored, so the
-        flag, `is_super_admin_email` and `super_admin_configured` agree."""
-        return is_super_admin_email(self.email, self.resolved_with)
+        flag, `is_super_admin_email` and `super_admin_configured` agree.
+        Never the second fake account (segment AD2X)."""
+        return not self.is_alternate and is_super_admin_email(self.email, self.resolved_with)
 
     @property
     def super_admin_configured(self) -> bool:
@@ -298,6 +303,86 @@ def _fake_identity(settings: IdentitySettings) -> Identity:
     )
 
 
+#: The cookie that picks the second fake account (segment AD2X), honored
+#: only while `switch_allowed` holds.
+FAKE_AS_COOKIE = "cordware_fake_as"
+#: The host's route that sets or clears it (`cordware.main`).
+SWITCH_PATH = "/.cordware/switch-identity"
+
+
+def _alternate_identity(settings: IdentitySettings) -> Identity | None:
+    """The second fake account, or None when none is set."""
+    email = settings.fake_auth_alt_email.strip()
+    if not email:
+        return None
+    # A blank ID is derived from the address, as Apply Desk's local
+    # directory derives each account's (Codex on #4278), so picking the
+    # person there and switching to them bind one person.
+    principal = settings.fake_auth_alt_principal_id.strip() or str(
+        uuid.uuid5(uuid.NAMESPACE_URL, f"mailto:{email.lower()}")
+    )
+    return Identity(
+        principal_id=principal,
+        email=email,
+        name=settings.fake_auth_alt_name,
+        provider="fake",
+        is_fake=True,
+        is_alternate=True,
+        tenant_id=settings.fake_auth_tenant_id.strip() or None,
+        upn=email,
+        mail=email,
+    )
+
+
+def switch_allowed(settings: IdentitySettings | None = None) -> bool:
+    """Whether a local run may switch between its two fake accounts: fake
+    auth on, `APP_ENV=local` (the guard fake auth itself has), and a
+    second account set."""
+    s = _settings(settings)
+    alternate = s.fake_auth_alt_email.strip().casefold()
+    # Never the fake user's own address (the switch would only change
+    # names), nor a super-admin's: applications that read super-admin by
+    # email would grant it otherwise (Codex on #4278).
+    return (
+        s.allow_fake_auth
+        and is_local(s)
+        and bool(alternate)
+        and alternate != s.fake_auth_email.strip().casefold()
+        and not is_super_admin_email(alternate, s)
+    )
+
+
+@dataclass(frozen=True)
+class FakeSwitch:
+    """The account menu's *Switch to …* item: its label and where it goes."""
+
+    label: str
+    href: str
+
+
+def fake_switch(request: Request, settings: IdentitySettings | None = None) -> FakeSwitch | None:
+    """*Switch to …* for the account menu, or None: only for a fake
+    identity on a local run with a second account set. It names the
+    account switched to and comes back to this page."""
+    from urllib.parse import urlencode
+
+    cfg = _settings(settings)
+    if not switch_allowed(cfg):
+        return None
+    signed_in = current_identity(request, settings)
+    if signed_in is None or not signed_in.is_fake:
+        return None
+    alternate = _alternate_identity(cfg)
+    assert alternate is not None  # switch_allowed holds
+    on_alternate = request.cookies.get(FAKE_AS_COOKIE) == "alt"
+    other = cfg.fake_auth_name if on_alternate else alternate.name
+    here = request.url.path
+    if request.url.query:
+        here += "?" + request.url.query
+    query = urlencode({"to": "main" if on_alternate else "alt", "return_to": here})
+    return FakeSwitch(label=f"Switch to {other}", href=f"{SWITCH_PATH}?{query}")
+
+
 _missing_headers = 0
 # `get_identity` is a plain function, so FastAPI runs it on a worker
 # thread: the count and the once-only check share a lock.
@@ -351,6 +436,9 @@ def current_identity(request: Request, settings: IdentitySettings | None = None)
     identity = _identity_from_easy_auth_headers(request)
     if identity is None and cfg.allow_fake_auth:
         identity = _fake_identity(cfg)
+        # The second fake account, picked from the account menu (AD2X).
+        if request.cookies.get(FAKE_AS_COOKIE) == "alt" and switch_allowed(cfg):
+            identity = _alternate_identity(cfg)
     if identity is None or settings is None:
         return identity
     return replace(identity, resolved_with=settings)

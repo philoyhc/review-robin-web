@@ -28,10 +28,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from starlette.exceptions import HTTPException
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
-from starlette.responses import PlainTextResponse, Response
+from starlette.responses import PlainTextResponse, RedirectResponse, Response
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from cordware.identity import is_local, missing_header_count, super_admin_configured
+from cordware.identity import (
+    FAKE_AS_COOKIE,
+    SWITCH_PATH,
+    is_local,
+    missing_header_count,
+    super_admin_configured,
+    switch_allowed,
+)
 from cordware.logging import configure_logging
 from cordware.settings import IdentitySettings, identity_settings
 from cordware.web import app_icons
@@ -341,6 +348,32 @@ class FakeAuthRefused(RuntimeError):
     """Fake auth is on outside `APP_ENV=local`: the host will not start."""
 
 
+def _safe_return(target: str) -> str:
+    """``target`` if it is a path on this host, else the host's root: never
+    another origin (`//evil`, `/\\evil`, a scheme)."""
+    if target.startswith("/") and not target.startswith("//") and "\\" not in target:
+        return target
+    return "/"
+
+
+def add_identity_switch(host: FastAPI) -> None:
+    """Register `SWITCH_PATH`: on a local run with two fake accounts
+    (`switch_allowed`), ``to=alt`` sets `FAKE_AS_COOKIE` and ``to=main``
+    clears it, then back to ``return_to``. Anywhere else, a 404 (segment
+    AD2X)."""
+
+    @host.get(SWITCH_PATH, include_in_schema=False, name="cordware_switch_identity")
+    def switch_identity(to: str = "alt", return_to: str = "/") -> Response:
+        if not switch_allowed():
+            raise HTTPException(status_code=404)
+        response = RedirectResponse(_safe_return(return_to), status_code=303)
+        if to == "alt":
+            response.set_cookie(FAKE_AS_COOKIE, "alt", path="/", httponly=True, samesite="lax")
+        else:
+            response.delete_cookie(FAKE_AS_COOKIE, path="/")
+        return response
+
+
 def check_fake_auth(settings: IdentitySettings) -> None:
     """The host's guard (v0.8 §3): fake auth only at `APP_ENV=local`.
 
@@ -450,6 +483,9 @@ def create_app(
     @host.get("/health", include_in_schema=False, name="cordware_health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    # A local run's *Switch to …* (segment AD2X), ahead of the mounts.
+    add_identity_switch(host)
 
     # Also ahead of the mounts; it stands aside for an application at `/`.
     add_landing_page(
