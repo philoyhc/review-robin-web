@@ -121,3 +121,22 @@ def test_rows_before_an_unreadable_one_are_looked_up() -> None:
     assert sent.status_code == 200, sent.text
     assert sent.json()["directory"]["directory_by_mail"] == 1
     assert _person(FOUND).object_id
+
+
+def test_no_address_past_the_row_limit_is_looked_up(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex on #4287: rows past the limit are counted by row number, bad
+    rows included, as `read_csv` counts them, so a row it will not read
+    binds nobody."""
+    from applydesk import candidates
+
+    monkeypatch.setattr(candidates, "MAX_ROWS", 2)
+    text = f"Email\nnot-an-email\nalso-not\n{FOUND}\n"
+    assert candidates.csv_addresses(text) == []
+    sent = _post("invitees", {"action": "csv", "text": text})
+    assert sent.status_code == 200, sent.text
+    session = db.new_session()
+    try:
+        found = session.scalar(select(Person).where(Person.email_key == FOUND))
+        assert found is None or found.object_id is None  # a sample's pending person
+    finally:
+        session.close()
