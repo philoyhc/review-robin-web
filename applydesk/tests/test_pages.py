@@ -1889,10 +1889,47 @@ def test_crumbs_and_headings_after_the_register(client: TestClient) -> None:
     assert "data-gate-state>Not ready<" in head and ">40 dossiers to approve</span>" in head
 
 
-def test_the_applicant_reaches_each_of_their_applications(client: TestClient) -> None:
+def _sign_in_as_the_applicant(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Segment AD4A: /me reads the signed-in person, so the test signs in as
+    the sample applicant, Aisha Bello (her submitted application), with a
+    new account bound to her record, and her draft (the sample's other
+    application) is made hers too."""
+    from sqlalchemy import select, update
+
+    from applydesk import db
+    from applydesk.models import Application
+    from cordware.settings import identity_settings
+
+    monkeypatch.setattr(identity_settings, "fake_auth_email", "aisha.bello@example.edu")
+    monkeypatch.setattr(identity_settings, "fake_auth_principal_id", "aisha-bello")
+    monkeypatch.setattr(identity_settings, "fake_auth_super_admin", False)
+    client.get("/applydesk/me")  # binds the account to her record
+    session = db.new_session()
+    try:
+        her = session.scalars(
+            select(Application.person_id).where(Application.public_id == sample_data.MINE[0])
+        ).one()
+        session.execute(
+            update(Application)
+            .where(Application.public_id == sample_data.MINE[1])
+            .values(person_id=her)
+        )
+        session.commit()
+    finally:
+        session.close()
+
+
+def test_the_applicant_reaches_each_of_their_applications(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """AD-27: the lobby and the exercise page list each of the applicant's
-    applications, the draft included."""
+    applications, the draft included; another person's are not listed
+    (segment AD4A)."""
     me = "/applydesk/me/exercises/wa9juxbc2t"
+    assert 'href="/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n"' not in (
+        client.get("/applydesk/me").text
+    )
+    _sign_in_as_the_applicant(client, monkeypatch)
     lobby = client.get("/applydesk/me").text
     page = client.get(me).text
     for app in ("m3qx8vkt2n", "f2ps7nyh4k"):
@@ -1911,10 +1948,13 @@ def test_one_count_of_applications_everywhere(client: TestClient) -> None:
     assert "100 submitted · 3 drafts" in home
 
 
-def test_an_applicant_reads_their_released_result(client: TestClient) -> None:
+def test_an_applicant_reads_their_released_result(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Ruling 41, AD-28: once an outcome is released to applicants, the
     applicant's own value shows on the exercise and application pages."""
     me = "/applydesk/me/exercises/wa9juxbc2t"
+    _sign_in_as_the_applicant(client, monkeypatch)
     page = client.get(me).text
     assert "Your result, Shortlisting: <strong>Re-appointment</strong>" in page
     app = client.get(f"{me}/applications/m3qx8vkt2n").text
@@ -1939,6 +1979,7 @@ def test_a_closed_exercise_stays_on_me_read_only(
         tuple(closed if e.public_id == ex.public_id else e for e in sample_data.EXERCISES),
     )
     monkeypatch.setattr(sample_data, "exercise", lambda i: closed if i == ex.public_id else None)
+    _sign_in_as_the_applicant(client, monkeypatch)
     lobby = client.get("/applydesk/me").text
     assert "Closed: its released results stay here" in lobby
     page = client.get("/applydesk/me/exercises/wa9juxbc2t").text
