@@ -137,3 +137,14 @@ def test_six_applications_without_a_second_account(monkeypatch: pytest.MonkeyPat
         session.close()
     assert n == local_seed.APPLICANTS
     assert not _open_form().made  # and a re-run finds it complete
+
+
+def test_the_second_account_sits_on_no_panel() -> None:
+    """Codex on #4279: the plain applicant is on neither panel, which keep
+    their sizes (Readers: Local Operator and three; Mentors: four)."""
+    made = _open_form()
+    state = panels_store.stored(made.public_id)
+    assert state is not None
+    assert "divya.petrova@example.edu" not in {m.email for m, _ in state.roster}
+    sizes = sorted(sum(1 for _, keys in state.roster if p.key in keys) for p in state.panels)
+    assert sizes == [4, 4]
