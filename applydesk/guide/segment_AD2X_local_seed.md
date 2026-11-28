@@ -47,6 +47,9 @@
 - **The second identity is a plain applicant**, not a second operator, because the views most worth checking are the applicant's and the outsider's (2026-11-28).
 - **The identity switcher lands wired, in one rung.** It is a localhost-only development affordance, not a product page, so the scaffold-first rule's purpose (iterating a page's shape) does not apply (2026-11-28).
 
+- **The scenarios post what the pages post** to Apply Desk's own routes, in process, as Local Operator (`applydesk/local_seed.py`), rather than calling each service. The route's transaction is the page's, so the seed cannot drift from it. The cost is that the seed needs fake auth on, which a local run has (2026-11-28, rung 4).
+- **Answers are not stored until AD4C.** The seeded applications are stored rows. Their answers are derived as the samples' are (`extract.form_answers`) until submit stores them (2026-11-28, rung 4).
+
 ## Blast radius (measured)
 
 Taken 2026-11-28 at `37ae6ec49`.
