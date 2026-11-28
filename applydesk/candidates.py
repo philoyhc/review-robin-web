@@ -435,19 +435,25 @@ def csv_addresses(text: str) -> list[str]:
     reader = csv.reader(io.StringIO(text.lstrip("\ufeff")))
     try:
         header = next(reader, None)
-        if header is None:
-            return []
-        names = [h.strip().casefold() for h in header]
-        if "email" not in names:
-            return []
-        at = names.index("email")
-        found: list[str] = []
-        for i, row in enumerate(reader):
-            if i >= MAX_ROWS:
-                break
-            address = row[at].strip() if at < len(row) else ""
-            if address and len(address) <= MAX_EMAIL and _EMAIL.fullmatch(address):
-                found.append(address)
-        return found
     except csv.Error:
         return []
+    if header is None:
+        return []
+    names = [h.strip().casefold() for h in header]
+    if "email" not in names:
+        return []
+    at = names.index("email")
+    found: list[str] = []
+    while len(found) < MAX_ROWS:
+        try:
+            row = next(reader)
+        except StopIteration:
+            break
+        except csv.Error:
+            # `read_csv` saves the rows before an unreadable one, so they
+            # are looked up too (Codex on #4287).
+            break
+        address = row[at].strip() if at < len(row) else ""
+        if address and len(address) <= MAX_EMAIL and _EMAIL.fullmatch(address):
+            found.append(address)
+    return found
