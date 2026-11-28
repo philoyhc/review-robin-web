@@ -844,6 +844,7 @@ def test_a_panel_added_waits_for_save(page: Page) -> None:
     page.locator("[data-pn-newname]").fill("Reserve")
     page.locator("[data-pn-members]").fill("Daniel Koh, zoe.tan@example.edu")
     add.click()
+    _settled(page)
     assert save.is_enabled() and rows.count() == n + 1
     assert (
         page.locator('li[data-panel="made-1"] [data-pn-unsaved]').inner_text()
@@ -857,6 +858,7 @@ def test_a_panel_added_waits_for_save(page: Page) -> None:
     )
     page.locator("[data-pn-newname]").fill("Reserve")
     add.click()
+    _settled(page)
     save.click()
     assert page.locator('th[data-panel="made-2"] [data-pn-name]').inner_text() == "Reserve"
     assert page.locator('li[data-panel="made-2"] [data-pn-unsaved]').count() == 0
@@ -864,6 +866,7 @@ def test_a_panel_added_waits_for_save(page: Page) -> None:
     # Close with one pending asks; accepted, it is taken back.
     page.locator("[data-pn-newname]").fill("Spare")
     add.click()
+    _settled(page)
     page.once("dialog", lambda d: d.accept())
     page.locator('[data-pn-act="close"]').click()
     assert page.locator('th[data-panel="made-3"]').count() == 0
@@ -883,12 +886,14 @@ def test_rows_a_panel_brought_follow_it(page: Page) -> None:
     page.locator("[data-pn-newname]").fill("Kept")
     page.locator("[data-pn-members]").fill("Daniel Koh")
     add.click()
+    _settled(page)
     page.locator('[data-pn-act="save-names"]').click()
     assert rows.count() == n + 1
     # Retire, unsaved: taken back with its row.
     page.locator("[data-pn-newname]").fill("Gone")
     page.locator("[data-pn-members]").fill("Priya Raman")
     add.click()
+    _settled(page)
     assert rows.count() == n + 2
     page.locator('li[data-panel="made-2"] [data-pn-act="retire"]').click()
     assert rows.count() == n + 1
@@ -898,6 +903,7 @@ def test_rows_a_panel_brought_follow_it(page: Page) -> None:
     page.locator("[data-pn-newname]").fill("Spare")
     page.locator("[data-pn-members]").fill("mei.chen@example.edu")
     add.click()
+    _settled(page)
     mei = rows.last
     mei.locator("[data-pn-select]").check()
     mei.locator('[data-pn="note"]').fill("Visiting")

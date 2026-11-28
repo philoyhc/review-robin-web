@@ -229,6 +229,7 @@ def test_panels_marks_a_row_a_new_panel_brought_kept_with_its_tick(page: Page) -
     page.locator("[data-pn-newname]").fill("Spare")
     page.locator("[data-pn-members]").fill("mei.chen@example.edu")
     page.locator('[data-pn-act="create"]').click()
+    page.wait_for_function("() => !window.applydeskPanelsBusy")  # segment AD2Y
     mei = page.locator("[data-pn-row][data-new-with]").first
     mei.locator("[data-pn-select]").check()
     mei.locator('[data-pn-act="save"]').click()
