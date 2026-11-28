@@ -500,7 +500,7 @@ stay RRW's.
 | `FAKE_AUTH_TENANT_ID` | `local-tenant` | Fake-auth identity slot: the fake identity's `tenant_id`. |
 | `FAKE_AUTH_UPN` | empty | Fake-auth identity slot: the fake identity's `upn`; blank is `FAKE_AUTH_EMAIL`. Set apart from the email to try an alias locally. |
 | `FAKE_AUTH_MAIL` | empty | Fake-auth identity slot: the fake identity's `mail`; blank is `FAKE_AUTH_EMAIL`. |
-| `FAKE_AUTH_ALT_PRINCIPAL_ID` | `local-dev-2` | The second fake account's object ID (segment AD2X). |
+| `FAKE_AUTH_ALT_PRINCIPAL_ID` | empty | The second fake account's object ID (segment AD2X); blank derives it from `FAKE_AUTH_ALT_EMAIL`, as a local run's directory derives each account's, so a directory pick and a switch bind one person. |
 | `FAKE_AUTH_ALT_EMAIL` | `divya.petrova@example.edu` | The second fake account a local run switches to from the account menu (*Switch to …*, `cordware.identity.fake_switch`); blank turns the switch off. Honored only with `ALLOW_FAKE_AUTH` on and `APP_ENV=local`; never the super-admin. |
 | `FAKE_AUTH_ALT_NAME` | `Divya Petrova` | The second fake account's name. |
 | `FAKE_AUTH_OPERATOR` | `True` | Sandbox-only: the fake identity is seeded as operator. Honored only for the fake identity (`Identity.is_fake`), which exists only while `ALLOW_FAKE_AUTH` is `True`; inert in deployed envs. |

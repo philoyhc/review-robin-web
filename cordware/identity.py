@@ -28,6 +28,7 @@ import binascii
 import json
 import logging
 import threading
+import uuid
 from dataclasses import dataclass, field, replace
 from typing import Any, cast
 
@@ -314,8 +315,14 @@ def _alternate_identity(settings: IdentitySettings) -> Identity | None:
     email = settings.fake_auth_alt_email.strip()
     if not email:
         return None
+    # A blank ID is derived from the address, as Apply Desk's local
+    # directory derives each account's (Codex on #4278), so picking the
+    # person there and switching to them bind one person.
+    principal = settings.fake_auth_alt_principal_id.strip() or str(
+        uuid.uuid5(uuid.NAMESPACE_URL, f"mailto:{email.lower()}")
+    )
     return Identity(
-        principal_id=settings.fake_auth_alt_principal_id,
+        principal_id=principal,
         email=email,
         name=settings.fake_auth_alt_name,
         provider="fake",
@@ -333,12 +340,15 @@ def switch_allowed(settings: IdentitySettings | None = None) -> bool:
     second account set."""
     s = _settings(settings)
     alternate = s.fake_auth_alt_email.strip().casefold()
-    # Never the fake user's own address: the switch would only change names.
+    # Never the fake user's own address (the switch would only change
+    # names), nor a super-admin's: applications that read super-admin by
+    # email would grant it otherwise (Codex on #4278).
     return (
         s.allow_fake_auth
         and is_local(s)
         and bool(alternate)
         and alternate != s.fake_auth_email.strip().casefold()
+        and not is_super_admin_email(alternate, s)
     )
 
 

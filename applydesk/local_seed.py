@@ -414,10 +414,13 @@ SCENARIOS: Sequence[Callable[[TestClient, Person, IdentitySettings], Made]] = (
 )
 
 
-def seed_local(settings: IdentitySettings | None = None) -> tuple[Made, ...]:
+def seed_local() -> tuple[Made, ...]:
     """Build every scenario not already there. Refused unless
-    `APP_ENV=local` with fake auth on."""
-    cfg = settings or identity_settings
+    `APP_ENV=local` with fake auth on. Always the host's identity settings:
+    the pages' requests resolve their identity from those, so the Owner the
+    seed binds and the one its requests make are one person (Codex on
+    #4279)."""
+    cfg = identity_settings
     if not is_local(cfg) or not cfg.allow_fake_auth:
         raise LocalSeedRefused(
             "the scenarios need APP_ENV=local and ALLOW_FAKE_AUTH=true (ruling 74)"
