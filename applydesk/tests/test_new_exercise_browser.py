@@ -12,6 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 from playwright.sync_api import Error, Page, Route, sync_playwright
 
+from applydesk.tests import _sample_directory
 from applydesk.tests._host import host_with
 from applydesk.tests.test_form_browser import ORIGIN
 
@@ -199,7 +200,9 @@ def test_process_saved_into_a_new_exercise_survives_a_reload(page: Page) -> None
     assert "Award" in page.locator("main").inner_text()
 
 
-def test_panels_saved_into_a_new_exercise_survive_a_reload(page: Page) -> None:
+def test_panels_saved_into_a_new_exercise_survive_a_reload(
+    page: Page, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Rung 5: a panel made in Manage panels, with a member from the
     directory, saved, read back, and offered to a gate on Process."""
     page.goto(LOBBY)
@@ -209,12 +212,14 @@ def test_panels_saved_into_a_new_exercise_survive_a_reload(page: Page) -> None:
     page.wait_for_url(f"{LOBBY}/*")
     home = page.url
     page.goto(home + "/panels")
-    who = page.evaluate("JSON.parse(document.getElementById('pn-people').textContent)[0]")
+    _sample_directory.use(monkeypatch)  # segment AD2Y: the directory here
+    who = _sample_directory.people()[0]
     page.locator('[data-pn-act="manage"]').click()
     page.locator("[data-pn-newname]").fill("Readers")
     page.locator("[data-pn-members]").fill(who[1])
     page.locator("[data-pn-members]").press("Enter")
     page.locator('[data-pn-act="create"]').click()
+    page.wait_for_function("() => !window.applydeskPanelsBusy")
     # Still open in Manage panels: Save is refused, saying why.
     page.locator("[data-fb-save]").click()
     assert "Keep or undo" in page.locator("[data-pn-said]").inner_text()

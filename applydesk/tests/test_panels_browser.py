@@ -10,6 +10,7 @@ import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from applydesk import locks
+from applydesk.tests import _sample_directory
 from applydesk.tests.test_form_browser import ORIGIN
 from applydesk.tests.test_form_browser import page as page  # the fixture, re-exported
 
@@ -23,28 +24,9 @@ def _form_open(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(autouse=True)
 def _directory_is_the_sample_institution(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Segment AD2Y: Panels asks the directory, so these tests' people, the
-    sample institution's, are the directory here; those on a roster read as
-    bound to it, as a saved roster's would be."""
-    import uuid
-
-    from applydesk import directory, panels_store, sample_data
-    from cordware.graph import DirectoryUser, FakeDirectory
-
-    members: list[tuple[str, str]] = sample_data.people_pools("r6tm4kq9wz")["institution"][
-        "members"
-    ]
-    users = tuple(
-        DirectoryUser(str(uuid.uuid5(uuid.NAMESPACE_URL, f"mailto:{e.lower()}")), n, e, e)
-        for n, e in members
-    )
-    known = {e.lower() for _, e in members}
-    monkeypatch.setattr(directory, "for_request", lambda request: FakeDirectory(users))
-    monkeypatch.setattr(
-        panels_store,
-        "bound_among",
-        lambda addresses: frozenset(a.lower() for a in addresses if a.lower() in known),
-    )
+    """Segment AD2Y: Panels asks the directory; here it is the sample
+    institution (`_sample_directory`)."""
+    _sample_directory.use(monkeypatch)
 
 
 PANELS = f"{ORIGIN}/applydesk/operator/exercises/r6tm4kq9wz/panels"
@@ -302,6 +284,11 @@ def test_a_csv_goes_out_and_comes_in(page: Page) -> None:
     )
     kim = page.locator("[data-pn-row]").last
     assert kim.locator(".pn-email-cell").get_attribute("data-verified") is None
+    # Kept unverified, the row may be opened and kept again unchanged; only
+    # a new or changed address must be found.
+    kim.locator("[data-pn-select]").check()
+    kim.locator('[data-pn-act="save"]').click()
+    assert page.locator("[data-pn-said]").inner_text() == "Kim Lee: nothing changed."
     dan = page.locator("[data-pn-row]").nth(-2)  # added by the script, unselected
     assert dan.get_attribute("data-sel") is None
     assert dan.locator('[data-pn-view="name"]').inner_text() == "Dan Koh"

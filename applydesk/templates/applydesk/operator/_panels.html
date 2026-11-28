@@ -879,6 +879,11 @@
   function save(r) {
     check();
     var why = r.querySelector("[data-pn-why]").textContent;
+    // Segment AD2Y: an address already on the roster and not changed may
+    // stay unverified (an upload keeps one so, and Save asks again); only
+    // a new or changed one must be found.
+    if (why === "Not found in the directory." && r.pnSnap && !r.dataset.fresh &&
+        (r.pnSnap.email || "").toLowerCase() === val(r, "email").toLowerCase()) why = "";
     var who = val(r, "name") || val(r, "email") || "This row";
     if (why) { said.textContent = who + " is not saved: " + why.toLowerCase(); return; }
     // Kept only when something changed: a new row, one a panel brought

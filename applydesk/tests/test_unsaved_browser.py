@@ -9,6 +9,7 @@ import pytest
 from playwright.sync_api import Dialog, Page
 
 from applydesk import locks
+from applydesk.tests import _sample_directory
 from applydesk.tests.test_form_browser import FORM
 from applydesk.tests.test_form_browser import page as page  # the fixture, re-exported
 from applydesk.tests.test_process_browser import MODEL as PROCESS
@@ -126,6 +127,14 @@ def test_dossiers_marks_what_lock_kept_and_asks_before_leaving(page: Page) -> No
     assert marker.inner_text() == "1 change on this page, not saved"
 
 
+@pytest.fixture
+def sample_directory(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Segment AD2Y: Panels asks the directory; here it is the sample
+    institution (`_sample_directory`)."""
+    _sample_directory.use(monkeypatch)
+
+
+@pytest.mark.usefixtures("sample_directory")
 def test_panels_marks_what_is_kept_and_asks_before_leaving(page: Page) -> None:
     """AD-07: ✓ says kept on this page, the page is marked and leaving
     asks; × on a member of a panel an opened gate keeps asks first."""
@@ -211,6 +220,7 @@ def test_panels_does_not_mark_a_refused_rename(page: Page) -> None:
     assert not page.locator("[data-pn-kept]").is_visible() and not page.evaluate(LEAVES)
 
 
+@pytest.mark.usefixtures("sample_directory")
 def test_panels_marks_a_row_a_new_panel_brought_kept_with_its_tick(page: Page) -> None:
     """Codex on #3996: ✓ on a row a new panel brought keeps that person
     apart from the panel, so the page is marked even with no edit."""
