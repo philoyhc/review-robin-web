@@ -86,7 +86,11 @@ The avatar opens it, in every application; it holds Sign out.
      Logs, **Who can see what**, its staff explainer (2026-11-07); Guide
      and About when they exist.
 3. **Under 640 px**: the Light/Dark toggle and the viewer's name.
-4. **Sign out**, last, its own group: `/.auth/logout`.
+4. **Sign out**, last, its own group: `/.auth/logout`. On a local run with
+   a second fake account, **Switch to …** (the other account's name) is a
+   group of its own just above it (`fake_switch`,
+   `cordware/spec/identity.md` "The second fake account"); it is absent
+   anywhere else (segment AD2X).
 
 - **Return to origin is kept.** Settings, Admin, Guide and About still
   carry `?return_to=` the current page.

@@ -76,6 +76,21 @@ Adding the prefix to the URLs an application emits is the application's
 job (RRW's, in `spec/architecture.md` "URL emission"). Easy Auth's
 `/.auth/*` stays at the host level, outside every mount.
 
+## Identity switch
+
+`add_identity_switch(host)` registers `GET /.cordware/switch-identity`
+(`SWITCH_PATH`, `cordware/spec/identity.md` "The second fake account")
+ahead of any mount. While `switch_allowed` holds, `to=alt` sets
+`cordware_fake_as=alt` (path `/`, `HttpOnly`, `SameSite=Lax`) and any other
+`to` clears it, then a 303 to `return_to`. `return_to` is kept only when it
+is a path on this host: one not starting `/`, starting `//`, or holding a
+backslash goes to `/` instead, so the switch never redirects off the host.
+Anywhere else, the route is a **404**.
+
+**Switching Microsoft accounts on Azure is not built.** Easy Auth keeps
+one session per browser, so a deployed viewer switches by *Sign out*, then
+signing in with the account picker (segment AD2X, out of scope).
+
 ## Landing page
 
 `cordware/web/landing.py` and its template, `cordware/web/templates/landing.html`,
@@ -88,7 +103,8 @@ as a link to its path with its trailing slash and the request's
 `root_path` (`/reviewrobin/` for RRW), titled by its registry title
 (registry name if empty) after its registry icon (24 px, decorative, empty
 `alt`; none if empty), and a host-level `Sign out` link to
-`/.auth/logout`. With none mounted it says no applications are running.
+`/.auth/logout`, preceded on a local run with a second fake account by
+*Switch to …* (`fake_switch`). With none mounted it says no applications are running.
 **One application is listed like any other** (author, 2026-10-31): the
 302 redirect a lone application took (ruled 2026-10-21) is withdrawn, as
 it hid the sign-in details on a deployment mounting only one.

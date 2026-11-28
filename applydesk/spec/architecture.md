@@ -23,10 +23,12 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/lobby.py` | The Operator Lobby's and the Archive's query string: `Query` (`sort`, `dir`, `tag`, `any`, `q`) and `apply` / `matches`, which sort and filter the rows |
 | `applydesk/alembic.ini`, `applydesk/alembic/` | Its migration history ("The database") |
 | `applydesk/people.py` | People and their binding: `resolve` at sign-in, `from_directory` for a directory find, `pending` for an address the directory did not find ("Binding") |
-| `applydesk/directory.py` | The people search every place that adds people uses: people on record first, then the directory through `cordware/graph.py`; a failed directory search is reported, never read as nobody there. `for_request` is the request's directory; a local run's fake one also finds every sample panel member, applicant and assessor, each with a name (about 150 accounts) |
+| `applydesk/directory.py` | The people search every place that adds people uses: people on record first, then the directory through `cordware/graph.py`; a failed directory search is reported, never read as nobody there. `for_request` is the request's directory; a local run's fake one finds Cordware's fake accounts first, then `local_directory.PEOPLE` |
 | `applydesk/operators.py` | The rules of who may operate and who operates each exercise: the allowlist (`admit`, `revoke`), the Admin tier (`promote`, `demote`; `is_admin`; `is_protected` marks a super-admin's row, which no Revoke, Promote or Demote acts on; `keeps_the_list` says who admits and revokes, `makes_admins` who promotes and demotes) and an exercise's Owners and operators (`create_exercise`, `add_operator`, `remove_operator`, `hand_over`, `adopt`, `can_operate`, `is_owner`, `owners_of`; `owner_labels` names each exercise's Owners, comma-separated, for the Owners columns). `Actor` is the person, whether they are the super-admin, and `platform`, the seed acting as no one with every exercise, never built from a sign-in. Refusing with `Refused` and its `key` ("Operators"); `_allowed` re-reads the allowlist row, under `FOR SHARE` where a change rests on it |
 | `applydesk/audit.py` | `write_event` in Review Robin's envelope, copied, and `EVENT_SCHEMAS` ("Audit") |
-| `applydesk/seed.py` | `python -m applydesk.seed`: the sample exercises' rows, their settings, their applications and their Owner; refused unless `APP_ENV=local`. `--reset` first runs Apply Desk's own Alembic chain down to base and up to head, and only on SQLite or a localhost URL; `--blank N` (at most 50) adds N drafts named *Blank exercise n*, Owned by the seed's person, through `exercises.make` |
+| `applydesk/local_directory.py` | The directory a local run searches (segment AD2X): `PEOPLE`, the RA exercise's panels' 48 people as (name, email) pairs, written out as data, never derived from `sample_data` |
+| `applydesk/local_seed.py` | Localhost's scenario exercises (segment AD2X): `seed_local()` builds each of `SCENARIOS` by posting what the pages post to Apply Desk's own routes, in process, signed in as Cordware's fake identity, so each runs the pages' checks and leaves their audit trail. A scenario is found by name among the exercises its owner made and skipped; a half-built one is refused (`Refused`), pointing at `--reset`. Refused unless `APP_ENV=local` with fake auth on |
+| `applydesk/seed.py` | `python -m applydesk.seed`: by default `local_seed.seed_local()`; `--samples` (and `seed()`, which the tests use) the sample exercises' rows, their settings, their applications and their Owner; refused unless `APP_ENV=local`. `--reset` first runs Apply Desk's own Alembic chain down to base and up to head, and only on SQLite or a localhost URL; `--blank N` (at most 50) adds N drafts named *Blank exercise n*, Owned by the seed's person, through `exercises.make` |
 | `applydesk/ids.py` | Public IDs: generation and the shape check; `row_id` and `RowId` for a database row ID in a form or path |
 | `applydesk/web.py` | Templates, mount-aware URLs (`url()`, `is_here()`, `host_url()`), the page chrome and `MAX_BODY`, the largest post an operator page takes (256 KiB) |
 | `applydesk/applications.py` | An exercise's applications in the database: `of` (an exercise's, in the order they came in) and `with_ids` read them as `sample_data.Application`, built by `from_row`, in a session of their own; `day` words a stored time as the pages show it, in UTC; `record_samples` is the seed's, and `sample_day` turns a sample's day into noon UTC. Flushes, never commits |
@@ -451,7 +453,24 @@ person found.
 
 ### The seed
 
-`python -m applydesk.seed` is idempotent and refused unless `APP_ENV=local`.
+There are two seeds (segment AD2X). **Localhost's**, `python -m
+applydesk.seed`, builds the scenario exercises (`local_seed.py`), each
+through the pages' own requests as Local Operator:
+
+- **Scenario 1, an open application form**: the Form published, its
+  window opened ten days before the run and closing 30 days after it,
+  two panels of its own (Local Operator on one), and six directory
+  people's applications, four submitted and two drafts. The second fake
+  account's is the first, submitted (`cordware/spec/identity.md` "The
+  second fake account"); that account sits on no panel.
+- **Scenario 2, Create dossiers**: two dossiers per person for five
+  people, Local Operator among them, entered as the page's CSV, and two
+  panels of its own.
+
+**The tests'**, `seed()` (and the CLI's `--samples`), loads the sample
+exercises, as below. `--owner EMAIL` goes with `--samples` only.
+
+`seed()` is idempotent and refused unless `APP_ENV=local`.
 It goes through `people` and `operators`, so its rows are matched and
 audited as any others: it binds Cordware's fake identity (or, with
 `--owner EMAIL`, leaves that address pending), admits the person as the
