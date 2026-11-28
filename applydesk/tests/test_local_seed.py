@@ -117,3 +117,13 @@ def test_the_second_account_sits_on_no_panel() -> None:
     assert "divya.petrova@example.edu" not in {m.email for m, _ in state.roster}
     sizes = sorted(sum(1 for _, keys in state.roster if p.key in keys) for p in state.panels)
     assert sizes == [4, 4]
+
+
+def test_the_second_account_s_application_is_its_own_if_it_signed_in_first() -> None:
+    """Codex on #4279: Divya Petrova signing in before the seed runs still
+    finds her application on /me, not on a pending duplicate."""
+    client = TestClient(host_with(("applydesk",))[0])
+    client.cookies.set("cordware_fake_as", "alt")
+    assert client.get("/applydesk/me").status_code == 200  # signs in first
+    _open_form()
+    assert "Herb garden on the roof" in client.get("/applydesk/me").text
