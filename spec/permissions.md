@@ -65,8 +65,10 @@ reads them only through `app/auth/roles.py` (`is_super_admin`,
 
 **Fake-auth fold-in (local dev only).** `FAKE_AUTH_OPERATOR` /
 `FAKE_AUTH_SYS_ADMIN` grant an identity those flags on first sign-in when
-`Identity.is_fake` is true, and on nothing else: they do not re-read
-`ALLOW_FAKE_AUTH`. Cordware sets `is_fake` only on the fake user, and the
+`Identity.is_fake` is true and `Identity.is_alternate` false, and on nothing
+else: they do not re-read `ALLOW_FAKE_AUTH`. Cordware sets `is_fake` only on
+its fake accounts; the second one a local run switches to (`is_alternate`,
+segment AD2X) is granted nothing and is never the super-admin. The
 host refuses to start with `ALLOW_FAKE_AUTH` on outside `APP_ENV=local`,
 so all three switches are inert in a deployed environment.
 `FAKE_AUTH_SUPER_ADMIN` is Cordware's: it folds the fake email into the

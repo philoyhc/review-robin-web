@@ -640,3 +640,26 @@ def test_a_row_stored_padded_before_the_fix_still_finds_its_owner(db: Session, s
 
     assert found.id == padded.id
     assert found.is_operator
+
+
+def test_the_second_fake_account_is_granted_nothing(
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Segment AD2X (cold read): the account a local run switches to is fake
+    but `is_alternate`, so the fake user's operator and sys-admin grants do
+    not reach it."""
+    monkeypatch.setattr(settings, "fake_auth_operator", True)
+    monkeypatch.setattr(settings, "fake_auth_sys_admin", True)
+    alternate = AuthenticatedUser(
+        principal_id="local-dev-2",
+        email="divya.petrova@example.edu",
+        name="Divya Petrova",
+        provider="fake",
+        is_fake=True,
+        is_alternate=True,
+    )
+    client = _make_client(db, alternate)
+    assert client.get("/__test/operator-gated", follow_redirects=False).status_code != 200
+    user = db.execute(select(User).where(User.email == "divya.petrova@example.edu")).scalar_one()
+    assert user.is_operator is False and user.is_sys_admin is False

@@ -477,7 +477,7 @@ pattern), `spec/operator_ui_concept.md` (chrome-detour return-to-origin).
 Listed for context — these are not operator-determined. Set in
 `.env` locally and via Azure App Service "Application settings" in
 deployed environments. Source: `app/config.py`, except `LOG_LEVEL` and
-`CORDWARE_APPS`, which are the host's (`cordware/main.py`), and the ten
+`CORDWARE_APPS`, which are the host's (`cordware/main.py`), and the thirteen
 identity settings (`APP_ENV`, `ALLOW_FAKE_AUTH`, `FAKE_AUTH_PRINCIPAL_ID`,
 `FAKE_AUTH_EMAIL`, `FAKE_AUTH_NAME`, `FAKE_AUTH_TENANT_ID`, `FAKE_AUTH_UPN`,
 `FAKE_AUTH_MAIL`, `FAKE_AUTH_ALT_PRINCIPAL_ID`, `FAKE_AUTH_ALT_EMAIL`,
