@@ -47,6 +47,8 @@ def me(request: Request) -> Response:
         exercises=participant.open_to(person_id, [e for e in live if _on_me(e)]),
         # Not an application in a deleted exercise (Codex on #4140).
         mine=[a for a in participant.my_applications(person_id) if a.exercise_id in shown],
+        # Open as the form is stored, not the placeholder's flag (Codex).
+        form_state=workflow.form_state,
         # Who evaluates which dossier is AD5's pairing: none until then.
         dossiers=[],
     )
@@ -73,6 +75,7 @@ def exercise(request: Request, exercise_id: str) -> Response:
             if a.exercise_id == found.public_id
         ),
         results=stages.released_results,
+        form_state=workflow.form_state,
     )
 
 

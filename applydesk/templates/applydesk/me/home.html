@@ -14,7 +14,7 @@
   {# Each exercise whose Form admits the viewer (segment AD4A,
      `eligibility.may_apply`), with why when it is not open to all. #}
   {% for e, why in exercises %}
-    <p><a href="{{ url('/me/exercises/' ~ e.public_id) }}">{{ e.name }}</a> <span class="muted">· {{ "Closed: its released results stay here" if e.state == "Closed" else ("Applications open" if e.form_open else "Applications closed") }}</span>{% if why == "invited" %} <span class="chip chip-info">You are invited</span>{% elif why == "dossier" %} <span class="chip chip-info">A dossier is held for you</span>{% endif %}</p>
+    <p><a href="{{ url('/me/exercises/' ~ e.public_id) }}">{{ e.name }}</a> <span class="muted">· {{ "Closed: its released results stay here" if e.state == "Closed" else ("Applications open" if form_state(e) == "Open" else "Applications closed") }}</span>{% if why == "invited" %} <span class="chip chip-info">You are invited</span>{% elif why == "dossier" %} <span class="chip chip-info">A dossier is held for you</span>{% endif %}</p>
   {% else %}<p class="muted">No exercise is open to you yet.</p>
   {% endfor %}
 </section>

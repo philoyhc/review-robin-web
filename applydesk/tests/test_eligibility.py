@@ -136,3 +136,29 @@ def test_open_to_me_lists_only_what_admits_the_viewer() -> None:
     lobby = client.get("/applydesk/me").text
     shown = lobby[lobby.index("Invited Fellowship") :]
     assert "You are invited" in shown[: shown.index("</p>")]
+
+
+def test_the_lobby_reads_the_stored_form_state() -> None:
+    """Codex on #4273: an exercise made with New exercise says
+    Applications open or closed as its form is stored, not by the
+    placeholder's flag."""
+    from fastapi.testclient import TestClient
+
+    from applydesk.tests._host import host_with
+
+    ex = _exercise("open")
+    session = db.new_session()
+    row = session.scalars(select(Exercise).where(Exercise.public_id == ex)).one()
+    row.name = "Stored Form"
+    row.process_revision = 1
+    for stage in session.scalars(select(StageRow).where(StageRow.exercise_id == row.id)):
+        stage.status = "published"
+        stage.form_state = "closed"
+    session.commit()
+    session.close()
+    client = TestClient(host_with(("applydesk",))[0])
+    lobby = client.get("/applydesk/me").text
+    shown = lobby[lobby.index("Stored Form") :]
+    assert "Applications closed" in shown[: shown.index("</p>")]
+    page = client.get(f"/applydesk/me/exercises/{ex}").text
+    assert "Start an application" not in page
