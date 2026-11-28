@@ -146,8 +146,8 @@ def test_the_seed_gives_each_sample_exercise_its_owner_once() -> None:
 
 @pytest.mark.usefixtures("applydesk_db")
 def test_the_seed_may_name_a_pending_owner(capsys: pytest.CaptureFixture[str]) -> None:
-    assert main(["--owner", "Someone@Example.EDU"]) == 0
-    assert "seeded: " in capsys.readouterr().out
+    assert main(["--samples", "--owner", "Someone@Example.EDU"]) == 0
+    assert "seeded the samples: " in capsys.readouterr().out
     session = db.new_session()
     owner = session.scalars(select(Person).where(Person.may_operate)).one()
     assert owner.object_id is None and owner.email_key == "someone@example.edu"
@@ -233,9 +233,12 @@ def _fresh(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
 def test_reset_and_blank_drafts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Segment AD2G: `--reset --blank 3` leaves the samples and three
-    blank drafts, whatever was there before; a second `--blank` numbers
-    on from the drafts already there."""
+    """Segment AD2G: `--reset --blank 3` leaves the seed's exercises and
+    three blank drafts, whatever was there before; a second `--blank`
+    numbers on from the drafts already there. Since AD2X the seed's are the
+    scenarios (`local_seed.SCENARIOS`)."""
+    from applydesk import local_seed
+
     _fresh(tmp_path, monkeypatch)
     assert main(["--blank", "2"]) == 0
     assert main(["--reset", "--blank", "3"]) == 0
@@ -246,7 +249,7 @@ def test_reset_and_blank_drafts(
     )
     assert names == ["Blank exercise 1", "Blank exercise 2", "Blank exercise 3"]
     total = session.scalar(select(func.count()).select_from(Exercise))
-    assert total == len(sample_data.EXERCISES) + 3
+    assert total == len(local_seed.SCENARIOS) + 3
     session.close()
     assert main(["--blank", "1"]) == 0
     session = db.new_session()
@@ -273,6 +276,29 @@ def test_reset_is_refused_outside_local(
 def test_blank_takes_at_most_the_cap() -> None:
     with pytest.raises(SystemExit):
         main(["--blank", "51"])
+
+
+@pytest.mark.usefixtures("applydesk_db")
+def test_the_seed_builds_the_scenarios_not_the_samples(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Segment AD2X: `python -m applydesk.seed` on a fresh database makes the
+    scenario exercises and no sample exercise; `--owner` goes with
+    `--samples` only."""
+    from applydesk import local_seed
+
+    _fresh(tmp_path, monkeypatch)
+    assert main([]) == 0
+    out = capsys.readouterr().out
+    assert local_seed.OPEN_FORM in out and local_seed.CREATE_DOSSIERS in out
+    session = db.new_session()
+    names = set(session.scalars(select(Exercise.name)))
+    ids = set(session.scalars(select(Exercise.public_id)))
+    session.close()
+    assert names == {local_seed.OPEN_FORM, local_seed.CREATE_DOSSIERS}
+    assert not ids & {e.public_id for e in sample_data.EXERCISES}
+    with pytest.raises(SystemExit):
+        main(["--owner", "someone@example.edu"])
 
 
 @pytest.mark.usefixtures("applydesk_db")
@@ -311,10 +337,12 @@ def test_reset_survives_data_old_constraints_forbid(
     finally:
         session.close()
     assert main(["--reset"]) == 0
+    from applydesk import local_seed
+
     session = db.new_session()
     try:
         assert session.scalar(select(func.count()).select_from(Exercise)) == len(
-            sample_data.EXERCISES
+            local_seed.SCENARIOS
         )
     finally:
         session.close()

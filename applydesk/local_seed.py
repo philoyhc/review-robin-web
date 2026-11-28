@@ -53,7 +53,8 @@ class TestClient(Protocol):
 
 #: The seed acts as the platform when it admits Local Operator to operate.
 _PLATFORM = operators.Actor(None, is_super_admin=True, platform=True)
-#: How long the open form stays open from the run (segment AD2X).
+#: How long the open form stays open from the run (segment AD2X), and how
+#: long before the run it opened, so the seeded applications fall inside.
 OPEN_FOR = timedelta(days=30)
 #: How long before the run the form opened, so the seeded applications,
 #: dated up to six days back, fall inside its window (cold read).

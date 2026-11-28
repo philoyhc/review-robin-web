@@ -122,9 +122,25 @@ def test_a_half_built_scenario_is_refused_not_skipped() -> None:
         local_seed.seed_local()
 
 
+def test_the_second_account_is_a_plain_applicant() -> None:
+    """Cold read: Divya Petrova applies, sits on no panel and holds no
+    dossier."""
+    from applydesk import candidates
+
+    made = {m.name: m.public_id for m in local_seed.seed_local()}
+    for public_id in made.values():
+        state = panels_store.stored(public_id)
+        assert state is not None
+        assert "divya.petrova@example.edu" not in {m.email for m, _ in state.roster}
+    session = db.new_session()
+    try:
+        held = candidates.listing(session, made[local_seed.CREATE_DOSSIERS])
+    finally:
+        session.close()
+    assert "divya.petrova@example.edu" not in {c.email for c in held}
+
+
 def test_six_applications_without_a_second_account(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Codex on #4279: with the switch off (no second account), Scenario 1
-    still makes six applications, so a re-run finds it complete."""
     monkeypatch.setattr(identity_settings, "fake_auth_alt_email", "")
     made = _open_form()
     session = db.new_session()
@@ -171,6 +187,14 @@ def test_the_second_account_s_application_is_its_own_if_it_signed_in_first() -> 
     assert client.get("/applydesk/me").status_code == 200  # signs in first
     _open_form()
     assert "Herb garden on the roof" in client.get("/applydesk/me").text
+
+
+def test_the_create_dossiers_scenario_runs_once() -> None:
+    first = {m.name: m for m in local_seed.seed_local()}
+    again = {m.name: m for m in local_seed.seed_local()}
+    made = again[local_seed.CREATE_DOSSIERS]
+    assert not made.made and made.public_id == first[local_seed.CREATE_DOSSIERS].public_id
+    assert local_seed._count(made.public_id, local_seed.Candidate) == 10  # pyright: ignore[reportPrivateUsage]  -- the seed's own
 
 
 def test_a_comma_in_the_operator_s_name_survives_the_csv(monkeypatch: pytest.MonkeyPatch) -> None:
