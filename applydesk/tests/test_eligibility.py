@@ -54,7 +54,10 @@ def _why(public_id: str, address: str | None) -> str | None:
 def _add(public_id: str, address: str, svc: object) -> None:
     """Put ``address`` on the invite list or Create dossiers' entries."""
     session = db.new_session()
-    person = people.pending(session, address, None)
+    # The person on record (bound, as the fake identity is), else pending.
+    person = session.scalars(
+        select(Person).where(Person.email_key == address).order_by(Person.id)
+    ).first() or people.pending(session, address, None)
     if svc is invitees:
         invitees.add(session, public_id, person, "search", None)
     else:
@@ -108,3 +111,28 @@ def test_an_archived_exercise_admits_no_one() -> None:
     session.commit()
     session.close()
     assert _why(ex, "ann@example.edu") is None
+
+
+def test_open_to_me_lists_only_what_admits_the_viewer() -> None:
+    """Segment AD4A: the User Lobby's *Open to me* follows *Who may apply*:
+    an invitation-only exercise shows, chipped, once the viewer (the fake
+    identity, admin@example.edu) is invited."""
+    from fastapi.testclient import TestClient
+
+    from applydesk.tests._host import host_with
+
+    ex = _exercise("invitation")
+    session = db.new_session()
+    row = session.scalars(select(Exercise).where(Exercise.public_id == ex)).one()
+    row.name = "Invited Fellowship"
+    row.process_revision = 1  # saved by Process, so its stages are read
+    for stage in session.scalars(select(StageRow).where(StageRow.exercise_id == row.id)):
+        stage.status = "published"
+    session.commit()
+    session.close()
+    client = TestClient(host_with(("applydesk",))[0])
+    assert "Invited Fellowship" not in client.get("/applydesk/me").text
+    _add(ex, "admin@example.edu", invitees)
+    lobby = client.get("/applydesk/me").text
+    shown = lobby[lobby.index("Invited Fellowship") :]
+    assert "You are invited" in shown[: shown.index("</p>")]
