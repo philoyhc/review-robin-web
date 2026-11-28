@@ -295,7 +295,7 @@
     var candHolder = all.filter(function (c) { return items(c, "candidates").length; })[0];
     all.forEach(function (card) {
       var hasForm = items(card, "form").length > 0, hasGates = items(card, "gate").length > 0;
-      // Ruling 77: at most one stage holds Candidates. Ruling 83 as amended
+      // Ruling 77: at most one stage holds Create dossiers. Ruling 83 as amended
       // (author, 2026-11-27): a Form creates the dossiers, so none is made
       // by hand once it exists; a Form may follow Create dossiers, never
       // precede it.
@@ -1121,7 +1121,7 @@
       added.dataset.stageKey = "";
       // One stage holds the form: a copy leaves it behind. Its gates and
       // outcome are new columns, with keys of their own.
-      // One stage holds Candidates too (ruling 77; Codex on #4161).
+      // One stage holds Create dossiers too (ruling 77; Codex on #4161).
       added.querySelectorAll('.pc-item[data-item="form"], .pc-item[data-item="candidates"]').forEach(function (f) { f.remove(); });
       // A copy is a new stage: a draft, nothing in it opened (AD1K).
       added.querySelectorAll("[data-pc-lock]").forEach(function (f) { delete f.dataset.opened; });

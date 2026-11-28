@@ -27,7 +27,7 @@ TABLES = {
     "exercise_operator",
     "exercise_tag",
     "audit_event",
-    # AD2C: the timeline, its gates and outcomes, and Candidates.
+    # AD2C: the timeline, its gates and outcomes, and Create dossiers.
     "stage",
     "gate",
     "gate_field",
