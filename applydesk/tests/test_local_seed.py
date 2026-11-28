@@ -109,3 +109,54 @@ def test_the_create_dossiers_scenario() -> None:
     lobby = TestClient(host_with(("applydesk",))[0]).get("/applydesk/me").text
     shown = lobby[lobby.index(local_seed.CREATE_DOSSIERS) :]
     assert "A dossier is held for you" in shown[: shown.index("</p>")]
+
+
+def test_a_half_built_scenario_is_refused_not_skipped() -> None:
+    """Cold read: a run that failed part-way leaves the exercise; a re-run
+    says so and points at --reset rather than passing it off as there."""
+    owner = local_seed.owner()
+    client = local_seed._client()  # pyright: ignore[reportPrivateUsage]  -- the seed's own
+    local_seed._make(client, local_seed.OPEN_FORM)  # pyright: ignore[reportPrivateUsage]  -- as a failed run leaves it
+    assert owner.id
+    with pytest.raises(local_seed.LocalSeedRefused, match="--reset"):
+        local_seed.seed_local()
+
+
+def test_the_second_account_is_a_plain_applicant() -> None:
+    """Cold read: Divya Petrova applies, sits on no panel and holds no
+    dossier."""
+    from applydesk import candidates
+
+    made = {m.name: m.public_id for m in local_seed.seed_local()}
+    for public_id in made.values():
+        state = panels_store.stored(public_id)
+        assert state is not None
+        assert "divya.petrova@example.edu" not in {m.email for m, _ in state.roster}
+    session = db.new_session()
+    try:
+        held = candidates.listing(session, made[local_seed.CREATE_DOSSIERS])
+    finally:
+        session.close()
+    assert "divya.petrova@example.edu" not in {c.email for c in held}
+
+
+def test_six_applications_without_a_second_account(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(identity_settings, "fake_auth_alt_email", "")
+    made = _open_form()
+    session = db.new_session()
+    try:
+        row = session.scalars(select(Exercise).where(Exercise.public_id == made.public_id)).one()
+        n = session.scalar(
+            select(func.count()).select_from(Application).where(Application.exercise_id == row.id)
+        )
+    finally:
+        session.close()
+    assert n == local_seed.APPLICANTS
+
+
+def test_the_create_dossiers_scenario_runs_once() -> None:
+    first = {m.name: m for m in local_seed.seed_local()}
+    again = {m.name: m for m in local_seed.seed_local()}
+    made = again[local_seed.CREATE_DOSSIERS]
+    assert not made.made and made.public_id == first[local_seed.CREATE_DOSSIERS].public_id
+    assert local_seed._count(made.public_id, local_seed.Candidate) == 10  # pyright: ignore[reportPrivateUsage]  -- the seed's own

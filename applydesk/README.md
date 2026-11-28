@@ -20,8 +20,8 @@ python -m applydesk.seed
 The seed builds the scenario exercises (`local_seed.py`) as Local Operator,
 by posting what the pages post:
 
-- **Community Project Grant 2027**: a published Form, open for 30 days from
-  the seeding, that anyone signed in may apply to; six applications, four
+- **Community Project Grant 2027**: a published Form, opened 10 days before
+  the seeding and open for 30 days after it, that anyone signed in may apply to; six applications, four
   submitted and two drafts (answers are derived until AD4C stores them).
 - **Peer Mentor Nominations 2027**: *Create dossiers* alone, two dossiers a
   person; five people, Local Operator among them, ten dossiers in all.
@@ -42,7 +42,9 @@ python -m applydesk.seed --reset
 The seed is idempotent (a scenario already there is left alone) and refuses
 to run unless `APP_ENV=local` with fake auth on. An operator's pages answer
 the platform super-admin, or someone on the operator allowlist who operates
-the exercise, and 404 otherwise (`gate.py`).
+the exercise, and 404 otherwise (`gate.py`). With `FAKE_AUTH_SUPER_ADMIN=false`
+the fake identity is an ordinary operator, the Owner the seed made it. A run
+that fails part-way is refused next time, not skipped: `--reset` rebuilds.
 
 **Two identities.** The account menu's *Switch to …* flips between Local
 Operator and a second fake account, Divya Petrova (`FAKE_AUTH_ALT_*`), a plain

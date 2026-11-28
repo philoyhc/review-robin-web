@@ -36,7 +36,7 @@
 
 ## Semantics
 
-- **Re-running** changes nothing. A scenario is found by its name among the exercises the seed's Owner created, and skipped. `--reset` empties the database first, as now. `--blank N` and `--owner` keep their meaning.
+- **Re-running** changes nothing. A scenario is found by its name among the exercises the seed's Owner created, and skipped. A half-built one is refused, pointing at `--reset`, which empties the database first, as now. `--blank N` keeps its meaning. `--owner` goes with `--samples` only, because the scenarios are built as Local Operator.
 - **Dates** are set from the run, so re-seeding after a month needs `--reset` to reopen the form. The seed's output says when the window closes.
 - **The second identity** is bound like any sign-in (`people.resolve`) the first time it is used. It is never super-admin and never on the operator allowlist. Switching back restores Local Operator. Outside local, the cookie is ignored and the menu item is absent.
 - **A directory person** who is seeded as an applicant, panel member or dossier holder becomes a person on record. The rest stay directory-only until someone adds them.
@@ -63,6 +63,20 @@ Taken 2026-11-28 at `37ae6ec49`.
 | Account-menu templates (sign-out link) | 3 | `grep -rln "Sign out" applydesk/templates app/web/templates cordware/web/templates` |
 | Specs naming the seed | 3 | `grep -rln "seed" applydesk/spec` |
 
+## Status
+
+**Kept open** (author, 2026-11-28): AD2X does not close. Each new capability adds its scenario to `applydesk/local_seed.py` here, so rung 7's close is struck and the plan stays in `guide/`.
+
+- Rungs 2–6 built (#4277, #4278 and after). The cumulative read (base `5f8492747`) found 11, and the build acted on:
+  - the second account took Review Robin's fake-user roles (`Identity.is_alternate`, never granted, never super-admin);
+  - a refused form move or rejected CSV rows passed silently;
+  - a half-built scenario was skipped as there;
+  - submissions predated the window;
+  - the plain applicant sat on a panel;
+  - five applications without a second account;
+  - a README sentence dropped.
+- Left for whoever next writes the spec: `cordware/spec/identity.md`, `cordware/spec/host.md` (the route, the cookie, the Azure note), `cordware/spec/header_chrome.md` §4, `spec/permissions.md` (done), and the `local_seed.py` and `local_directory.py` rows in `applydesk/spec/architecture.md`.
+
 ## PR ladder
 
 1. **Plan** (this file), its README row, and the AD2 series row. Prose only.
@@ -72,7 +86,7 @@ Taken 2026-11-28 at `37ae6ec49`.
 5. **Scenario 2.** Create dossiers with five people, ten dossiers and two panels.
 6. **The CLI loads the scenarios.** `python -m applydesk.seed` runs `seed_local()`; tests keep `seed()`; the local setup docs say what is seeded and how to switch identity.
    - **Last build rung:** `diff-reviewer` on the cumulative diff from rung 2's base.
-7. **Close:** `spec-writer` on the specs below; Status compacted; the plan archived.
+7. ~~**Close:** `spec-writer` on the specs below; Status compacted; the plan archived.~~ Struck: the segment stays open (author, 2026-11-28).
 
 ## Definition of done
 
@@ -88,7 +102,7 @@ Taken 2026-11-28 at `37ae6ec49`.
 
 ## Open questions
 
-- **Who is the second identity?** One of the Scenario 1 applicants, by name; the author picks, or the first applicant stands. Decided at rung 3.
+- ~~Who is the second identity?~~ Divya Petrova (`FAKE_AUTH_ALT_*`), a local-directory person who applies in Scenario 1 (rung 3).
 
 ## Out of scope
 

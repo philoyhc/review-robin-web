@@ -21,11 +21,11 @@ from datetime import datetime, timedelta
 from typing import Protocol, cast
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from applydesk import applications, db, ids, operators, people, sample_data
 from applydesk.local_directory import PEOPLE
-from applydesk.models import Exercise, Person
+from applydesk.models import Application, Candidate, Exercise, Person
 from cordware.identity import Identity, is_local
 from cordware.settings import IdentitySettings, identity_settings
 
@@ -53,8 +53,12 @@ class TestClient(Protocol):
 
 #: The seed acts as the platform when it admits Local Operator to operate.
 _PLATFORM = operators.Actor(None, is_super_admin=True, platform=True)
-#: How long the open form stays open from the run (segment AD2X).
+#: How long the open form stays open from the run (segment AD2X), and how
+#: long before the run it opened, so the seeded applications fall inside.
 OPEN_FOR = timedelta(days=30)
+OPENED = timedelta(days=10)
+#: How many applications Scenario 1 makes.
+APPLICANTS = 6
 
 OPEN_FORM = "Community Project Grant 2027"
 CREATE_DOSSIERS = "Peer Mentor Nominations 2027"
@@ -106,15 +110,38 @@ def owner(settings: IdentitySettings | None = None) -> Person:
         session.close()
 
 
-def _existing(owner_id: int, name: str) -> str | None:
+def _existing(owner_id: int, name: str, complete: Callable[[str], bool]) -> str | None:
+    """The scenario's exercise if Local Operator made it already. One left
+    half-built by a failed run is refused, never passed off as there: a
+    re-run cannot tell what the failure skipped (cold read)."""
     session = db.new_session()
     try:
-        return session.scalar(
+        found = session.scalar(
             select(Exercise.public_id).where(
                 Exercise.created_by_id == owner_id,
                 Exercise.name == name,
                 Exercise.deleted_at.is_(None),
             )
+        )
+    finally:
+        session.close()
+    if found is not None and not complete(found):
+        raise LocalSeedRefused(
+            f"{name!r} ({found}) is there but not complete, from a run that failed "
+            "part-way; `python -m applydesk.seed --reset` builds it again"
+        )
+    return found
+
+
+def _count(public_id: str, model: type[Application] | type[Candidate]) -> int:
+    session = db.new_session()
+    try:
+        row = session.scalars(select(Exercise).where(Exercise.public_id == public_id)).one()
+        return (
+            session.scalar(
+                select(func.count()).select_from(model).where(model.exercise_id == row.id)
+            )
+            or 0
         )
     finally:
         session.close()
@@ -153,9 +180,18 @@ def _make(client: TestClient, name: str) -> str:
     return found.group(1)
 
 
-def _people(start: int, count: int) -> list[tuple[str, str]]:
-    """``count`` people of the local directory from ``start``, wrapping."""
-    return [PEOPLE[(start + i) % len(PEOPLE)] for i in range(count)]
+def _people(start: int, count: int, but: str = "") -> list[tuple[str, str]]:
+    """``count`` people of the local directory from ``start``, wrapping,
+    leaving out the address ``but`` (the second fake account, a plain
+    applicant, sits on no panel and holds no dossier)."""
+    out: list[tuple[str, str]] = []
+    i = start
+    while len(out) < count:
+        person = PEOPLE[i % len(PEOPLE)]
+        if person[1].lower() != but.strip().lower():
+            out.append(person)
+        i += 1
+    return out
 
 
 def _panels(
@@ -164,7 +200,9 @@ def _panels(
     """Two panels of four, Local Operator on the first; the keys the
     server gave them."""
     base = f"/operator/exercises/{public_id}/panels"
-    first, second = _people(start, 3), _people(start + 3, 4)
+    alternate = identity_settings.fake_auth_alt_email
+    picked = _people(start, 7, but=alternate)
+    first, second = picked[:3], picked[3:]
     rows: list[dict[str, object]] = [
         {"name": operator[0], "email": operator[1], "note": "", "panels": ["made-1"]},
         *({"name": n, "email": e, "note": "", "panels": ["made-1"]} for n, e in first),
@@ -182,6 +220,8 @@ def _panels(
     if state is None:
         raise LocalSeedRefused("Panels' Save left no panels")
     keys = {p.name: p.key for p in state.panels}
+    if "Readers" not in keys or "Mentors" not in keys:
+        raise LocalSeedRefused(f"Panels' Save kept {sorted(keys)}, not Readers and Mentors")
     return keys["Readers"], keys["Mentors"]
 
 
@@ -215,7 +255,7 @@ def open_form(client: TestClient, owner: Person, settings: IdentitySettings) -> 
     anyone signed in may apply to; two panels; six applications by people
     of the local directory, four submitted and two drafts. Local Operator
     has not applied: submitting is AD4C's."""
-    found = _existing(owner.id, OPEN_FORM)
+    found = _existing(owner.id, OPEN_FORM, lambda e: _count(e, Application) >= APPLICANTS)
     if found is not None:
         return Made(OPEN_FORM, found, made=False)
     public_id = _make(client, OPEN_FORM)
@@ -254,12 +294,12 @@ def open_form(client: TestClient, owner: Person, settings: IdentitySettings) -> 
         "stages": [
             {
                 "name": "Applications",
-                "from": _when(now - timedelta(days=1)),
+                "from": _when(now - OPENED),
                 "to": _when(now + OPEN_FOR),
                 "shown": True,
                 "published": True,
                 "form": {
-                    "from": _when(now - timedelta(days=1)),
+                    "from": _when(now - OPENED),
                     "to": _when(now + OPEN_FOR),
                     "receipt": True,
                     "reminder": False,
@@ -270,10 +310,13 @@ def open_form(client: TestClient, owner: Person, settings: IdentitySettings) -> 
         ],
     }
     _ok(client.post(f"{base}/process", json=process), "Process's Save")
-    _ok(
+    moved = _ok(
         client.post(f"{base}/form/move", data={"to": "open"}, follow_redirects=False),
         "Opening the form",
     )
+    # The route names the move it made, or the refusal's key (cold read).
+    if not moved.headers.get("location", "").endswith("form_said=open"):
+        raise LocalSeedRefused(f"Opening the form was refused: {moved.headers['location']}")
     _applications(public_id, owner, settings)
     return Made(OPEN_FORM, public_id, made=True)
 
@@ -282,9 +325,8 @@ def _applications(public_id: str, owner: Person, settings: IdentitySettings) -> 
     """Six applications: the second fake account's first, submitted, so
     switching to it shows one; then five more, two of them drafts."""
     alternate = settings.fake_auth_alt_email.strip().lower()
-    chosen = [p for p in _people(10, 12) if p[1].lower() != alternate][:5]
-    if alternate:
-        chosen = [(settings.fake_auth_alt_name, alternate), *chosen]
+    head = [(settings.fake_auth_alt_name, alternate)] if alternate else []
+    chosen = head + _people(10, APPLICANTS - len(head), but=alternate)
     titles = (
         "Herb garden on the roof",
         "Late-night study café",
@@ -307,7 +349,7 @@ def _applications(public_id: str, owner: Person, settings: IdentitySettings) -> 
             f"{(today - timedelta(days=6 - i)):%b %Y}",
             dossier_id="",
         )
-        for i, (name, email) in enumerate(chosen[:6])
+        for i, (name, email) in enumerate(chosen)
     )
     session = db.new_session()
     try:
@@ -325,7 +367,7 @@ def create_dossiers(client: TestClient, owner: Person, settings: IdentitySetting
     a person; five people, Local Operator among them, each holding two
     titled dossiers, ten in all, so the Dossiers page is populated; two
     panels. The author adds the Form."""
-    found = _existing(owner.id, CREATE_DOSSIERS)
+    found = _existing(owner.id, CREATE_DOSSIERS, lambda e: _count(e, Candidate) >= 10)
     if found is not None:
         return Made(CREATE_DOSSIERS, found, made=False)
     public_id = _make(client, CREATE_DOSSIERS)
@@ -350,13 +392,18 @@ def create_dossiers(client: TestClient, owner: Person, settings: IdentitySetting
         ],
     }
     _ok(client.post(f"{base}/process", json=process), "Process's Save")
-    holders = [operator, *_people(30, 4)]
+    holders = [operator, *_people(30, 4, but=settings.fake_auth_alt_email)]
     lines = ["Name,Email,Title"]
     for name, email in holders:
         for term in ("Semester 1", "Semester 2"):
             lines.append(f"{name},{email},Peer mentor · {term}")
     sent = {"action": "csv", "text": "\n".join(lines) + "\n"}
-    _ok(client.post(f"{base}/candidates", json=sent), "Create dossiers' CSV")
+    reply = _ok(client.post(f"{base}/candidates", json=sent), "Create dossiers' CSV")
+    import json
+
+    bad: list[object] = list(json.loads(reply.text).get("bad") or ())
+    if bad:
+        raise LocalSeedRefused(f"Create dossiers' CSV refused rows: {bad}")
     return Made(CREATE_DOSSIERS, public_id, made=True)
 
 
