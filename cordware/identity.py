@@ -333,12 +333,15 @@ def switch_allowed(settings: IdentitySettings | None = None) -> bool:
     second account set."""
     s = _settings(settings)
     alternate = s.fake_auth_alt_email.strip().casefold()
-    # Never the fake user's own address: the switch would only change names.
+    # Never the fake user's own address (the switch would only change
+    # names), nor a super-admin's: applications that read super-admin by
+    # email would grant it otherwise (Codex on #4278).
     return (
         s.allow_fake_auth
         and is_local(s)
         and bool(alternate)
         and alternate != s.fake_auth_email.strip().casefold()
+        and not is_super_admin_email(alternate, s)
     )
 
 

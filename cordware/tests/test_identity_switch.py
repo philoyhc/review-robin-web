@@ -125,10 +125,17 @@ def test_easy_auth_headers_win_over_the_cookie() -> None:
 
 @pytest.mark.usefixtures("local")
 def test_the_second_account_is_never_the_super_admin(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex on #4278: a second address on the super-admin list turns the
+    switch off, so no application reading super-admin by email grants it."""
+    from cordware.identity import is_super_admin_email
+
     monkeypatch.setattr(identity_settings, "super_admin_emails", ["divya.petrova@example.edu"])
+    assert is_super_admin_email("divya.petrova@example.edu")
+    assert not switch_allowed()
     client = _client()
     client.cookies.set(FAKE_AS_COOKIE, "alt")
-    assert client.get("/one/").json()["super_admin"] is False
+    seen = client.get("/one/").json()
+    assert seen["email"] == "operator@example.edu" and seen["switch"] is None
 
 
 @pytest.mark.usefixtures("local")
