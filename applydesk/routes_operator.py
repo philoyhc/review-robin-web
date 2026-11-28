@@ -1043,7 +1043,11 @@ async def panels_lookup(request: Request, exercise_id: str) -> Response:
             user = outcome.user
             found[address] = [user.display_name, user.mail or user.user_principal_name]
     return JSONResponse(
-        {"found": found, "said": directory_line(lookup.counts, lookup.unchecked_reason)}
+        {
+            "found": found,
+            "said": directory_line(lookup.counts, lookup.unchecked_reason),
+            "not_checked": lookup.counts.not_checked,
+        }
     )
 
 

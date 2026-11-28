@@ -104,7 +104,7 @@
       </section>
       <section class="card">
         <h2>Upload</h2>
-        <p class="muted pn-csv-note">A CSV has <code>Name</code>, <code>Email</code> and <code>Note</code>, and a column per panel by its name, marked for each member. People not found in the directory are left out and named.</p>
+        <p class="muted pn-csv-note">A CSV has <code>Name</code>, <code>Email</code> and <code>Note</code>, and a column per panel by its name, marked for each member. Each address is looked up in the directory; people not found are added unverified and named.</p>
         <div class="btnrow">
           <label class="btn btn-secondary pn-file">Upload CSV<input type="file" accept=".csv,text/csv" data-pn-import class="visually-hidden"></label>
           <button class="btn btn-secondary" type="button" data-pn-act="export">Download CSV</button>
@@ -194,9 +194,14 @@
   // server, which searches it (typeahead) or looks the address up.
   var SEARCH = {{ url('/operator/exercises/' ~ exercise.public_id ~ '/panels/search') | tojson }};
   var LOOKUP = {{ url('/operator/exercises/' ~ exercise.public_id ~ '/panels/lookup') | tojson }};
+  // How many asks are in flight: the page's tests wait on it.
+  window.applydeskPanelsBusy = 0;
   function ask(u, body) {
+    window.applydeskPanelsBusy += 1;
+    var done = function () { window.applydeskPanelsBusy -= 1; };
     return fetch(u, body ? { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(body) } : { credentials: "same-origin" })
-      .then(function (r) { return r.json().then(function (got) { if (!r.ok) throw new Error(got.error || "The directory could not be reached; try again."); return got; }); });
+      .then(function (r) { return r.json().then(function (got) { if (!r.ok) throw new Error(got.error || "The directory could not be reached; try again."); return got; }); })
+      .then(function (got) { setTimeout(done); return got; }, function (e) { setTimeout(done); throw e; });
   }
   // One entry, a name or an email, found: {person: [name, email]}, {twice:
   // true} for a name two people share, {} for no one, {error} when the
@@ -776,7 +781,8 @@
     if (bad.length) parts.push("Not an email, not added: " + bad.join(", ") + ".");
     if (missing.length) parts.push("Not found in the directory, added unverified: " + missing.join(", ") + ".");
     if (unknown.length) parts.push("No panel called: " + unknown.join(", ") + ".");
-    if (got.said) parts.push(got.said);
+    // The directory's own line only when it could not answer for some.
+    if (got.not_checked) parts.push(got.said);
     said.textContent = parts.join(" ");
     if (took) kept();
     check();

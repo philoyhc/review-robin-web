@@ -7,7 +7,7 @@ to a chosen panel. Skips without a Chromium build, as
 from __future__ import annotations
 
 import pytest
-from playwright.sync_api import Locator, Page
+from playwright.sync_api import Locator, Page, expect
 
 from applydesk import locks
 from applydesk.tests.test_form_browser import ORIGIN
@@ -19,6 +19,32 @@ def _form_open(monkeypatch: pytest.MonkeyPatch) -> None:
     """These tests edit the form: its lock (segment AD1K) is opened, as a
     draft exercise's would be; the lock has tests of its own."""
     monkeypatch.setattr(locks, "form_lock", lambda e: locks.OPEN)
+
+
+@pytest.fixture(autouse=True)
+def _directory_is_the_sample_institution(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Segment AD2Y: Panels asks the directory, so these tests' people, the
+    sample institution's, are the directory here; those on a roster read as
+    bound to it, as a saved roster's would be."""
+    import uuid
+
+    from applydesk import directory, panels_store, sample_data
+    from cordware.graph import DirectoryUser, FakeDirectory
+
+    members: list[tuple[str, str]] = sample_data.people_pools("r6tm4kq9wz")["institution"][
+        "members"
+    ]
+    users = tuple(
+        DirectoryUser(str(uuid.uuid5(uuid.NAMESPACE_URL, f"mailto:{e.lower()}")), n, e, e)
+        for n, e in members
+    )
+    known = {e.lower() for _, e in members}
+    monkeypatch.setattr(directory, "for_request", lambda request: FakeDirectory(users))
+    monkeypatch.setattr(
+        panels_store,
+        "bound_among",
+        lambda addresses: frozenset(a.lower() for a in addresses if a.lower() in known),
+    )
 
 
 PANELS = f"{ORIGIN}/applydesk/operator/exercises/r6tm4kq9wz/panels"
@@ -35,6 +61,11 @@ def _manage(page: Page) -> None:
     """Opens Manage panels, where the panels' own controls and the CSV are
     (author, 2026-11-14: as Review Robin's Unlock)."""
     page.locator('[data-pn-act="manage"]').click()
+
+
+def _settled(page: Page) -> None:
+    """Waits for the page's directory asks (segment AD2Y) to come back."""
+    page.wait_for_function("() => !window.applydeskPanelsBusy")
 
 
 def _count(page: Page, key: str) -> str:
@@ -82,9 +113,11 @@ def test_ticks_rows_and_their_checks(page: Page) -> None:
     entry = new.locator("[data-pn-entry]")
     entry.fill("kim")
     entry.press("Enter")
+    _settled(page)
     assert new.locator("[data-pn-why]").inner_text() == "Not found in the directory."
     entry.fill("ZOE.TAN@example.edu")
     entry.press("Enter")
+    _settled(page)
     assert new.locator("[data-pn-pill]").inner_text().startswith("zoe.tan@example.edu")
     assert new.locator("[data-pn-why]").inner_text() == "Listed more than once."
     issues = page.locator("[data-pn-issues]").inner_text()
@@ -96,6 +129,7 @@ def test_ticks_rows_and_their_checks(page: Page) -> None:
     new.locator('[data-pn="name"]').fill("")
     entry.fill("Daniel Koh")
     entry.press("Enter")
+    _settled(page)
     assert new.locator('[data-pn="name"]').input_value() == "Daniel Koh"
     assert not page.locator("[data-pn-issues]").is_visible()
     assert people.inner_text() == "9"
@@ -119,9 +153,11 @@ def test_panels_are_made_copied_and_retired_only_unused(page: Page) -> None:
     name = page.locator("[data-pn-newname]")
     name.fill("panel a")
     page.locator('[data-pn-act="create"]').click()
+    _settled(page)
     assert page.locator("[data-pn-newerr]").inner_text() == "A panel is already called panel a."
     name.fill("Panel C")
     name.press("Enter")
+    _settled(page)
     heads = page.locator("th[data-panel] [data-pn-name]").all_inner_texts()
     assert heads[-1] == "Panel C" and _count(page, "made-1") == "0 people"
     sara = _row(page, "sara.ng@example.edu")
@@ -133,6 +169,7 @@ def test_panels_are_made_copied_and_retired_only_unused(page: Page) -> None:
     name.fill("Interview reserve")
     page.locator("[data-pn-from]").select_option("interviewers")
     page.locator('[data-pn-act="create"]').click()
+    _settled(page)
     assert (
         page.locator('th[data-panel="made-2"] [data-pn-name]').inner_text() == "Interview reserve"
     )
@@ -228,6 +265,7 @@ def test_show_columns_hides_and_shows_a_panel(page: Page) -> None:
     _manage(page)
     page.locator("[data-pn-newname]").fill("Panel C")
     page.locator('[data-pn-act="create"]').click()
+    _settled(page)
     made = page.locator('[data-pn-show][data-panel="made-1"]')
     assert made.inner_text() == "Panel C"
     page.locator('li[data-panel="made-1"] [data-pn-rename]').fill("Panel D")
@@ -253,13 +291,18 @@ def test_a_csv_goes_out_and_comes_in(page: Page) -> None:
           "kim.lee@example.edu,Kim Lee,,\\r\\n" +
           "not-an-email,Nobody,,\\r\\n")"""
     )
-    said = page.locator("[data-pn-said]").inner_text()
-    assert said == (
-        "1 person added. Already listed, not added: zoe.tan@example.edu. "
+    _settled(page)
+    # Segment AD2Y: asked of the directory first; one not found is added,
+    # unverified, as Review Robin's rosters keep it.
+    expect(page.locator("[data-pn-said]")).to_have_text(
+        "2 people added. Already listed, not added: zoe.tan@example.edu. "
         "Not an email, not added: not-an-email. "
-        "Not found in the directory, not added: kim.lee@example.edu. No panel called: Board."
+        "Not found in the directory, added unverified: kim.lee@example.edu. "
+        "No panel called: Board."
     )
-    dan = page.locator("[data-pn-row]").last  # added by the script, unselected
+    kim = page.locator("[data-pn-row]").last
+    assert kim.locator(".pn-email-cell").get_attribute("data-verified") is None
+    dan = page.locator("[data-pn-row]").nth(-2)  # added by the script, unselected
     assert dan.get_attribute("data-sel") is None
     assert dan.locator('[data-pn-view="name"]').inner_text() == "Dan Koh"
     assert dan.locator('input[data-pn-panel="panel-b"]').is_checked()
@@ -320,6 +363,7 @@ def test_csv_guards_formulas_and_refuses_an_open_quote(page: Page) -> None:
     row.locator('[data-pn="name"]').fill("=SUM(A1)")
     row.locator("[data-pn-entry]").fill("mei.chen@example.edu")
     row.locator("[data-pn-entry]").press("Enter")
+    _settled(page)
     assert "'=SUM(A1),mei.chen@example.edu," in page.evaluate("window.applydeskPanelsCsv()")
     page.evaluate(
         """window.applydeskPanelsImport('email,name\\r\\nob@x.edu,O"Brien\\r\\nk@x.edu,K\\r\\n')"""
@@ -350,6 +394,7 @@ def test_a_panel_may_not_take_a_csv_column_s_name(page: Page) -> None:
     _manage(page)
     page.locator("[data-pn-newname]").fill("email")
     page.locator('[data-pn-act="create"]').click()
+    _settled(page)
     err = page.locator("[data-pn-newerr]").inner_text()
     assert err == "email names a CSV column: choose another name."
     # Nor may one made in place, on Form.
@@ -375,6 +420,7 @@ def test_a_guarded_csv_reads_back_the_same(page: Page) -> None:
     _manage(page)
     page.locator("[data-pn-newname]").fill("-External")
     page.locator('[data-pn-act="create"]').click()
+    _settled(page)
     zoe = _row(page, "zoe.tan@example.edu")
     zoe.locator("[data-pn-select]").check()
     zoe.locator('input[data-pn-panel="made-1"]').check()
@@ -383,7 +429,8 @@ def test_a_guarded_csv_reads_back_the_same(page: Page) -> None:
     assert "'-External" in csv and "'=chair" in csv
     zoe.locator('[data-pn-act="remove"]').click()
     page.evaluate("(t) => window.applydeskPanelsImport(t)", csv)
-    assert page.locator("[data-pn-said]").inner_text().startswith("1 person added.")
+    _settled(page)
+    expect(page.locator("[data-pn-said]")).to_contain_text("1 person added.")
     back = page.locator("[data-pn-row]").last
     assert back.locator('input[data-pn-panel="made-1"]').is_checked()
     assert back.locator('[data-pn-view="note"]').inner_text() == "=chair"
@@ -400,6 +447,7 @@ def test_select_all_turns_every_row_live_and_back(page: Page) -> None:
     zoe = _row(page, "zoe.tan@example.edu")
     zoe.locator('[data-pn="note"]').fill("Chair")
     zoe.locator('[data-pn="note"]').press("Enter")  # Enter is the row's ✓
+    _settled(page)
     assert zoe.get_attribute("data-sel") is None
     assert every.evaluate("e => e.indeterminate")
     every.check()  # a click on a part-ticked box selects every row
@@ -530,6 +578,7 @@ def test_a_row_is_kept_by_its_tick_mark_and_put_back_by_its_untick(page: Page) -
     hana.locator('[data-pn-act="unverify"]').click()
     hana.locator("[data-pn-entry]").fill("mei.chen@example.edu")
     hana.locator("[data-pn-entry]").press("Enter")
+    _settled(page)
     hana.locator("[data-pn-select]").uncheck()
     assert hana.locator('[data-pn-view="note"]').inner_text() == "Life Sciences"
     assert hana.locator('[data-pn-view="email"]').inner_text() == "hana.ito@example.edu"
@@ -557,12 +606,14 @@ def test_panels_are_renamed_where_listed_and_their_emails_copied(page: Page) -> 
     box = page.locator('li[data-panel="panel-a"] [data-pn-rename]')
     box.fill("Panel B")
     box.press("Enter")
+    _settled(page)
     assert box.input_value() == "Panel A"
     assert page.locator("[data-pn-said]").inner_text() == (
         "A panel is already called Panel B. Panel A keeps its name."
     )
     box.fill("Peer panel")
     box.press("Enter")
+    _settled(page)
     assert page.locator('th[data-panel="panel-a"] [data-pn-name]').inner_text() == "Peer panel"
     # text_content: the chip is uppercase, as every display chip (AD-76).
     assert page.locator('[data-pn-chips] [data-panel="panel-a"] [data-pn-name]').text_content() == (
@@ -596,6 +647,7 @@ def test_an_open_row_keeps_what_changes_around_it(page: Page) -> None:
     page.locator("[data-pn-newname]").fill("Reserve")
     page.locator("[data-pn-from]").select_option("interviewers")
     page.locator('[data-pn-act="create"]').click()
+    _settled(page)
     ivan.locator('[data-pn-act="unverify"]').click()  # clicked, left as it was
     ivan.locator("[data-pn-select]").uncheck()
     assert ivan.locator('input[data-pn-panel="made-1"]').is_checked()
@@ -630,6 +682,7 @@ def test_a_new_row_unsaved_is_on_no_panel_a_copy_takes(page: Page) -> None:
     page.locator("[data-pn-newname]").fill("Reserve")
     page.locator("[data-pn-from]").select_option("interviewers")
     page.locator('[data-pn-act="create"]').click()
+    _settled(page)
     assert not new.locator('input[data-pn-panel="made-1"]').is_checked()
     assert _count(page, "made-1") == "2 people"
 
@@ -690,9 +743,11 @@ def test_a_blank_panel_takes_its_members_as_pills(page: Page) -> None:
     assert page.locator("[data-pn-newerr]").inner_text() == "Not found in the directory: nobody."
     page.locator("[data-pn-newname]").fill("Reserve")
     page.locator('[data-pn-act="create"]').click()
+    _settled(page)
     assert page.locator('th[data-panel="made-1"]').count() == 0  # refused: nobody is left over
     members.fill("")
     page.locator('[data-pn-act="create"]').click()
+    _settled(page)
     assert page.locator("[data-pn-said]").inner_text() == (
         "Reserve added, with 2 people. Save keeps it; Cancel takes it back."
     )
@@ -722,6 +777,7 @@ def test_a_verified_email_is_a_pill_and_a_message_moves_no_box(page: Page) -> No
     zoe.locator('[data-pn-act="unverify"]').click()
     zoe.locator("[data-pn-entry]").fill("nobody")
     zoe.locator("[data-pn-entry]").press("Enter")
+    _settled(page)
     assert zoe.locator("[data-pn-why]").inner_text() == "Not found in the directory."
     assert zoe.evaluate(gap) == before
 
@@ -771,11 +827,13 @@ def test_a_saved_row_is_matched_by_its_new_email(page: Page) -> None:
     zoe.locator('[data-pn-act="unverify"]').click()
     zoe.locator("[data-pn-entry]").fill("daniel.koh@example.edu")
     zoe.locator("[data-pn-entry]").press("Enter")
+    _settled(page)
     zoe.locator('[data-pn-act="save"]').click()
     _manage(page)
     page.locator("[data-pn-members]").fill("zoe.tan@example.edu")
     page.locator("[data-pn-newname]").fill("Reserve")
     page.locator('[data-pn-act="create"]').click()
+    _settled(page)
     assert not zoe.locator('input[data-pn-panel="made-1"]').is_checked()
     added = page.locator("[data-pn-row]").last
     assert added.locator('[data-pn="email"]').input_value() == "zoe.tan@example.edu"
@@ -881,6 +939,7 @@ def test_panel_chips_are_display_chips_and_their_row_buttons_short(page: Page) -
     # A panel made here carries the same classes as one drawn by the server.
     page.locator("[data-pn-newname]").fill("Reserve")
     page.locator('[data-pn-act="create"]').click()
+    _settled(page)
     for li in (page.locator(".pn-list li").first, page.locator('li[data-panel="made-1"]')):
         for act in ("emails", "retire"):
             button = li.locator(f'[data-pn-act="{act}"]')
