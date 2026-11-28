@@ -70,7 +70,8 @@ def test_the_list_is_kept_as_it_is_changed(page: Page) -> None:
     )
     sum_.filter(has_text="2 dossiers for 2 people").wait_for()
     assert "is not an email address" in item.locator("[data-cand-bad]").inner_text()
-    assert item.locator("[data-cand-said]").inner_text() == "1 added."
+    # Segment AD2Y: the upload names what the directory said.
+    assert item.locator("[data-cand-said]").inner_text().startswith("1 added. Directory: ")
     # Kept as made: Process's own Save has nothing unsaved.
     assert page.locator("[data-unsaved]").is_hidden()
 
