@@ -21,11 +21,11 @@ from datetime import datetime, timedelta
 from typing import Protocol, cast
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from applydesk import applications, db, ids, operators, people, sample_data
 from applydesk.local_directory import PEOPLE
-from applydesk.models import Exercise, Person
+from applydesk.models import Application, Candidate, Exercise, Person
 from cordware.identity import Identity, is_local
 from cordware.settings import IdentitySettings, identity_settings
 
@@ -55,6 +55,8 @@ class TestClient(Protocol):
 _PLATFORM = operators.Actor(None, is_super_admin=True, platform=True)
 #: How long the open form stays open from the run (segment AD2X).
 OPEN_FOR = timedelta(days=30)
+#: How many applications Scenario 1 makes.
+APPLICANTS = 6
 
 OPEN_FORM = "Community Project Grant 2027"
 
@@ -86,33 +88,57 @@ def _fake_identity(settings: IdentitySettings) -> Identity:
     )
 
 
-def _owner(settings: IdentitySettings) -> Person:
+def owner(settings: IdentitySettings | None = None) -> Person:
     """Local Operator, bound as a sign-in binds them and admitted to
-    operate; committed."""
+    operate; committed. Detached, for its ID."""
+    settings = settings or identity_settings
     session = db.new_session()
     try:
-        owner = people.resolve(session, _fake_identity(settings))
-        if owner is None:
+        person = people.resolve(session, _fake_identity(settings))
+        if person is None:
             raise LocalSeedRefused("the fake identity has no tenant or principal ID to bind")
-        if not operators.may_operate(owner):
-            operators.admit(session, _PLATFORM, owner)
+        if not operators.may_operate(person):
+            operators.admit(session, _PLATFORM, person)
         session.commit()
-        session.refresh(owner)
-        session.expunge(owner)
-        return owner
+        session.refresh(person)
+        session.expunge(person)
+        return person
     finally:
         session.close()
 
 
-def _existing(owner_id: int, name: str) -> str | None:
+def _existing(owner_id: int, name: str, complete: Callable[[str], bool]) -> str | None:
+    """The scenario's exercise if Local Operator made it already. One left
+    half-built by a failed run is refused, never passed off as there: a
+    re-run cannot tell what the failure skipped (cold read)."""
     session = db.new_session()
     try:
-        return session.scalar(
+        found = session.scalar(
             select(Exercise.public_id).where(
                 Exercise.created_by_id == owner_id,
                 Exercise.name == name,
                 Exercise.deleted_at.is_(None),
             )
+        )
+    finally:
+        session.close()
+    if found is not None and not complete(found):
+        raise LocalSeedRefused(
+            f"{name!r} ({found}) is there but not complete, from a run that failed "
+            "part-way; `python -m applydesk.seed --reset` builds it again"
+        )
+    return found
+
+
+def _count(public_id: str, model: type[Application] | type[Candidate]) -> int:
+    session = db.new_session()
+    try:
+        row = session.scalars(select(Exercise).where(Exercise.public_id == public_id)).one()
+        return (
+            session.scalar(
+                select(func.count()).select_from(model).where(model.exercise_id == row.id)
+            )
+            or 0
         )
     finally:
         session.close()
@@ -213,7 +239,7 @@ def open_form(client: TestClient, owner: Person, settings: IdentitySettings) -> 
     anyone signed in may apply to; two panels; six applications by people
     of the local directory, four submitted and two drafts. Local Operator
     has not applied: submitting is AD4C's."""
-    found = _existing(owner.id, OPEN_FORM)
+    found = _existing(owner.id, OPEN_FORM, lambda e: _count(e, Application) >= APPLICANTS)
     if found is not None:
         return Made(OPEN_FORM, found, made=False)
     public_id = _make(client, OPEN_FORM)
@@ -322,14 +348,17 @@ def _applications(public_id: str, owner: Person, settings: IdentitySettings) -> 
 SCENARIOS: Sequence[Callable[[TestClient, Person, IdentitySettings], Made]] = (open_form,)
 
 
-def seed_local(settings: IdentitySettings | None = None) -> tuple[Made, ...]:
+def seed_local() -> tuple[Made, ...]:
     """Build every scenario not already there. Refused unless
-    `APP_ENV=local` with fake auth on."""
-    cfg = settings or identity_settings
+    `APP_ENV=local` with fake auth on. Always the host's identity settings:
+    the pages' requests resolve their identity from those, so the Owner the
+    seed binds and the one its requests make are one person (Codex on
+    #4279)."""
+    cfg = identity_settings
     if not is_local(cfg) or not cfg.allow_fake_auth:
         raise LocalSeedRefused(
             "the scenarios need APP_ENV=local and ALLOW_FAKE_AUTH=true (ruling 74)"
         )
-    owner = _owner(cfg)
+    found = owner(cfg)
     client = _client()
-    return tuple(scenario(client, owner, cfg) for scenario in SCENARIOS)
+    return tuple(scenario(client, found, cfg) for scenario in SCENARIOS)

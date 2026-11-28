@@ -78,3 +78,14 @@ def test_refused_without_fake_auth(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(identity_settings, "allow_fake_auth", False)
     with pytest.raises(local_seed.LocalSeedRefused):
         local_seed.seed_local()
+
+
+def test_a_half_built_scenario_is_refused_not_skipped() -> None:
+    """Cold read: a run that failed part-way leaves the exercise; a re-run
+    says so and points at --reset rather than passing it off as there."""
+    owner = local_seed.owner()
+    client = local_seed._client()  # pyright: ignore[reportPrivateUsage]  -- the seed's own
+    local_seed._make(client, local_seed.OPEN_FORM)  # pyright: ignore[reportPrivateUsage]  -- as a failed run leaves it
+    assert owner.id
+    with pytest.raises(local_seed.LocalSeedRefused, match="--reset"):
+        local_seed.seed_local()
