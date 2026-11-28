@@ -177,9 +177,18 @@ def _make(client: TestClient, name: str) -> str:
     return found.group(1)
 
 
-def _people(start: int, count: int) -> list[tuple[str, str]]:
-    """``count`` people of the local directory from ``start``, wrapping."""
-    return [PEOPLE[(start + i) % len(PEOPLE)] for i in range(count)]
+def _people(start: int, count: int, but: str = "") -> list[tuple[str, str]]:
+    """``count`` people of the local directory from ``start``, wrapping,
+    leaving out the address ``but`` (the second fake account, a plain
+    applicant, sits on no panel and holds no dossier)."""
+    out: list[tuple[str, str]] = []
+    i = start
+    while len(out) < count:
+        person = PEOPLE[i % len(PEOPLE)]
+        if person[1].lower() != but.strip().lower():
+            out.append(person)
+        i += 1
+    return out
 
 
 def _panels(
@@ -306,9 +315,8 @@ def _applications(public_id: str, owner: Person, settings: IdentitySettings) -> 
     """Six applications: the second fake account's first, submitted, so
     switching to it shows one; then five more, two of them drafts."""
     alternate = settings.fake_auth_alt_email.strip().lower()
-    chosen = [p for p in _people(10, 12) if p[1].lower() != alternate][:5]
-    if alternate:
-        chosen = [(settings.fake_auth_alt_name, alternate), *chosen]
+    head = [(settings.fake_auth_alt_name, alternate)] if alternate else []
+    chosen = head + _people(10, APPLICANTS - len(head), but=alternate)
     titles = (
         "Herb garden on the roof",
         "Late-night study café",
@@ -331,7 +339,7 @@ def _applications(public_id: str, owner: Person, settings: IdentitySettings) -> 
             f"{(today - timedelta(days=6 - i)):%b %Y}",
             dossier_id="",
         )
-        for i, (name, email) in enumerate(chosen[:6])
+        for i, (name, email) in enumerate(chosen)
     )
     session = db.new_session()
     try:

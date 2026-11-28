@@ -89,3 +89,20 @@ def test_a_half_built_scenario_is_refused_not_skipped() -> None:
     assert owner.id
     with pytest.raises(local_seed.LocalSeedRefused, match="--reset"):
         local_seed.seed_local()
+
+
+def test_six_applications_without_a_second_account(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex on #4279: with the switch off (no second account), Scenario 1
+    still makes six applications, so a re-run finds it complete."""
+    monkeypatch.setattr(identity_settings, "fake_auth_alt_email", "")
+    made = _open_form()
+    session = db.new_session()
+    try:
+        row = session.scalars(select(Exercise).where(Exercise.public_id == made.public_id)).one()
+        n = session.scalar(
+            select(func.count()).select_from(Application).where(Application.exercise_id == row.id)
+        )
+    finally:
+        session.close()
+    assert n == local_seed.APPLICANTS
+    assert not _open_form().made  # and a re-run finds it complete
