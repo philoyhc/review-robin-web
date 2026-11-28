@@ -91,6 +91,9 @@
                 <a href="{{ url('/about') }}?return_to={{ here() | urlencode }}">About{% if _operator and app_version is defined %} <small>version {{ app_version }}</small>{% endif %}</a>
               {% endif %}
             </div>
+            {% set switch = fake_switch(request) %}{% if switch %}<div class="tb-group">
+              <a href="{{ host_url(switch.href) }}" data-switch-identity>{{ switch.label }}</a>
+            </div>{% endif %}
             <div class="tb-group">
               <a href="/.auth/logout" data-sign-out>Sign out</a>
             </div>

@@ -84,7 +84,7 @@
         <p class="empty">Not signed in: this request carries no Easy Auth headers, and fake auth is off.</p>
       {% endif %}
     </section>
-    <footer><a href="/.auth/logout">Sign out</a></footer>
+    <footer>{% if switch %}<a href="{{ switch.href }}" data-switch-identity>{{ switch.label }}</a> · {% endif %}<a href="/.auth/logout">Sign out</a></footer>
   </main>
 </body>
 </html>

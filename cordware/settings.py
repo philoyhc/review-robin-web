@@ -33,6 +33,12 @@ class IdentitySettings(BaseSettings):
     fake_auth_tenant_id: str = "local-tenant"
     fake_auth_upn: str = ""
     fake_auth_mail: str = ""
+    # A second fake account a local run can switch to from the account
+    # menu (segment AD2X): a plain applicant, never the super-admin. A blank
+    # email turns the switch off. It shares the tenant above.
+    fake_auth_alt_principal_id: str = "local-dev-2"
+    fake_auth_alt_email: str = "divya.petrova@example.edu"
+    fake_auth_alt_name: str = "Divya Petrova"
 
     # The platform super-admin (v0.8 §3): a comma-separated email list,
     # set only by the deployer. `NoDecode` keeps pydantic-settings from

@@ -1096,6 +1096,9 @@
               {% if admin_entry %}<div class="mg">
                 <a href="{{ url('/admin/operators') }}?return_to={{ here_path | urlencode }}" data-admin-entry>Admin</a>
               </div>{% endif %}
+              {% set switch = fake_switch(request) %}{% if switch %}<div class="mg">
+                <a href="{{ host_url(switch.href) }}" data-switch-identity>{{ switch.label }}</a>
+              </div>{% endif %}
               <div class="mg">
                 <a href="{{ host_url('/.auth/logout') }}">Sign out</a>
               </div>
