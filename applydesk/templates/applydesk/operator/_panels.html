@@ -973,6 +973,10 @@
       // An entry not found: said why, nothing added (segment AD2Y: the
       // entries are asked of the directory first).
       var go = function () {
+        // Checked again as it lands: a second click while the Members
+        // were looked up may have made it already (Codex on #4288).
+        var late = badName(name);
+        if (late) { newErr.textContent = late; return; }
         var who = from ? [] : mPeople();
         var key = addPanel(name, from || null);
         // A blank panel's members: ticked where they have a row, added
@@ -1001,7 +1005,11 @@
           : who.length ? name + " added, with " + people(who.length) + "." : name + " added: tick who sits on it.") +
           " Save keeps it; Cancel takes it back.";
       };
-      if (from) go(); else mTake(true).then(function (ok) { if (ok) go(); });
+      if (from) { go(); return; }
+      // One +Panel at a time while its Members are looked up.
+      if (a.dataset.busy) return;
+      a.dataset.busy = "1";
+      mTake(true).then(function (ok) { delete a.dataset.busy; if (ok) go(); });
     } else if (what === "save-names") {
       keepAll();
     } else if (what === "cancel-names") {

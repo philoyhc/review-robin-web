@@ -1084,3 +1084,25 @@ def test_a_tick_mark_waits_for_the_lookup_of_an_edited_email(page: Page) -> None
     _settled(page)
     expect(page.locator("[data-pn-row][data-sel]")).to_have_count(0)
     assert page.locator('[data-pn="email"][value="daniel.koh@example.edu"]').count() >= 1
+
+
+def test_two_quick_clicks_on_panel_make_one_panel(page: Page) -> None:
+    """Codex on #4288: a second +Panel while the Members are looked up
+    makes no second panel of the same name."""
+    from playwright.sync_api import Route
+
+    held: list[Route] = []
+    page.route("**/panels/lookup", lambda route: held.append(route))
+    page.goto(PANELS)
+    _manage(page)
+    before = page.locator("th[data-panel]").count()
+    page.locator("[data-pn-newname]").fill("Twice")
+    page.locator("[data-pn-members]").fill("zoe.tan@example.edu")
+    add = page.locator('[data-pn-act="create"]')
+    add.click()
+    add.click()
+    page.wait_for_function("() => window.applydeskPanelsBusy > 0")
+    for route in held:
+        route.fallback()
+    _settled(page)
+    assert page.locator("th[data-panel]").count() == before + 1
