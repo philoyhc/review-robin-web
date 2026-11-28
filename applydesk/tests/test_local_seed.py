@@ -171,3 +171,19 @@ def test_the_second_account_s_application_is_its_own_if_it_signed_in_first() -> 
     assert client.get("/applydesk/me").status_code == 200  # signs in first
     _open_form()
     assert "Herb garden on the roof" in client.get("/applydesk/me").text
+
+
+def test_a_comma_in_the_operator_s_name_survives_the_csv(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex on #4280: Create dossiers' CSV quotes a configured name with a
+    comma, so Local Operator still holds two dossiers."""
+    from applydesk import candidates
+
+    monkeypatch.setattr(identity_settings, "fake_auth_name", "Operator, Local")
+    made = next(m for m in local_seed.seed_local() if m.name == local_seed.CREATE_DOSSIERS)
+    session = db.new_session()
+    try:
+        listed = candidates.listing(session, made.public_id)
+    finally:
+        session.close()
+    assert len(listed) == 10
+    assert sum(1 for c in listed if c.email == identity_settings.fake_auth_email) == 2
