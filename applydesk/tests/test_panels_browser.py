@@ -13,6 +13,7 @@ from applydesk import locks
 from applydesk.tests import _sample_directory
 from applydesk.tests.test_form_browser import ORIGIN
 from applydesk.tests.test_form_browser import page as page  # the fixture, re-exported
+from cordware.graph import DirectoryUser
 
 
 @pytest.fixture(autouse=True)
@@ -726,6 +727,7 @@ def test_a_blank_panel_takes_its_members_as_pills(page: Page) -> None:
     _manage(page)
     members = page.locator("[data-pn-members]")
     members.press_sequentially("Daniel Koh, zoe.tan@example.edu, nobody,")
+    _settled(page)
     assert page.locator("[data-pn-tokens] .token").count() == 2
     assert page.locator("[data-pn-newerr]").inner_text() == "Not found in the directory: nobody."
     page.locator("[data-pn-newname]").fill("Reserve")
@@ -1000,3 +1002,61 @@ def test_an_empty_roster_is_one_block_until_a_row_comes(page: Page) -> None:
     assert page.evaluate("document.activeElement.dataset.pn") == "name"
     page.locator('[data-pn-row] [data-pn-act="remove"]').click()
     assert blank.is_visible() and not table.is_visible()
+
+
+def test_an_accounts_upn_and_mail_in_one_csv_make_one_row(
+    page: Page, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex on #4288: a UPN the directory resolves to its mail meets that
+    mail, so the file adds one row, on both rows' panels."""
+    from applydesk import directory
+    from cordware.graph import DirectoryUser, FakeDirectory
+
+    zed = DirectoryUser("z-1", "Zed Upn", "zed.mail@example.edu", "zed.upn@example.edu")
+    users = (*_sample_users(), zed)
+    monkeypatch.setattr(directory, "for_request", lambda request: FakeDirectory(users))
+    page.goto(PANELS)
+    before = page.locator("[data-pn-row]").count()
+    page.evaluate(
+        """window.applydeskPanelsImport(
+          "email,name,Panel A,Panel B\\r\\n" +
+          "zed.mail@example.edu,Zed,x,\\r\\n" +
+          "zed.upn@example.edu,Zed,,x\\r\\n")"""
+    )
+    _settled(page)
+    expect(page.locator("[data-pn-said]")).to_contain_text("1 person added.")
+    assert page.locator("[data-pn-row]").count() == before + 1
+    zed_row = _row(page, "zed.mail@example.edu")
+    assert zed_row.locator('input[data-pn-panel="panel-a"]').is_checked()
+    assert zed_row.locator('input[data-pn-panel="panel-b"]').is_checked()
+
+
+def _sample_users() -> tuple[DirectoryUser, ...]:
+    import uuid
+
+    return tuple(
+        DirectoryUser(str(uuid.uuid5(uuid.NAMESPACE_URL, f"mailto:{e.lower()}")), n, e, e)
+        for n, e in _sample_directory.people()
+    )
+
+
+def test_a_lookup_answered_after_the_row_is_undone_is_dropped(page: Page) -> None:
+    """Codex on #4288: an edit undone before the directory answers keeps
+    the row as it was."""
+    from playwright.sync_api import Route
+
+    held: list[Route] = []
+    page.route("**/panels/lookup", lambda route: held.append(route))
+    page.goto(PANELS)
+    zoe = _row(page, "zoe.tan@example.edu")
+    zoe.locator("[data-pn-select]").check()
+    zoe.locator('[data-pn-act="unverify"]').click()
+    entry = zoe.locator("[data-pn-entry]")
+    entry.fill("daniel.koh@example.edu")
+    entry.press("Enter")
+    page.wait_for_function("() => window.applydeskPanelsBusy > 0")
+    zoe.locator("[data-pn-select]").uncheck()  # undone before the answer
+    for route in held:
+        route.fallback()
+    _settled(page)
+    assert zoe.locator('[data-pn="email"]').input_value() == "zoe.tan@example.edu"

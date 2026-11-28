@@ -350,6 +350,9 @@
   // `how` is "save" to keep what the row holds; otherwise unticking puts
   // it back, and a row added and never saved goes.
   function select(r, on, how) {
+    // A lookup still out for this row answers an edit that is now closed
+    // (Codex on #4288): its answer is dropped.
+    if (!on) r.pnGen = (r.pnGen || 0) + 1;
     if (on && !r.hasAttribute("data-sel")) r.pnSnap = snap(r);
     if (!on && r.hasAttribute("data-sel") && how !== "save") {
       var who = val(r, "name") || val(r, "email") || "The new row";
@@ -447,7 +450,10 @@
       markEmail(r, entry, [name0, box.dataset.was]);
       return Promise.resolve();
     }
+    // Only the latest lookup for an open row is applied (Codex on #4288).
+    var gen = r.pnGen = (r.pnGen || 0) + 1;
     return find(entry).then(function (found) {
+      if (r.pnGen !== gen || !r.isConnected) return;
       if (found.error) said.textContent = found.error;
       markEmail(r, entry, found.person || null);
     });
@@ -756,7 +762,9 @@
     ask(LOOKUP, { addresses: asked }).then(function (got) { take(table, hdr, at, byName, got); }, function (e) { said.textContent = e.message + " Nothing imported."; });
   };
   function take(table, hdr, at, byName, got) {
-    var seen = {}, took = 0, skipped = [], bad = [], unknown = [], missing = [];
+    // Rows are one per person by the address they will hold: a UPN the
+    // directory resolves to its mail meets that mail (Codex on #4288).
+    var seen = {}, added = {}, took = 0, skipped = [], bad = [], unknown = [], missing = [];
     rows().forEach(function (r) { seen[val(r, "email").toLowerCase()] = true; });
     hdr.forEach(function (h, i) { if (i !== at.name && i !== at.email && i !== at.note && h && !byName[h]) unknown.push(table[0][i].trim()); });
     table.slice(1).forEach(function (cells) {
@@ -764,16 +772,22 @@
       var email = get(at.email);
       if (!EMAIL.test(email)) { bad.push(email || "(blank)"); return; }
       var person = got.found[email] || null;
-      if (seen[email.toLowerCase()]) { skipped.push(email); return; }
-      if (!person) missing.push(email);
-      seen[email.toLowerCase()] = true;
+      var key = (person ? person[1] : email).toLowerCase();
       var on = [];
       hdr.forEach(function (h, i) {
         if (i === at.name || i === at.email || i === at.note) return;  // never a panel's column
         var v = (cells[i] || "").trim().toLowerCase();
         if (byName[h] && v && v !== "0" && v !== "no" && v !== "false") on.push(byName[h]);
       });
-      addRow({ name: get(at.name), email: email, note: get(at.note), panels: on, person: person });
+      // The same person again in this file: their panels join the row.
+      if (added[key]) {
+        on.forEach(function (k) { var c = added[key].querySelector('input[data-pn-panel="' + k + '"]'); if (c) c.checked = true; });
+        return;
+      }
+      if (seen[key] || seen[email.toLowerCase()]) { skipped.push(email); return; }
+      if (!person) missing.push(email);
+      seen[key] = seen[email.toLowerCase()] = true;
+      added[key] = addRow({ name: get(at.name), email: email, note: get(at.note), panels: on, person: person });
       took += 1;
     });
     var parts = [people(took) + " added."];
@@ -831,8 +845,16 @@
   }
   // Each finished entry asked of the directory (segment AD2Y); resolves
   // true when every one was found.
+  // One take at a time, each reading the box as it starts, so an older
+  // answer never rewrites the box or its message over a newer one.
+  var mQueue = Promise.resolve(true);
   function mTake(all) {
+    mQueue = mQueue.then(function () { return mTakeNow(all); });
+    return mQueue;
+  }
+  function mTakeNow(all) {
     var parts = mIn.value.split(","); if (!all) parts.pop();
+    var taken = parts.length;  // the box's first entries, those asked about
     var entries = parts.map(function (raw) { return raw.trim(); }).filter(Boolean);
     return Promise.all(entries.map(find)).then(function (answers) {
       var missed = [], twice = [], again = [], failed = "";
@@ -841,9 +863,11 @@
         else if (found.error) { failed = found.error; missed.push(entries[i]); }
         else (found.twice ? twice : missed).push(entries[i]);
       });
-      // What was typed after the entries taken stays in the box.
-      var rest = all ? "" : mIn.value.split(",").pop().replace(/^\s+/, "");
-      var left = missed.concat(twice), value = all ? left.join(", ") : left.concat([rest]).join(", ");
+      // The entries taken leave the box; what was typed after them while
+      // the directory answered stays (Codex on #4288).
+      var after = mIn.value.split(",").slice(taken).map(function (t) { return t.replace(/^\s+/, ""); });
+      if (all) after = after.filter(function (t) { return t.trim(); });
+      var left = missed.concat(twice), value = left.concat(after).join(", ");
       if (mIn.value !== value) mIn.value = value;
       var told = [];
       if (failed) told.push(failed);
