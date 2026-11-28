@@ -1,4 +1,4 @@
-"""The Candidates item in a real Chromium (ruling 77, segment AD2C rung
+"""Create dossiers in a real Chromium (ruling 77, segment AD2C rung
 9): the search finds someone on record, Add lists them, Remove takes them
 off, a CSV adds its good rows and lists the rest back; none of it marks
 Process unsaved, since each change is kept as it is made."""
@@ -163,7 +163,7 @@ def _drafts_holding_candidates() -> None:
 
 
 def test_a_replicated_stage_leaves_candidates_behind(page: Page) -> None:
-    """Codex on #4161: a stage's copy holds no Candidates, as it holds no
+    """Codex on #4161: a stage's copy holds no Create dossiers, as it holds no
     form, so Replicate does not leave Process unsaveable."""
     _drafts_holding_candidates()
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
@@ -179,7 +179,7 @@ def test_a_replicated_stage_leaves_candidates_behind(page: Page) -> None:
 
 
 def test_an_answer_after_a_move_redraws_the_item_on_the_page(page: Page) -> None:
-    """Codex on #4161: a change answered after Candidates moved stage is
+    """Codex on #4161: a change answered after Create dossiers moved stage is
     drawn on the item now on the page, not the one taken off."""
     _drafts_holding_candidates()
     held: list[Route] = []

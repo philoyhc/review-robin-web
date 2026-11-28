@@ -355,7 +355,7 @@ class Stage:
     # Its key, stable across saves once stored (segment AD2C); "" for a
     # sample's or a new stage's, a save minting one (``process_store``).
     key: str = ""
-    # Holds the Candidates item (ruling 77): at most one stage does.
+    # Holds Create dossiers (ruling 77; `candidates` in code): at most one stage does.
     candidates: bool = False
     # Why a published stage was reverted to draft on the page (ruling 35):
     # sent with the save that records the revert, and audited with it.
@@ -811,7 +811,7 @@ def plan_of(exercise_id: str) -> Plan:
         from applydesk import dossiers  # it reads the store this module builds on
 
         saved = form_keyed(saved, exercise_id)
-        # Candidates' dossiers (AD2F), after the applications, on a sample's
+        # Create dossiers' dossiers (AD2F), after the applications, on a sample's
         # saved timeline as on any other (Codex on #4246).
         theirs = tuple(
             Row(Dossier(public_id, public_id, name, email), {})
@@ -829,7 +829,7 @@ def plan_of(exercise_id: str) -> Plan:
         when = _exercise_span(e) if e else None
         status = "Draft" if e is None or e.state == "Draft" else "Published"
         # A new exercise starts blank (segment AD2K, ruling 83): the operator
-        # adds a Form or Candidates as its first item. A sample keeps its form.
+        # adds a Form or Create dossiers as its first item. A sample keeps its form.
         only = Stage(1, "", when, form=e is not None, status=status)
         return Plan((only,), tuple(Row(dossier_of(a), {}) for a in apps), exercise_id)
     rows = _model_rows(apps) if exercise_id == "wa9juxbc2t" else _small_rows(apps)
@@ -891,7 +891,7 @@ def problems(stages: tuple[Stage, ...]) -> tuple[str, ...]:
     form, anywhere in the timeline (a gate may come first, its
     outcome deciding who may apply: author, 2026-11-13); no stage holds
     the form and a gate, or more than one outcome; at most one holds
-    Candidates (ruling 77). (A stage left
+    Create dossiers (ruling 77). (A stage left
     empty while it is set up is allowed.)"""
     out: list[str] = []
     holding = [st for st in stages if st.form]

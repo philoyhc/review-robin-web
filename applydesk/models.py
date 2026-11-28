@@ -1,6 +1,6 @@
 """Apply Desk's tables (segment AD2A): people, exercises, who operates
 them, and the audit trail; an exercise's settings and tags (AD2B); its
-timeline, gates, outcomes and Candidates (AD2C); its panels and roster
+timeline, gates, outcomes and Create dossiers (AD2C); its panels and roster
 (AD2E); its form's cards (AD2D); its email ticks and templates (AD2L).
 The rest of an exercise still comes from `applydesk/sample_data.py` until
 the series' later segments (`applydesk/guide/ad2_series.md`)."""
@@ -255,7 +255,7 @@ class Stage(Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
     shown: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     holds_form: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    # Ruling 77: the exercise's one Candidates item sits on a stage.
+    # Ruling 77: the exercise's one Create dossiers item sits on a stage.
     holds_candidates: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     form_opens_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     form_closes_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -471,10 +471,10 @@ class Invitee(Base):
 
 
 class Candidate(Base):
-    """One entry on an exercise's Candidates list, shown as *Populate
-    Dossiers* (rulings 77, 83): someone added by hand, through the people
-    search or a CSV, one dossier each, so a person may hold several, up to
-    the exercise's ``dossiers_per_person`` (segment AD2K). Removing an entry
+    """One entry on an exercise's *Create dossiers* list (rulings 77, 83):
+    someone added by hand, through the people search or a CSV, one dossier
+    each, so a person may hold several, with no most per person (author,
+    2026-11-27; ``dossiers_per_person`` is the Form's). Removing an entry
     sets ``removed_at``; adding the person again is a new entry."""
 
     __tablename__ = "candidate"
@@ -529,7 +529,7 @@ class Application(Base):
 class Dossier(Base):
     """The record a panel opens about one candidate's one entry (segment
     AD2F; rulings 25, 26, 32, 81): its own public ID, never the
-    application's, and its source, a Candidates entry or an application, or
+    application's, and its source, a Create dossiers entry or an application, or
     both once a later Form adds to a populated dossier (ruling 83, AD4),
     each at most once. Retiring sets ``retired_at`` (ruling 74)."""
 

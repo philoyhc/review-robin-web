@@ -635,7 +635,7 @@ def _check_process(exercise_id: str, sent: Any) -> Response:
 
 @router.get("/exercises/{exercise_id}/candidates/search", name="applydesk_candidates_search")
 def candidates_search(request: Request, exercise_id: str, q: str = "") -> Response:
-    """The Candidates item's people search (ruling 75): people on record,
+    """Create dossiers' people search (ruling 75): people on record,
     then the directory's not on record; those listed as often as allowed
     left out (segment AD2K)."""
     return _people_search(request, exercise_id, q, candidates)
@@ -680,7 +680,7 @@ def _people_search(request: Request, exercise_id: str, q: str, svc: Any) -> Resp
 
 @router.post("/exercises/{exercise_id}/candidates", name="applydesk_candidates_change")
 async def candidates_change(request: Request, exercise_id: str) -> Response:
-    """The Candidates item's changes (rulings 77, 83): add an entry for
+    """Create dossiers' changes (rulings 77, 83): add an entry for
     someone picked in the search, remove an entry, or upload a CSV; the
     list as it now stands."""
     sent = await _page_json(request)
@@ -1834,7 +1834,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
             key: {"label": q.label, "options": list(q.options)}
             for key, q in sample_data.list_questions(exercise.public_id).items()
         },
-        # Ruling 77: the Candidates list, read where Process draws it.
+        # Ruling 77: Create dossiers' list, read where Process draws it.
         cand_list=(_candidates_of(exercise.public_id) if section == "process" else ()),
         # The Dossiers page's one table (author, 2026-11-27): Create
         # dossiers' entries, by their dossier once minted, else as rows of

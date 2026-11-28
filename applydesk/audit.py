@@ -144,7 +144,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "exercise.form_saved": EventSchema(_EXERCISE | {"counts", "context"}),
     # Segment AD2L: one Emails card's template saved.
     "exercise.email_saved": EventSchema(_EXERCISE | {"context"}),
-    # Candidates (ruling 77): added by search or CSV, removed in the list.
+    # Create dossiers (ruling 77): added by search or CSV, removed in the list.
     # The form's moves, Home's next step (ruling 76).
     "exercise.form_opened": EventSchema(_EXERCISE),
     # A published stage reverted to draft by a Process save (ruling 35).
@@ -160,7 +160,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "application.seeded": EventSchema(_EXERCISE | {"counts"}),
     # Segment AD2F: the samples' dossiers recorded by the seed.
     "dossier.seeded": EventSchema(_EXERCISE | {"counts"}),
-    # Segment AD2F: Candidates' dossiers minted, and retired (AD2K: one per entry).
+    # Segment AD2F: Create dossiers' dossiers minted, and retired (AD2K: one per entry).
     "dossier.minted": EventSchema(_EXERCISE | {"counts"}),
     "dossier.retired": EventSchema(_EXERCISE | {"refs"}),
     "candidate.removed": EventSchema(_EXERCISE | {"refs"}),

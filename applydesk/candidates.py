@@ -1,4 +1,4 @@
-"""An exercise's Candidates, shown as *Create dossiers* (rulings 77, 83;
+"""An exercise's *Create dossiers* entries (`candidates` in code; rulings 77, 83;
 segments AD2C rung 9, AD2K): entries kept by hand, added through the people
 search (ruling 75) or a CSV upload, removed in the list. A Form after it
 invites from these dossiers (ruling 84); where the item is the first, each

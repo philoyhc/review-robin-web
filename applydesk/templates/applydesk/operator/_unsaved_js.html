@@ -13,7 +13,7 @@
   document.querySelectorAll("[data-unsaved-root]").forEach(function (root) {
     var mark = root.querySelector("[data-unsaved]"), dirty = false;
     // Neither a preview's answers nor a panel box not yet created, nor the
-    // Candidates list, which keeps each change as it is made (ruling 77).
+    // Create dossiers list, which keeps each change as it is made (ruling 77).
     function counts(el) { return !el.closest("#fb-preview, [data-newpanel], [data-cand-live]"); }
     function changed() {
       if (dirty) return;
