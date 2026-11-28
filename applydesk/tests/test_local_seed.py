@@ -109,3 +109,14 @@ def test_the_create_dossiers_scenario() -> None:
     lobby = TestClient(host_with(("applydesk",))[0]).get("/applydesk/me").text
     shown = lobby[lobby.index(local_seed.CREATE_DOSSIERS) :]
     assert "A dossier is held for you" in shown[: shown.index("</p>")]
+
+
+def test_a_half_built_scenario_is_refused_not_skipped() -> None:
+    """Cold read: a run that failed part-way leaves the exercise; a re-run
+    says so and points at --reset rather than passing it off as there."""
+    owner = local_seed.owner()
+    client = local_seed._client()  # pyright: ignore[reportPrivateUsage]  -- the seed's own
+    local_seed._make(client, local_seed.OPEN_FORM)  # pyright: ignore[reportPrivateUsage]  -- as a failed run leaves it
+    assert owner.id
+    with pytest.raises(local_seed.LocalSeedRefused, match="--reset"):
+        local_seed.seed_local()
