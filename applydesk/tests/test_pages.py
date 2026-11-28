@@ -89,36 +89,50 @@ def client() -> TestClient:
 
 
 def _get_as_owner(client: TestClient, path: str) -> Any:
-    """GET ``path``; an application page as its own applicant, who alone
-    reaches it (segment AD4A): signed in for that request only as the
-    person the application belongs to, then back to the fake operator."""
+    """GET ``path``; a /me exercise or application page as someone who
+    reaches it (segment AD4A): an application page as its own applicant;
+    an exercise page as its earliest applicant, who has applied there, so
+    an invitation-only exercise answers too. Signed in for that request
+    only, then back to the fake operator."""
     from sqlalchemy import select
 
     from applydesk import db
     from applydesk.models import Application, Person
+    from applydesk.models import Exercise as ExerciseRow
     from cordware.settings import identity_settings
 
-    if "/applications/" not in path:
-        return client.get(path)
-    app_id = path.split("/applications/", 1)[1].split("/")[0]
+    found = re.fullmatch(
+        r"/applydesk/me/exercises/([a-z0-9]{10})(?:/applications/([a-z0-9]{10}))?", path
+    )
+    if found is None:
+        return client.get(path)  # not one, or a malformed ID: the route's 404
+    exercise_id, app_id = found.groups()
     session = db.new_session()
     try:
-        email = session.scalar(
-            select(Person.email)
-            .join(Application, Application.person_id == Person.id)
-            .where(Application.public_id == app_id)
-        )
+        query = select(Person.email).join(Application, Application.person_id == Person.id)
+        if app_id is not None:
+            query = query.where(Application.public_id == app_id)
+        else:
+            query = (
+                query.join(ExerciseRow, ExerciseRow.id == Application.exercise_id)
+                .where(ExerciseRow.public_id == exercise_id)
+                .order_by(Application.id)
+            )
+        email = session.scalars(query).first()
     finally:
         session.close()
-    if email is None:
-        return client.get(path)
+    if app_id is None and email is None:
+        return client.get(path)  # no applicant yet: as the fake operator
+    assert email is not None, f"no applicant on record for {app_id}"
     saved = (
         identity_settings.fake_auth_email,
         identity_settings.fake_auth_principal_id,
         identity_settings.fake_auth_super_admin,
     )
     identity_settings.fake_auth_email = email
-    identity_settings.fake_auth_principal_id = f"applicant-{app_id}"
+    # One account per person, so two of one person's applications bind
+    # the same row (cold read).
+    identity_settings.fake_auth_principal_id = f"applicant-{email}"
     identity_settings.fake_auth_super_admin = False
     try:
         return client.get(path)
@@ -2061,6 +2075,21 @@ def test_another_application_s_page_shows_no_results(client: TestClient) -> None
     since segment AD4A another's application page is not there at all."""
     other = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/h6zr2tdw9p")
     assert other.status_code == 404 and "Your results" not in other.text
+
+
+def test_an_applicant_sees_their_own_applications_and_no_one_else_s(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Segment AD4A (cold read): signed in as an ordinary applicant, not
+    the super-admin, the lobby lists her own applications only, and
+    another applicant's page in the same exercise is a 404."""
+    _sign_in_as_the_applicant(client, monkeypatch)
+    me = "/applydesk/me/exercises/wa9juxbc2t"
+    lobby = client.get("/applydesk/me").text
+    links = set(re.findall(rf"{me}/applications/([a-z0-9]{{10}})", lobby))
+    assert links == {"m3qx8vkt2n", "f2ps7nyh4k"}
+    assert client.get(f"{me}/applications/m3qx8vkt2n").status_code == 200
+    assert client.get(f"{me}/applications/h6zr2tdw9p").status_code == 404
 
 
 def test_archived_closes_the_application_and_dossier_pages(

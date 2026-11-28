@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from applydesk import audit, candidates, db
 from applydesk.candidates import Imported, Listed, Refused
-from applydesk.models import Exercise, Invitee, Person, Stage
+from applydesk.models import Exercise, Invitee, Person
 
 __all__ = [
     "Imported",
@@ -163,13 +163,8 @@ def tab_shown(public_id: str) -> bool:
         exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
         if exercise is None or exercise.eligibility != "invitation":
             return False
-        held = session.scalar(
-            select(Stage.id).where(
-                Stage.exercise_id == exercise.id,
-                Stage.retired_at.is_(None),
-                Stage.holds_candidates.is_(True),
-            )
-        )
-        return held is None
+        from applydesk import eligibility  # it reads this module's table
+
+        return not eligibility.from_dossiers(session, exercise)
     finally:
         session.close()
