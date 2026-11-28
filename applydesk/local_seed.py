@@ -55,6 +55,9 @@ class TestClient(Protocol):
 _PLATFORM = operators.Actor(None, is_super_admin=True, platform=True)
 #: How long the open form stays open from the run (segment AD2X).
 OPEN_FOR = timedelta(days=30)
+#: How long before the run the form opened, so the seeded applications,
+#: dated up to six days back, fall inside its window (cold read).
+OPENED = timedelta(days=10)
 #: How many applications Scenario 1 makes.
 APPLICANTS = 6
 
@@ -197,7 +200,9 @@ def _panels(
     """Two panels of four, Local Operator on the first; the keys the
     server gave them."""
     base = f"/operator/exercises/{public_id}/panels"
-    first, second = _people(start, 3), _people(start + 3, 4)
+    alternate = identity_settings.fake_auth_alt_email
+    picked = _people(start, 7, but=alternate)
+    first, second = picked[:3], picked[3:]
     rows: list[dict[str, object]] = [
         {"name": operator[0], "email": operator[1], "note": "", "panels": ["made-1"]},
         *({"name": n, "email": e, "note": "", "panels": ["made-1"]} for n, e in first),
@@ -215,6 +220,8 @@ def _panels(
     if state is None:
         raise LocalSeedRefused("Panels' Save left no panels")
     keys = {p.name: p.key for p in state.panels}
+    if "Readers" not in keys or "Mentors" not in keys:
+        raise LocalSeedRefused(f"Panels' Save kept {sorted(keys)}, not Readers and Mentors")
     return keys["Readers"], keys["Mentors"]
 
 
@@ -287,12 +294,12 @@ def open_form(client: TestClient, owner: Person, settings: IdentitySettings) -> 
         "stages": [
             {
                 "name": "Applications",
-                "from": _when(now - timedelta(days=1)),
+                "from": _when(now - OPENED),
                 "to": _when(now + OPEN_FOR),
                 "shown": True,
                 "published": True,
                 "form": {
-                    "from": _when(now - timedelta(days=1)),
+                    "from": _when(now - OPENED),
                     "to": _when(now + OPEN_FOR),
                     "receipt": True,
                     "reminder": False,
@@ -303,10 +310,13 @@ def open_form(client: TestClient, owner: Person, settings: IdentitySettings) -> 
         ],
     }
     _ok(client.post(f"{base}/process", json=process), "Process's Save")
-    _ok(
+    moved = _ok(
         client.post(f"{base}/form/move", data={"to": "open"}, follow_redirects=False),
         "Opening the form",
     )
+    # The route names the move it made, or the refusal's key (cold read).
+    if not moved.headers.get("location", "").endswith("form_said=open"):
+        raise LocalSeedRefused(f"Opening the form was refused: {moved.headers['location']}")
     _applications(public_id, owner, settings)
     return Made(OPEN_FORM, public_id, made=True)
 
