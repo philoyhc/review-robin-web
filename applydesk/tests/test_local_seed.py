@@ -211,3 +211,25 @@ def test_a_comma_in_the_operator_s_name_survives_the_csv(monkeypatch: pytest.Mon
         session.close()
     assert len(listed) == 10
     assert sum(1 for c in listed if c.email == identity_settings.fake_auth_email) == 2
+
+
+def test_the_dossiers_page_heads_its_rows_with_create_dossiers_stage() -> None:
+    """Author, 2026-11-28: dossiers created by hand follow their stage's
+    name and dates, as a form's applications do; "From elsewhere" is only
+    for rows no stage made. A bound person's address is a pill."""
+    import re
+
+    made = next(m for m in local_seed.seed_local() if m.name == local_seed.CREATE_DOSSIERS)
+    text = (
+        TestClient(host_with(("applydesk",))[0])
+        .get(f"/applydesk/operator/exercises/{made.public_id}/dossiers")
+        .text
+    )
+    assert "From elsewhere" not in text
+    head = re.search(
+        r'<th class="ap-first" colspan="\d+"><b>([^<]+)</b><span class="ap-when">([^<]+)<', text
+    )
+    assert head is not None and head.groups() == ("Nominations", "Dates not set")
+    me = identity_settings.fake_auth_email
+    pills = re.findall(r'<span class="pl-addr" data-verified[^>]*>([^<]+)</span>', text)
+    assert pills and set(pills) == {me}  # Local Operator is bound; the rest are pending

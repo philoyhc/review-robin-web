@@ -18,7 +18,7 @@ from sqlalchemy import exists, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from applydesk import audit, db, ids, sample_data
+from applydesk import audit, db, ids, people, sample_data
 from applydesk.models import Application, Candidate, Dossier, Exercise, Person
 from applydesk.models import Stage as StageRow
 
@@ -239,3 +239,26 @@ def hand_rows(exercise_id: str) -> tuple[HandRow, ...]:
         HandRow(entry, dossier or "", name or email or "", email or "", title or "")
         for entry, dossier, name, email, title in rows
     )
+
+
+def verified_emails(exercise_id: str) -> frozenset[str]:
+    """The match keys (`people.email_key`) of the exercise's applicants and
+    Create dossiers entries who are bound to a directory account, read in a
+    session of their own: the Dossiers page shows their addresses as a
+    pill, as Panels and Process do (author, 2026-11-28)."""
+    session = db.new_session()
+    try:
+        exercise = select(Exercise.id).where(Exercise.public_id == exercise_id).scalar_subquery()
+        applicants = select(Application.person_id).where(Application.exercise_id == exercise)
+        entries = select(Candidate.person_id).where(
+            Candidate.exercise_id == exercise, Candidate.removed_at.is_(None)
+        )
+        found = session.scalars(
+            select(Person.email).where(
+                Person.object_id.is_not(None),
+                Person.id.in_(applicants.union(entries)),
+            )
+        ).all()
+    finally:
+        session.close()
+    return frozenset(k for k in (people.email_key(e) for e in found) if k)
